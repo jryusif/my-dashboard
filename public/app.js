@@ -2944,6 +2944,30 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
         </form>
       </div>
     </section>
+
+    <!-- Complete Transaction Audit Log & History Ledger -->
+    <section style="margin-top: 32px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <h2 class="finance-block-title" style="margin:0;">📜 Transaction History &amp; Audit Ledger</h2>
+        <div class="ledger-quick-summary" id="ledgerQuickSummary"></div>
+      </div>
+
+      <div class="ledger-filter-toolbar">
+        <div class="ledger-search-box">
+          <span style="opacity:0.6;">🔍</span>
+          <input type="text" id="ledgerSearchInput" placeholder="Search salary, expense, vendor, note..." />
+        </div>
+        <div class="ledger-type-pills" id="ledgerTypePills">
+          <button type="button" class="ledger-pill ${activeLedgerType === 'all' ? 'active' : ''}" data-type="all">All Records</button>
+          <button type="button" class="ledger-pill ${activeLedgerType === 'income' ? 'active' : ''}" data-type="income">💰 Inflows / Salary</button>
+          <button type="button" class="ledger-pill ${activeLedgerType === 'expense' ? 'active' : ''}" data-type="expense">💸 Outflows / Expenses</button>
+        </div>
+      </div>
+
+      <div class="finance-ledger-table-wrap">
+        <div id="financeLedgerList" class="finance-ledger-list"></div>
+      </div>
+    </section>
   `;
 
   renderFinanceList('incomeList', incomeItems, 'income', item => ({
@@ -2969,8 +2993,110 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
   document.getElementById('expenseAddForm').addEventListener('submit',  handleAddExpense);
   document.getElementById('cashUpdateForm').addEventListener('submit',  handleUpdateCash);
 
+  // Setup Ledger Filters
+  const searchInput = document.getElementById('ledgerSearchInput');
+  if (searchInput) {
+    searchInput.value = ledgerSearchQuery;
+    let searchDebounce;
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(searchDebounce);
+      ledgerSearchQuery = e.target.value;
+      searchDebounce = setTimeout(() => loadFinanceHistoryLedger(), 250);
+    });
+  }
+
+  const typePills = document.getElementById('ledgerTypePills');
+  if (typePills) {
+    typePills.querySelectorAll('.ledger-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        typePills.querySelectorAll('.ledger-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeLedgerType = btn.dataset.type || 'all';
+        loadFinanceHistoryLedger();
+      });
+    });
+  }
+
   loadFinanceAssetsQuickGlance();
+  loadFinanceHistoryLedger();
 }
+
+let activeLedgerType = 'all';
+let ledgerSearchQuery = '';
+
+async function loadFinanceHistoryLedger() {
+  const container = document.getElementById('financeLedgerList');
+  const summaryEl = document.getElementById('ledgerQuickSummary');
+  if (!container) return;
+
+  container.innerHTML = `<div class="skeleton-block" style="height: 100px; margin: 12px;"></div>`;
+
+  try {
+    let url = `/api/finance/transactions?type=${activeLedgerType}`;
+    if (ledgerSearchQuery && ledgerSearchQuery.trim()) {
+      url += `&search=${encodeURIComponent(ledgerSearchQuery.trim())}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('failed');
+    const data = await res.json();
+    const { transactions, summary } = data;
+
+    if (summaryEl && summary) {
+      summaryEl.innerHTML = `
+        <span style="font-size:12px;color:var(--ink-soft);">
+          Total Inflows: <strong style="color:#22c55e;">+${fmtMoney(summary.totalIncome)}</strong> &middot; 
+          Total Outflows: <strong style="color:#ef4444;">−${fmtMoney(summary.totalExpenses)}</strong> &middot; 
+          Net: <strong style="color:#38bdf8;">${fmtMoney(summary.net)}</strong>
+        </span>
+      `;
+    }
+
+    if (!transactions || !transactions.length) {
+      container.innerHTML = `<p class="finance-empty" style="padding: 24px;">No financial entries logged yet.</p>`;
+      return;
+    }
+
+    container.innerHTML = transactions.map(t => {
+      const isInc = t.type === 'income';
+      const icon = isInc ? '💰' : '💸';
+      return `
+        <div class="ledger-row" id="ledgerRow_${t.id}">
+          <div class="ledger-row-left">
+            <div class="ledger-icon-badge ${t.type}">${icon}</div>
+            <div class="ledger-row-details">
+              <div class="ledger-row-title">${escapeHtml(t.description || (isInc ? 'Income Deposit' : 'Expense Outflow'))}</div>
+              <div class="ledger-row-meta">
+                <span>${fmtDateFull(t.date)}</span>
+                <span class="ledger-tag-chip">${escapeHtml(t.category || 'General')}</span>
+                ${t.account ? `<span class="ledger-tag-chip" style="opacity:0.85;">💳 ${escapeHtml(t.account)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="ledger-row-right">
+            <span class="ledger-amount ${t.type}">${isInc ? '+' : '−'}${fmtMoney(t.amount)}</span>
+            <button type="button" class="ledger-del-btn" title="Delete transaction" onclick="handleDeleteTransaction('${t.id}')">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Ledger error:', err);
+    container.innerHTML = `<p class="finance-empty" style="padding: 24px;">Could not load transaction history.</p>`;
+  }
+}
+
+window.handleDeleteTransaction = async function(id) {
+  if (!confirm('Are you sure you want to delete this recorded entry?')) return;
+  try {
+    const res = await fetch(`/api/finance/transactions?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('failed');
+    showToast('Entry removed from ledger.');
+    await loadFinancePage();
+    await loadWealthCard();
+  } catch {
+    showToast('Could not delete entry.');
+  }
+};
 
 // ---- Finance form handlers ----
 
@@ -3016,6 +3142,7 @@ async function handleAddIncome(e) {
     if (!res.ok) throw new Error('failed');
     showToast('Income added.');
     await loadFinancePage();
+    await loadWealthCard();
   } catch {
     submitBtn.disabled = false; submitBtn.textContent = 'Add Income';
     showToast('Could not add that income entry — please try again.');
@@ -3039,6 +3166,7 @@ async function handleAddExpense(e) {
     if (!res.ok) throw new Error('failed');
     showToast('Expense added.');
     await loadFinancePage();
+    await loadWealthCard();
   } catch {
     showToast('Could not add that expense — please try again.');
   }

@@ -8121,6 +8121,208 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   }
 }
 
+/* =============================================================================
+   TRANSACTION HISTORY LEDGER & AUDIT TRAIL
+   ============================================================================= */
+.ledger-filter-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ledger-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 6px 14px;
+  flex: 1;
+  min-width: 240px;
+  max-width: 420px;
+  transition: all var(--transition-fast);
+}
+
+.ledger-search-box:focus-within {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.05);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+}
+
+.ledger-search-box input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  font-family: var(--font-body);
+  width: 100%;
+  outline: none;
+}
+
+.ledger-type-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ledger-pill {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ledger-pill:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ledger-pill.active {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.finance-ledger-table-wrap {
+  background: rgba(20, 24, 34, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.ledger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s ease;
+  gap: 12px;
+}
+
+.ledger-row:last-child {
+  border-bottom: none;
+}
+
+.ledger-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ledger-row-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ledger-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.ledger-icon-badge.income {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.ledger-icon-badge.expense {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.ledger-row-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ledger-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ledger-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  flex-wrap: wrap;
+}
+
+.ledger-tag-chip {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.ledger-row-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.ledger-amount {
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.ledger-amount.income {
+  color: #22c55e;
+}
+
+.ledger-amount.expense {
+  color: #ef4444;
+}
+
+.ledger-del-btn {
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.ledger-del-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
 /* =====================================================================
    REDUCED MOTION
    ===================================================================== */

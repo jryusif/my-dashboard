@@ -13,20 +13,41 @@ export async function POST(req) {
   const userId = await resolveUserId(req);
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { cash } = await req.json();
-  const amount = parseFloat(cash) || 0;
+  const body = await req.json();
+  const rawAmount = body.amount !== undefined ? body.amount : (body.cash !== undefined ? body.cash : 0);
+  const amount = Math.max(0, parseFloat(rawAmount) || 0);
 
-  await prisma.financialTransaction.create({
-    data: {
-      userId,
-      type: 'income',
-      category: 'Saved Cash Balance',
-      amount,
-      description: 'Cash Reserve Balance Update',
-      account: 'Cash Wallet',
-      date: new Date().toISOString().split('T')[0]
-    }
+  // Find or create user's Liquid Cash Asset in database
+  const existingCashAsset = await prisma.asset.findFirst({
+    where: { userId, type: 'Cash' }
   });
 
-  return NextResponse.json({ success: true, cash: amount });
+  let asset;
+  if (existingCashAsset) {
+    asset = await prisma.asset.update({
+      where: { id: existingCashAsset.id },
+      data: {
+        quantity: amount,
+        purchasePrice: amount,
+        purchaseDate: new Date().toISOString().split('T')[0],
+        notes: 'Money I Already Have (Liquid Cash Savings)'
+      }
+    });
+  } else {
+    asset = await prisma.asset.create({
+      data: {
+        userId,
+        name: 'Liquid Cash Savings',
+        type: 'Cash',
+        status: 'Owned',
+        quantity: amount,
+        unit: 'EGP',
+        purchasePrice: amount,
+        purchaseDate: new Date().toISOString().split('T')[0],
+        notes: 'Money I Already Have (Liquid Cash Savings)'
+      }
+    });
+  }
+
+  return NextResponse.json({ success: true, cash: amount, asset });
 }

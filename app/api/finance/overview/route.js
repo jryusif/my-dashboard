@@ -68,16 +68,22 @@ export async function GET(req) {
     const allExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     const netCashSurplus = allIncome - allExpenses;
 
+    // Saved Cash Baseline ("Money I Already Have")
+    const cashAsset = assets.find(a => a.type === 'Cash');
+    const savedCashBaseline = cashAsset ? (cashAsset.purchasePrice || cashAsset.quantity || 0) : 0;
+    const totalWalletCash = Math.max(0, savedCashBaseline + netCashSurplus);
+
     // Real Gold Lots Valuation in EGP
     const goldLotsTotalEgp = goldLots.reduce((sum, g) => {
       const ratio = (g.karat === '21k' ? 21/24 : (g.karat === '18k' ? 18/24 : 1));
       return sum + (g.grams * liveGold.pricePerGramEgp24 * ratio);
     }, 0);
 
-    // Standard Assets Total
-    const standardAssetsTotal = assets.reduce((sum, a) => sum + (a.purchasePrice || (a.quantity * 100)), 0);
+    // Other Investment Assets Total
+    const otherAssets = assets.filter(a => a.type !== 'Cash');
+    const otherAssetsTotal = otherAssets.reduce((sum, a) => sum + (a.purchasePrice || (a.quantity * 100)), 0);
 
-    const totalAssets = standardAssetsTotal + goldLotsTotalEgp + Math.max(0, netCashSurplus);
+    const totalAssets = otherAssetsTotal + goldLotsTotalEgp + totalWalletCash;
     const totalLiabilities = 0;
     const netWorthVal = totalAssets - totalLiabilities;
 
@@ -86,11 +92,11 @@ export async function GET(req) {
     const budget = {
       month,
       monthlyBudget,
-      totalIncome: totalIncome,
-      totalExpenses: totalExpenses,
-      netIncome: netIncome,
-      savingsRatePct: savingsRatePct,
-      expenseRatePct: expenseRatePct,
+      totalIncome,
+      totalExpenses,
+      netIncome,
+      savingsRatePct,
+      expenseRatePct,
       allocations: {
         construction: { amount: Math.round(totalIncome * 0.25), pct: 25 },
         emergency: { amount: Math.round(totalIncome * 0.15), pct: 15 },
@@ -120,9 +126,10 @@ export async function GET(req) {
       snapshot: 'Live Synchronized Financial Snapshot',
       date: new Date().toISOString().split('T')[0],
       breakdown: {
-        cash: Math.max(0, netCashSurplus),
+        cash: savedCashBaseline,
+        walletTotal: totalWalletCash,
         gold: Math.round(goldLotsTotalEgp),
-        otherAssets: standardAssetsTotal
+        otherAssets: otherAssetsTotal
       }
     };
 
