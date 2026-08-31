@@ -192,8 +192,19 @@
         <header class="dashboard-header">
           <p class="eyebrow">Overview</p>
           <h1>My Dashboard</h1>
-          <p class="subtitle">Jump into any area of your life</p>
-        </header>
+        <!-- Guest Auth Prompt Banner -->
+        <div class="auth-callout-banner" id="authCalloutBanner" style="display: none;">
+          <div class="auth-callout-left">
+            <span class="auth-callout-icon">🔐</span>
+            <div>
+              <strong>Sign In to Your Neon Database</strong>
+              <p>Sign in to access your workouts, dental cases, roadmaps, and synced tasks.</p>
+            </div>
+          </div>
+          <button type="button" class="btn-primary auth-callout-btn" id="btnBannerSignIn">
+            <span>🚀</span> Sign In / Register
+          </button>
+        </div>
 
         <div class="wealth-card" id="wealthCard">
           <div class="wealth-card-main">
@@ -1859,6 +1870,7 @@
        =================================================================== -->
   <div class="modal-backdrop" id="authModalBackdrop" hidden>
     <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <button type="button" class="modal-close-btn" id="btnCloseAuthModal" title="Close modal">✕</button>
       <div class="auth-modal-header">
         <div class="auth-brand-badge">⚡ Cloud Database Active</div>
         <h2 id="authModalTitle">Welcome to Your Personal HQ</h2>

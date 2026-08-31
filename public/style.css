@@ -7733,6 +7733,70 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   padding: 32px !important;
 }
 
+.modal-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--ink-soft);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all var(--transition-fast);
+}
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.auth-callout-banner {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.16) 0%, rgba(99, 102, 241, 0.12) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: var(--radius-lg, 16px);
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  animation: modalScaleIn 0.3s ease forwards;
+}
+.auth-callout-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.auth-callout-icon {
+  font-size: 26px;
+}
+.auth-callout-left strong {
+  display: block;
+  font-size: 15px;
+  color: #fff;
+  margin-bottom: 2px;
+}
+.auth-callout-left p {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin: 0;
+}
+.auth-callout-btn {
+  white-space: nowrap;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
 .auth-modal-header {
   text-align: center;
   margin-bottom: 20px;

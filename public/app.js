@@ -7475,6 +7475,10 @@ const btnAuthLogout = document.getElementById('btnAuthLogout');
 const userEmailLabel = document.getElementById('userEmailLabel');
 
 const authModalBackdrop = document.getElementById('authModalBackdrop');
+const btnCloseAuthModal = document.getElementById('btnCloseAuthModal');
+const authCalloutBanner = document.getElementById('authCalloutBanner');
+const btnBannerSignIn = document.getElementById('btnBannerSignIn');
+
 const authModalTitle = document.getElementById('authModalTitle');
 const authModalSubtitle = document.getElementById('authModalSubtitle');
 const authTabLogin = document.getElementById('authTabLogin');
@@ -7497,6 +7501,20 @@ function initAuthEvents() {
       } else {
         showToast(`Signed in as: ${currentUser?.email || 'User'}`);
       }
+    });
+  }
+
+  if (btnBannerSignIn) {
+    btnBannerSignIn.addEventListener('click', () => openAuthModal('login'));
+  }
+
+  if (btnCloseAuthModal) {
+    btnCloseAuthModal.addEventListener('click', closeAuthModal);
+  }
+
+  if (authModalBackdrop) {
+    authModalBackdrop.addEventListener('click', (e) => {
+      if (e.target === authModalBackdrop) closeAuthModal();
     });
   }
 
@@ -7529,7 +7547,7 @@ function setAuthMode(mode) {
     if (authTabRegister) authTabRegister.classList.remove('active');
     if (authNameGroup) authNameGroup.style.display = 'none';
     if (authModalTitle) authModalTitle.textContent = 'Welcome Back';
-    if (authModalSubtitle) authModalSubtitle.textContent = 'Sign in to access your multi-tenant workspace';
+    if (authModalSubtitle) authModalSubtitle.textContent = 'Sign in to access your Neon PostgreSQL workspace';
     if (authSubmitBtn) authSubmitBtn.innerHTML = '<span>🚀</span> Sign In';
   } else {
     if (authTabRegister) authTabRegister.classList.add('active');
@@ -7543,12 +7561,22 @@ function setAuthMode(mode) {
 
 function openAuthModal(mode = 'login') {
   setAuthMode(mode);
-  if (authModalBackdrop) authModalBackdrop.hidden = false;
-  if (authEmailInput) authEmailInput.focus();
+  if (authModalBackdrop) {
+    authModalBackdrop.hidden = false;
+    authModalBackdrop.removeAttribute('hidden');
+    authModalBackdrop.style.setProperty('display', 'flex', 'important');
+  }
+  if (authEmailInput) {
+    setTimeout(() => authEmailInput.focus(), 100);
+  }
 }
 
 function closeAuthModal() {
-  if (authModalBackdrop) authModalBackdrop.hidden = true;
+  if (authModalBackdrop) {
+    authModalBackdrop.hidden = true;
+    authModalBackdrop.setAttribute('hidden', '');
+    authModalBackdrop.style.setProperty('display', 'none', 'important');
+  }
   if (authErrorMsg) authErrorMsg.style.display = 'none';
 }
 
@@ -7569,6 +7597,9 @@ async function handleAuthSubmit(e) {
   const payload = authMode === 'register' ? { email, password, name } : { email, password };
 
   try {
+    authSubmitBtn.disabled = true;
+    authSubmitBtn.innerHTML = '<span>⏳</span> Processing...';
+
     const res = await _originalFetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -7599,6 +7630,11 @@ async function handleAuthSubmit(e) {
   } catch (err) {
     console.error('Auth submit error:', err);
     showAuthError('Network error connecting to server.');
+  } finally {
+    if (authSubmitBtn) {
+      authSubmitBtn.disabled = false;
+      authSubmitBtn.innerHTML = authMode === 'register' ? '<span>✨</span> Create Account' : '<span>🚀</span> Sign In';
+    }
   }
 }
 
@@ -7623,9 +7659,11 @@ function updateUserUi() {
   if (currentUser && authToken) {
     if (userEmailLabel) userEmailLabel.textContent = currentUser.name || currentUser.email.split('@')[0];
     if (btnAuthLogout) btnAuthLogout.style.display = 'flex';
+    if (authCalloutBanner) authCalloutBanner.style.display = 'none';
   } else {
     if (userEmailLabel) userEmailLabel.textContent = 'Sign In';
     if (btnAuthLogout) btnAuthLogout.style.display = 'none';
+    if (authCalloutBanner) authCalloutBanner.style.display = 'flex';
   }
 }
 
