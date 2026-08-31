@@ -174,7 +174,7 @@
 
             <!-- 4. User Account Capsule -->
             <div class="dock-user-capsule" id="userAuthCapsule">
-              <button type="button" class="btn-dock-user" id="btnAuthProfile" title="Account / Profile">
+              <button type="button" class="btn-dock-user" id="btnAuthProfile" onclick="openAuthModal('login')" title="Account / Profile">
                 <span class="user-avatar-icon">👤</span>
                 <span class="user-email-text" id="userEmailLabel">Sign In</span>
               </button>
@@ -192,6 +192,8 @@
         <header class="dashboard-header">
           <p class="eyebrow">Overview</p>
           <h1>My Dashboard</h1>
+        </header>
+
         <!-- Guest Auth Prompt Banner -->
         <div class="auth-callout-banner" id="authCalloutBanner" style="display: none;">
           <div class="auth-callout-left">
@@ -201,7 +203,7 @@
               <p>Sign in to access your workouts, dental cases, roadmaps, and synced tasks.</p>
             </div>
           </div>
-          <button type="button" class="btn-primary auth-callout-btn" id="btnBannerSignIn">
+          <button type="button" class="btn-primary auth-callout-btn" id="btnBannerSignIn" onclick="openAuthModal('login')">
             <span>🚀</span> Sign In / Register
           </button>
         </div>
@@ -1870,7 +1872,7 @@
        =================================================================== -->
   <div class="modal-backdrop" id="authModalBackdrop" hidden>
     <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-      <button type="button" class="modal-close-btn" id="btnCloseAuthModal" title="Close modal">✕</button>
+      <button type="button" class="modal-close-btn" id="btnCloseAuthModal" onclick="closeAuthModal()" title="Close modal">✕</button>
       <div class="auth-modal-header">
         <div class="auth-brand-badge">⚡ Cloud Database Active</div>
         <h2 id="authModalTitle">Welcome to Your Personal HQ</h2>
@@ -1879,8 +1881,8 @@
 
       <!-- Auth Tabs -->
       <div class="auth-tabs">
-        <button type="button" class="auth-tab active" id="authTabLogin" data-mode="login">Sign In</button>
-        <button type="button" class="auth-tab" id="authTabRegister" data-mode="register">Create Account</button>
+        <button type="button" class="auth-tab active" id="authTabLogin" onclick="setAuthMode('login')" data-mode="login">Sign In</button>
+        <button type="button" class="auth-tab" id="authTabRegister" onclick="setAuthMode('register')" data-mode="register">Create Account</button>
       </div>
 
       <form id="authForm" class="auth-form">

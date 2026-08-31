@@ -7540,45 +7540,62 @@ function initAuthEvents() {
 
 function setAuthMode(mode) {
   authMode = mode;
-  if (authErrorMsg) authErrorMsg.style.display = 'none';
+  const errorMsg = document.getElementById('authErrorMsg');
+  const tabLogin = document.getElementById('authTabLogin');
+  const tabRegister = document.getElementById('authTabRegister');
+  const nameGroup = document.getElementById('authNameGroup');
+  const modalTitle = document.getElementById('authModalTitle');
+  const modalSub = document.getElementById('authModalSubtitle');
+  const submitBtn = document.getElementById('authSubmitBtn');
+
+  if (errorMsg) errorMsg.style.display = 'none';
 
   if (mode === 'login') {
-    if (authTabLogin) authTabLogin.classList.add('active');
-    if (authTabRegister) authTabRegister.classList.remove('active');
-    if (authNameGroup) authNameGroup.style.display = 'none';
-    if (authModalTitle) authModalTitle.textContent = 'Welcome Back';
-    if (authModalSubtitle) authModalSubtitle.textContent = 'Sign in to access your Neon PostgreSQL workspace';
-    if (authSubmitBtn) authSubmitBtn.innerHTML = '<span>🚀</span> Sign In';
+    if (tabLogin) tabLogin.classList.add('active');
+    if (tabRegister) tabRegister.classList.remove('active');
+    if (nameGroup) nameGroup.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = 'Welcome Back';
+    if (modalSub) modalSub.textContent = 'Sign in to access your Neon PostgreSQL workspace';
+    if (submitBtn) submitBtn.innerHTML = '<span>🚀</span> Sign In';
   } else {
-    if (authTabRegister) authTabRegister.classList.add('active');
-    if (authTabLogin) authTabLogin.classList.remove('active');
-    if (authNameGroup) authNameGroup.style.display = 'flex';
-    if (authModalTitle) authModalTitle.textContent = 'Create Master Account';
-    if (authModalSubtitle) authModalSubtitle.textContent = 'Get your personal cloud PostgreSQL workspace';
-    if (authSubmitBtn) authSubmitBtn.innerHTML = '<span>✨</span> Create Account';
+    if (tabRegister) tabRegister.classList.add('active');
+    if (tabLogin) tabLogin.classList.remove('active');
+    if (nameGroup) nameGroup.style.display = 'flex';
+    if (modalTitle) modalTitle.textContent = 'Create Master Account';
+    if (modalSub) modalSub.textContent = 'Get your personal cloud PostgreSQL workspace';
+    if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Create Account';
   }
 }
 
 function openAuthModal(mode = 'login') {
   setAuthMode(mode);
-  if (authModalBackdrop) {
-    authModalBackdrop.hidden = false;
-    authModalBackdrop.removeAttribute('hidden');
-    authModalBackdrop.style.setProperty('display', 'flex', 'important');
+  const backdrop = document.getElementById('authModalBackdrop');
+  const emailInput = document.getElementById('authEmailInput');
+  if (backdrop) {
+    backdrop.hidden = false;
+    backdrop.removeAttribute('hidden');
+    backdrop.style.setProperty('display', 'flex', 'important');
   }
-  if (authEmailInput) {
-    setTimeout(() => authEmailInput.focus(), 100);
+  if (emailInput) {
+    setTimeout(() => emailInput.focus(), 100);
   }
 }
 
 function closeAuthModal() {
-  if (authModalBackdrop) {
-    authModalBackdrop.hidden = true;
-    authModalBackdrop.setAttribute('hidden', '');
-    authModalBackdrop.style.setProperty('display', 'none', 'important');
+  const backdrop = document.getElementById('authModalBackdrop');
+  const errorMsg = document.getElementById('authErrorMsg');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+    backdrop.style.setProperty('display', 'none', 'important');
   }
-  if (authErrorMsg) authErrorMsg.style.display = 'none';
+  if (errorMsg) errorMsg.style.display = 'none';
 }
+
+// Expose globally so inline onclick always succeeds immediately
+window.openAuthModal = openAuthModal;
+window.closeAuthModal = closeAuthModal;
+window.setAuthMode = setAuthMode;
 
 async function handleAuthSubmit(e) {
   e.preventDefault();
