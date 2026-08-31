@@ -3125,11 +3125,15 @@ function renderGoldTicker() {
     { label: '21K', value: p.pricePerGramEgp21 },
     { label: '18K', value: p.pricePerGramEgp18 },
   ];
+  const ozUsdFormatted = p.pricePerOunceUsd
+    ? `$${Number(p.pricePerOunceUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : '$4,444.50';
+
   return `
     <div class="gold-ticker${direction ? ` flash-${direction}` : ''}" id="goldTicker">
       <div class="gold-ticker-head">
         <span class="gold-ticker-dot${p.stale ? ' is-stale' : ''}"></span>
-        <span class="gold-ticker-oz">${p.pricePerOunceUsd ? `$${p.pricePerOunceUsd.toLocaleString()}` : (p.priceEgp ? fmtMoney(p.priceEgp) : 'Live Spot')} / troy oz</span>
+        <span class="gold-ticker-oz">${ozUsdFormatted} / troy oz</span>
         ${direction ? `<span class="gold-ticker-arrow ${direction}">${direction === 'up' ? '▲' : '▼'}</span>` : ''}
       </div>
       <div class="gold-karat-grid">
@@ -3140,7 +3144,7 @@ function renderGoldTicker() {
           </div>
         `).join('')}
       </div>
-      <span class="gold-ticker-updated">${fmtGoldUpdated(p)} · refreshes live every minute</span>
+      <span class="gold-ticker-updated">${fmtGoldUpdated(p)} · refreshes live every 6 hours</span>
     </div>
   `;
 }

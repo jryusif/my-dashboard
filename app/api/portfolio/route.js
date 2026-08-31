@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser, jsonError } from '@/lib/auth.js';
 import prisma from '@/lib/prisma.js';
+import { getLiveGoldPrice } from '@/lib/gold.js';
 
 async function resolveUserId(req) {
   const auth = getAuthUser(req);
@@ -26,39 +27,28 @@ export async function GET(req) {
     });
   }
 
-  const pricePerOunceUsd = 2750.50;
-  const pricePerGramUsd24 = 88.43;
-  const usdToEgp = 50.35;
-  const pricePerGramEgp24 = Math.round(pricePerGramUsd24 * usdToEgp);
-  const pricePerGramEgp21 = Math.round(pricePerGramEgp24 * (21 / 24));
-  const pricePerGramEgp18 = Math.round(pricePerGramEgp24 * (18 / 24));
-  const priceEgp = Math.round(pricePerOunceUsd * usdToEgp);
-
-  const liveGoldPrice = {
-    pricePerOunceUsd,
-    pricePerGramUsd24,
-    pricePerGramEgp24,
-    pricePerGramEgp21,
-    pricePerGramEgp18,
-    priceEgp,
-    updatedAt: new Date().toISOString(),
-    stale: false
-  };
+  const liveGoldPrice = await getLiveGoldPrice();
 
   const holdings = [
-    ...assets.map(a => ({
-      id: a.id,
-      name: a.name,
-      assetType: a.type || 'Other Assets',
-      status: a.status || 'Owned',
-      quantity: a.quantity,
-      unit: a.unit || 'units',
-      purchasePrice: a.purchasePrice || 0,
-      liveValue: a.purchasePrice || (a.quantity * 100),
-      date: a.purchaseDate,
-      notes: a.notes,
-      pnl: { isGain: true, diff: 0, pct: 0 }
-    })),
+    ...assets.map(a => {
+      const cost = a.purchasePrice || 0;
+      const liveVal = a.purchasePrice || (a.quantity * 100);
+      const diff = liveVal - cost;
+      const pct = cost > 0 ? (diff / cost) * 100 : 0;
+      return {
+        id: a.id,
+        name: a.name,
+        assetType: a.type || 'Other Assets',
+        status: a.status || 'Owned',
+        quantity: a.quantity,
+        unit: a.unit || 'units',
+        purchasePrice: cost,
+        liveValue: Math.round(liveVal),
+        date: a.purchaseDate,
+        notes: a.notes,
+        pnl: { isGain: diff >= 0, diff: Math.abs(Math.round(diff)), pct: Math.abs(Math.round(pct * 10) / 10) }
+      };
+    }),
     ...goldLots.map(g => {
       const karatRatio = (g.karat === '21k' ? 21/24 : (g.karat === '18k' ? 18/24 : 1));
       const liveVal = g.grams * liveGoldPrice.pricePerGramEgp24 * karatRatio;

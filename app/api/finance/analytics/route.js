@@ -24,12 +24,16 @@ export async function GET(req) {
     const incomeTx = transactions.filter(t => t.type === 'income');
     const expenseTx = transactions.filter(t => t.type === 'expense');
 
-    const totalIncome = incomeTx.reduce((sum, t) => sum + t.amount, 0) || 5000;
-    const totalExpenses = expenseTx.reduce((sum, t) => sum + t.amount, 0) || 1200;
+    const totalIncome = incomeTx.reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenses = expenseTx.reduce((sum, t) => sum + t.amount, 0);
     const netSavings = totalIncome - totalExpenses;
-    const savingsRatePct = totalIncome > 0 ? Math.max(0, Math.round((netSavings / totalIncome) * 100)) : 40;
+    const savingsRatePct = totalIncome > 0 ? Math.max(0, Math.round((netSavings / totalIncome) * 100)) : 0;
 
     const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonthIdx = now.getMonth();
+
+    // Compute Saturday-aligned current week
     const dayOfWeek = now.getDay();
     const diffFromSaturday = (dayOfWeek + 1) % 7;
     const currentSat = new Date(now);
@@ -47,16 +51,13 @@ export async function GET(req) {
       const dayIncome = incomeTx.filter(t => t.date === dateStr).reduce((s, t) => s + t.amount, 0);
       const dayExpense = expenseTx.filter(t => t.date === dateStr).reduce((s, t) => s + t.amount, 0);
 
-      const inc = dayIncome > 0 ? dayIncome : (i === 0 ? 3500 : (i === 2 ? 1500 : 0));
-      const exp = dayExpense > 0 ? dayExpense : (i === 1 ? 400 : (i === 3 ? 300 : (i === 5 ? 500 : 0)));
-
       weekDays.push({
         dayLabel: dayLabels[i],
         dayName: fullDayNames[i],
         date: dateStr,
-        income: inc,
-        expenses: exp,
-        net: inc - exp
+        income: dayIncome,
+        expenses: dayExpense,
+        net: dayIncome - dayExpense
       });
     }
 
@@ -68,9 +69,10 @@ export async function GET(req) {
     const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const mInc = Math.floor(4500 + Math.random() * 2000);
-      const mExp = Math.floor(1200 + Math.random() * 600);
+      const d = new Date(currentYear, currentMonthIdx - i, 1);
+      const mPrefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const mInc = incomeTx.filter(t => t.date && t.date.startsWith(mPrefix)).reduce((s, t) => s + t.amount, 0);
+      const mExp = expenseTx.filter(t => t.date && t.date.startsWith(mPrefix)).reduce((s, t) => s + t.amount, 0);
       const mNet = mInc - mExp;
       last6Months.push({
         label: shortMonthNames[d.getMonth()],
@@ -78,16 +80,16 @@ export async function GET(req) {
         income: mInc,
         expenses: mExp,
         net: mNet,
-        savingsRatePct: Math.round((mNet / mInc) * 100)
+        savingsRatePct: mInc > 0 ? Math.round((mNet / mInc) * 100) : 0
       });
     }
 
     let runningSavings = 0;
     const currentYearMonths = shortMonthNames.map((shortName, idx) => {
-      const isPastOrCurrent = idx <= now.getMonth();
-      const inc = isPastOrCurrent ? Math.floor(5000 + Math.random() * 1500) : 0;
-      const exp = isPastOrCurrent ? Math.floor(1300 + Math.random() * 400) : 0;
-      const net = isPastOrCurrent ? inc - exp : 0;
+      const mPrefix = `${currentYear}-${String(idx + 1).padStart(2, '0')}`;
+      const inc = incomeTx.filter(t => t.date && t.date.startsWith(mPrefix)).reduce((s, t) => s + t.amount, 0);
+      const exp = expenseTx.filter(t => t.date && t.date.startsWith(mPrefix)).reduce((s, t) => s + t.amount, 0);
+      const net = inc - exp;
       runningSavings += net;
       return {
         shortName,
@@ -100,10 +102,10 @@ export async function GET(req) {
     });
 
     const last4Weeks = [
-      { label: 'Week 1', dateRange: 'Aug 8 - Aug 14', income: 4800, expenses: 1100, net: 3700 },
-      { label: 'Week 2', dateRange: 'Aug 15 - Aug 21', income: 5200, expenses: 1400, net: 3800 },
-      { label: 'Week 3', dateRange: 'Aug 22 - Aug 28', income: 4900, expenses: 1050, net: 3850 },
-      { label: 'Week 4', dateRange: 'Aug 29 - Sep 4', income: currentWeekIncome, expenses: currentWeekExpenses, net: currentWeekNet }
+      { label: 'Week 1', dateRange: 'Past Week 3', income: 0, expenses: 0, net: 0 },
+      { label: 'Week 2', dateRange: 'Past Week 2', income: 0, expenses: 0, net: 0 },
+      { label: 'Week 3', dateRange: 'Past Week 1', income: 0, expenses: 0, net: 0 },
+      { label: 'Week 4', dateRange: 'Current Week', income: currentWeekIncome, expenses: currentWeekExpenses, net: currentWeekNet }
     ];
 
     const spendingDayDist = {};
@@ -114,23 +116,29 @@ export async function GET(req) {
       };
     });
 
-    const incomeBySource = [
-      { name: 'Clinical Practice', total: 3500, pct: 70 },
-      { name: 'US Stocks Trading', total: 1500, pct: 30 }
-    ];
+    // Real Income by Source / Category
+    const incomeCategories = {};
+    incomeTx.forEach(t => {
+      const cat = t.category || 'General Income';
+      incomeCategories[cat] = (incomeCategories[cat] || 0) + t.amount;
+    });
+    const incomeBySource = Object.keys(incomeCategories).map(cat => ({
+      name: cat,
+      total: incomeCategories[cat],
+      pct: totalIncome > 0 ? Math.round((incomeCategories[cat] / totalIncome) * 100) : 0
+    }));
 
-    const expensesByCategory = [
-      { name: 'Clinic & Dental Materials', total: 600, pct: 50 },
-      { name: 'Living & Food', total: 400, pct: 33 },
-      { name: 'Gym & Nutrition', total: 200, pct: 17 }
-    ];
-
-    const streamsMatrix = [
-      { key: 'Clinic', title: 'Clinical Practice', icon: '🦷', color: '#00f2fe', income: 3500, expenses: 600, net: 2900, savingsRatePct: 83 },
-      { key: 'Trading', title: 'US Stocks Trading', icon: '📈', color: '#eab308', income: 1500, expenses: 150, net: 1350, savingsRatePct: 90 },
-      { key: 'Living', title: 'Living & Lifestyle', icon: '🏠', color: '#38bdf8', income: 0, expenses: 400, net: -400, savingsRatePct: 0 },
-      { key: 'Training', title: 'Fitness & Health', icon: '🏋️', color: '#22c55e', income: 0, expenses: 200, net: -200, savingsRatePct: 0 }
-    ];
+    // Real Expenses by Category
+    const expenseCategories = {};
+    expenseTx.forEach(t => {
+      const cat = t.category || 'General Expense';
+      expenseCategories[cat] = (expenseCategories[cat] || 0) + t.amount;
+    });
+    const expensesByCategory = Object.keys(expenseCategories).map(cat => ({
+      name: cat,
+      total: expenseCategories[cat],
+      pct: totalExpenses > 0 ? Math.round((expenseCategories[cat] / totalExpenses) * 100) : 0
+    }));
 
     return NextResponse.json({
       overview: {
@@ -150,20 +158,23 @@ export async function GET(req) {
           last6Months
         },
         yearly: {
-          year: now.getFullYear(),
+          year: currentYear,
           months: currentYearMonths
         }
       },
       breakdowns: {
-        incomeBySource,
-        expensesByCategory,
+        incomeBySource: incomeBySource.length > 0 ? incomeBySource : [{ name: 'Clinical Revenue', total: totalIncome, pct: 100 }],
+        expensesByCategory: expensesByCategory.length > 0 ? expensesByCategory : [{ name: 'Practice & Living', total: totalExpenses, pct: 100 }],
         spendingDayDist
       },
-      streamsMatrix,
+      streamsMatrix: [
+        { key: 'Clinic', title: 'Clinical Practice', icon: '🦷', color: '#00f2fe', income: incomeCategories['Clinical Practice'] || totalIncome, expenses: expenseCategories['Dental Materials'] || 0, net: (incomeCategories['Clinical Practice'] || totalIncome) - (expenseCategories['Dental Materials'] || 0), savingsRatePct: 90 },
+        { key: 'Trading', title: 'US Stocks Trading', icon: '📈', color: '#eab308', income: incomeCategories['US Stocks Trading'] || 0, expenses: 0, net: incomeCategories['US Stocks Trading'] || 0, savingsRatePct: 100 }
+      ],
       transactions
     });
   } catch (err) {
-    console.error('Error fetching finance analytics:', err);
+    console.error('Error fetching real finance analytics:', err);
     return NextResponse.json({ error: 'Could not fetch finance analytics' }, { status: 500 });
   }
 }

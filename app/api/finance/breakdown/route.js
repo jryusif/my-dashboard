@@ -11,46 +11,62 @@ async function resolveUserId(req) {
 
 export async function GET(req) {
   const userId = await resolveUserId(req);
+  const { searchParams } = new URL(req.url);
+  const month = searchParams.get('month');
+
   let transactions = [];
   if (userId) {
     transactions = await prisma.financialTransaction.findMany({
-      where: { userId }
+      where: { userId },
+      orderBy: { date: 'desc' }
     });
   }
 
-  const incomeTx = transactions.filter(t => t.type === 'income');
-  const expenseTx = transactions.filter(t => t.type === 'expense');
+  // Filter by month if provided
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  let monthPrefix = '';
+  if (month) {
+    const parts = month.split(' ');
+    if (parts.length === 2) {
+      const mIdx = monthNames.indexOf(parts[0]);
+      if (mIdx !== -1) monthPrefix = `${parts[1]}-${String(mIdx + 1).padStart(2, '0')}`;
+    }
+  }
 
-  const incomeSum = incomeTx.reduce((acc, t) => acc + t.amount, 0) || 5000;
-  const expenseSum = expenseTx.reduce((acc, t) => acc + t.amount, 0) || 1200;
+  const filteredTx = monthPrefix
+    ? transactions.filter(t => t.date && t.date.startsWith(monthPrefix))
+    : transactions;
+
+  const incomeTx = filteredTx.filter(t => t.type === 'income');
+  const expenseTx = filteredTx.filter(t => t.type === 'expense');
+
+  const incomeSum = incomeTx.reduce((acc, t) => acc + t.amount, 0);
+  const expenseSum = expenseTx.reduce((acc, t) => acc + t.amount, 0);
 
   const incomeMap = {};
   for (const t of incomeTx) {
-    incomeMap[t.category] = (incomeMap[t.category] || 0) + t.amount;
-  }
-  if (Object.keys(incomeMap).length === 0) {
-    incomeMap['Clinical Practice'] = 3500;
-    incomeMap['US Stocks Trading'] = 1500;
+    const cat = t.category || 'General Income';
+    incomeMap[cat] = (incomeMap[cat] || 0) + t.amount;
   }
 
   const expenseMap = {};
   for (const t of expenseTx) {
-    expenseMap[t.category] = (expenseMap[t.category] || 0) + t.amount;
-  }
-  if (Object.keys(expenseMap).length === 0) {
-    expenseMap['Clinic & Dental Materials'] = 600;
-    expenseMap['Living & Food'] = 400;
-    expenseMap['Gym & Nutrition'] = 200;
+    const cat = t.category || 'General Expense';
+    expenseMap[cat] = (expenseMap[cat] || 0) + t.amount;
   }
 
-  const incomeBySource = Object.entries(incomeMap).map(([label, amount]) => ({
-    label,
+  const incomeBySource = Object.entries(incomeMap).map(([catName, amount]) => ({
+    name: catName,
+    label: catName,
+    total: amount,
     amount,
     pct: incomeSum > 0 ? Math.round((amount / incomeSum) * 100) : 0
   }));
 
-  const expensesByCategory = Object.entries(expenseMap).map(([label, amount]) => ({
-    label,
+  const expensesByCategory = Object.entries(expenseMap).map(([catName, amount]) => ({
+    name: catName,
+    label: catName,
+    total: amount,
     amount,
     pct: expenseSum > 0 ? Math.round((amount / expenseSum) * 100) : 0
   }));
