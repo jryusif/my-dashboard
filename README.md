@@ -1,81 +1,94 @@
-# My Personal Dashboard
+# 🚀 My Personal Dashboard
 
-A small, modern web app that sits on top of your Notion **Main Database** as
-a proper frontend. Notion stays your single source of truth; this app is
-just a nicer way to look at it and act on it.
+A modern, high-performance **Personal Operating System** built with **Next.js (App Router)**, **Prisma ORM**, and a remote **Neon PostgreSQL** serverless database. Deployed globally on **Vercel**.
 
 ```
-Browser  →  This server (Express)  →  Notion API  →  Main Database
+Client (Browser)  ⇄  Next.js 16 App Router (Vercel Edge/Serverless)  ⇄  Prisma ORM  ⇄  Neon Serverless PostgreSQL
 ```
 
-Your Notion secret only ever lives in the server's environment variables.
-It is never sent to the browser.
+---
 
-## 1. Get your Notion credentials
+## 🌟 Key Pillars & Features
 
-1. Go to https://www.notion.so/my-integrations → **New integration** →
-   give it a name → copy the **Internal Integration Secret**. That's your
-   `NOTION_TOKEN`.
-2. Open "Main Database" in Notion → **···** menu (top right) → **Connections**
-   → connect the integration you just created. Without this step the API
-   calls will fail with a 404, not a permissions error, which is a common
-   point of confusion.
-3. Your `NOTION_DATABASE_ID` for this workspace's Main Database is:
-   `8eb75a8417ef48e09a46639bf7ae6c38`
+- **⚡ Cloud PostgreSQL Database**: Multi-tenant database schema managed via Prisma ORM on [Neon.tech](https://neon.tech), with connection pooling for ultra-fast serverless queries.
+- **🔐 JWT Authentication & Tenant Isolation**: Secure user accounts with bcrypt password hashing and row-level tenant data isolation.
+- **📋 Daily & Weekly Task Hub**: Dynamic Saturday-to-Friday planner with categories, priority tags, and time-block scheduling.
+- **🦷 Dental Clinical Portfolio**: Case documentation studio with before/after photo sliders, procedure step trackers, material lists, and showcase patient cards.
+- **🏋️ Workout Split & PR Tracker**: Complete push/pull/legs exercise library, set/rep targets, live session logger, and all-time Personal Record (PR) progression charts.
+- **📈 Life Master Roadmap**: Strategic phase milestones across Dental Career, US Stocks Trading, Studies, and Wealth Creation pillars.
+- **💰 Financial Command Center & Gold Vault**: Live Net Worth calculation, income/expense transaction ledger, monthly savings budget pace, and real-time 24k/21k/18k gold bullion valuations.
+- **🔁 Weekly Recurring Templates**: Automated weekly schedule generators for recurring clinic shifts, study blocks, and trading sessions.
 
-## 2. Run it locally
+---
 
+## 🛠️ Tech Stack & Architecture
+
+- **Frontend**: Vanilla ES6+ JavaScript, CSS3 Glassmorphism design system, Chart.js progression engines.
+- **Framework**: Next.js 16.3.4 (App Router & Turbopack)
+- **Database**: PostgreSQL 18.6 hosted on [Neon](https://neon.tech)
+- **ORM**: Prisma Client v5.22
+- **Authentication**: JWT (JSON Web Tokens) with Bearer token header interceptor
+- **Hosting & CI/CD**: Vercel Git-Integrated Serverless Deployments
+
+---
+
+## 🗄️ Database Tables (Prisma Schema)
+
+| Table Name | Description |
+|---|---|
+| `users` | User accounts with hashed passwords and profile metadata |
+| `tasks` | Daily tasks, categories, segments, priority, and completion status |
+| `routines` | Daily habits (Morning / Evening routines) |
+| `routine_logs` | Daily habit completion logs |
+| `dental_cases` | Clinical dental case documentation, materials, and photos |
+| `workout_splits` | Weekly workout day schedules (Saturday → Friday) |
+| `workout_exercises` | Exercise registry with target sets and reps |
+| `exercise_weight_logs` | Workout logs with weight (kg/lbs) and PR indicators |
+| `roadmap_milestones` | Life goals, strategic phases, and interactive key results |
+| `financial_transactions` | Income and expense transaction ledger |
+| `financial_goals` | Net worth and savings milestones |
+| `financial_settings` | Currency, monthly budget, and savings target percentage |
+| `assets` & `gold_lots` | Holdings, investments, and physical gold bullion lots |
+
+---
+
+## ⚙️ Local Development
+
+### 1. Clone & Install
 ```bash
-cp .env.example .env
-# edit .env and paste in your real NOTION_TOKEN
-
+git clone https://github.com/jryusif/my-dashboard.git
+cd my-dashboard
 npm install
-npm start
 ```
 
-Open http://localhost:3000 — you should see today's real tasks.
+### 2. Configure Environment Variables
+Create a `.env` file in the project root:
+```env
+DATABASE_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-still-grass-b1plnpi7-pooler.c-5.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-still-grass-b1plnpi7.c-5.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+JWT_SECRET="your-super-secret-jwt-key"
+NODE_ENV="development"
+```
 
-## 3. Deploy it for free
+### 3. Run Database Migrations
+```bash
+npx prisma migrate deploy
+```
 
-Any Node host works. Two straightforward free-tier options:
+### 4. Start Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-**Render**
-1. Push this folder to a GitHub repo (`.env` is already git-ignored).
-2. Render → New → Web Service → connect the repo.
-3. Build command: `npm install`. Start command: `npm start`.
-4. Add `NOTION_TOKEN` and `NOTION_DATABASE_ID` under Environment.
+---
 
-**Railway**
-1. Same idea — new project from your GitHub repo.
-2. Set the same two environment variables in the project's Variables tab.
-3. Railway detects `npm start` automatically.
+## 🚀 Vercel Deployment
 
-Either way, never paste your token into the frontend, into a public repo,
-or into a client-side `.js` file — only into the host's environment
-variable settings.
-
-## How each part maps to your original spec
-
-- **Dynamic "Today"** — the server computes today's date itself
-  (`new Date()`), never hardcoded, and asks Notion for tasks whose `Due
-  Date` equals that date.
-- **Empty state** — if Notion returns zero tasks, the UI shows "Your day is
-  clear" instead of an empty list.
-- **Categories only shown when populated** — the frontend groups tasks by
-  `Category` and simply never renders a group with nothing in it.
-- **Real checkboxes** — checking a task sends `PATCH /api/tasks/:id`, which
-  updates the actual page's `Completed` and `Status` properties together in
-  Main Database, so they can never fall out of sync with each other.
-- **Add Task** — the modal's Category → Segment dropdown is populated live
-  from your database's actual select options (via `GET /api/meta`), so if
-  you add a new segment in Notion later, the form picks it up automatically
-  — nothing to edit in the code.
-- **One database, no duplicates** — every route reads and writes the same
-  `NOTION_DATABASE_ID`. Nothing in this app can create a second database.
-
-## What's next
-
-The Weekly Planner (Saturday → Friday, same database, filtered by whichever
-day is selected) is a natural phase 2 on top of this same server — it would
-reuse `GET /api/tasks?date=YYYY-MM-DD`, which already supports any date, not
-just today.
+1. Import this repository into [Vercel](https://vercel.com).
+2. Configure the 4 Environment Variables in your Vercel Project Settings:
+   - `DATABASE_URL`: Your pooled Neon connection string.
+   - `DIRECT_URL`: Your unpooled direct Neon connection string.
+   - `JWT_SECRET`: Your secret encryption key.
+   - `NODE_ENV`: `production`
+3. Click **Deploy**. Vercel will automatically build the Next.js App Router bundle and Prisma client.
