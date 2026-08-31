@@ -994,7 +994,7 @@ async function loadCategoryPage(category) {
       <div class="empty-state">
         <span class="glyph">⚠️</span>
         <h2>Could not load</h2>
-        <p>Failed to load ${escapeHtml(category)} tasks from Notion. Please try again.</p>
+        <p>Failed to load ${escapeHtml(category)} tasks. Please sign in or try again.</p>
       </div>`;
   }
 }
@@ -1288,7 +1288,7 @@ if (weeklyTemplateForm) {
 let workoutProgramData = null;
 let selectedWorkoutDayId = null;
 let workoutViewTab = 'program'; // 'program' | 'tasks'
-let workoutNotionTasks = [];
+let workoutDbTasks = [];
 
 async function loadWorkoutsPage() {
   categoryPageIcon.textContent = '🏋️';
@@ -1303,7 +1303,7 @@ async function loadWorkoutsPage() {
 
     if (!progRes.ok) throw new Error('Could not load workout program');
     workoutProgramData = await progRes.json();
-    workoutNotionTasks = tasksRes.ok ? (await tasksRes.json()).tasks : [];
+    workoutDbTasks = tasksRes.ok ? (await tasksRes.json()).tasks : [];
 
     if (!selectedWorkoutDayId) {
       selectedWorkoutDayId = workoutProgramData.todayDayId || 'saturday';
@@ -1348,7 +1348,7 @@ function renderWorkoutsView() {
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
       <div class="portfolio-filter-bar" style="margin:0;">
         <button type="button" class="portfolio-filter-btn ${workoutViewTab === 'program' ? 'is-active' : ''}" id="wTabProgram">🏋️ Training Program</button>
-        <button type="button" class="portfolio-filter-btn ${workoutViewTab === 'tasks' ? 'is-active' : ''}" id="wTabTasks">📋 Tasks &amp; Reminders (${workoutNotionTasks.length})</button>
+        <button type="button" class="portfolio-filter-btn ${workoutViewTab === 'tasks' ? 'is-active' : ''}" id="wTabTasks">📋 Tasks &amp; Reminders (${workoutDbTasks.length})</button>
       </div>
 
       <div style="display:flex;gap:8px;">
@@ -1673,7 +1673,7 @@ function renderWorkoutTasksView(container) {
 
   // Render tasks board
   const catBoard = document.getElementById('categoryBoard');
-  if (workoutNotionTasks.length === 0) {
+  if (workoutDbTasks.length === 0) {
     catBoard.innerHTML = `
       <div class="empty-state">
         <span class="glyph">📋</span>
@@ -1681,7 +1681,7 @@ function renderWorkoutTasksView(container) {
         <p>Add workout reminders or schedule tasks above.</p>
       </div>`;
   } else {
-    const byDate = groupBy(workoutNotionTasks, t => t.dueDate || 'No date');
+    const byDate = groupBy(workoutDbTasks, t => t.dueDate || 'No date');
     const sortedDates = Object.keys(byDate).sort((a, b) => {
       if (a === 'No date') return 1;
       if (b === 'No date') return -1;
@@ -2603,7 +2603,7 @@ async function loadFinancePage() {
 
     renderFinancePage(overview, incomeItems, expenseItems, breakdown);
   } catch {
-    financeContent.innerHTML = '<div class="finance-error">Could not load finances from Notion — please try again.</div>';
+    financeContent.innerHTML = '<div class="finance-error">Could not load finances — please sign in or try again.</div>';
   }
 }
 
@@ -2723,7 +2723,7 @@ function wireDateQuickButtons(scopeEl) {
 }
 
 function renderChoiceRow(options, selected, className) {
-  if (!options.length) return `<p class="finance-empty" style="padding:0;">None set up in Notion yet.</p>`;
+  if (!options.length) return `<p class="finance-empty" style="padding:0;">None set up yet.</p>`;
   return options.map(opt => `
     <button type="button" class="${className}${opt === selected ? ' is-selected' : ''}" data-value="${escapeHtml(opt)}">${escapeHtml(opt)}</button>
   `).join('');
@@ -2813,7 +2813,7 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
       ${allocTile('Flexible Cash',budget.allocations.flexible)}
     </div>
     ${renderPaceCard(budget)}
-  ` : `<p class="finance-empty">No Monthly Budget row for ${escapeHtml(currentFinanceMonth)} yet — add one in Notion.</p>`;
+  ` : `<p class="finance-empty">No Monthly Budget row for ${escapeHtml(currentFinanceMonth)} yet.</p>`;
 
   const goalsHtml = goals && goals.length
     ? `<div class="goal-list">${goals.map(renderGoalCard).join('')}</div>`
@@ -3168,7 +3168,7 @@ async function loadPortfolioPage() {
     renderPortfolioPage();
   } catch (err) {
     console.error(err);
-    assetsContent.innerHTML = '<div class="finance-error">Could not load your portfolio from Notion — please try again.</div>';
+    assetsContent.innerHTML = '<div class="finance-error">Could not load your portfolio — please sign in or try again.</div>';
   }
 }
 
