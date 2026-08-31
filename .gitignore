@@ -31,3 +31,4 @@ logs
 # Prisma SQLite fallback/local databases if any
 *.db
 *.db-journal
+.neon
