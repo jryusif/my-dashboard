@@ -3129,7 +3129,7 @@ function renderGoldTicker() {
     <div class="gold-ticker${direction ? ` flash-${direction}` : ''}" id="goldTicker">
       <div class="gold-ticker-head">
         <span class="gold-ticker-dot${p.stale ? ' is-stale' : ''}"></span>
-        <span class="gold-ticker-oz">${fmtMoney(p.priceEgp)} / troy oz</span>
+        <span class="gold-ticker-oz">${p.pricePerOunceUsd ? `$${p.pricePerOunceUsd.toLocaleString()}` : (p.priceEgp ? fmtMoney(p.priceEgp) : 'Live Spot')} / troy oz</span>
         ${direction ? `<span class="gold-ticker-arrow ${direction}">${direction === 'up' ? '▲' : '▼'}</span>` : ''}
       </div>
       <div class="gold-karat-grid">
@@ -4403,12 +4403,16 @@ function renderTheaterCase(c) {
   if (btnTheaterNextCase) btnTheaterNextCase.disabled = (currentTheaterCaseIndex === theaterPlaylist.length - 1);
 
   // Setup presentation comparison slider
-  const beforeUrl = c.beforeAfter?.beforeImageUrl || (c.steps && c.steps[0]?.imageUrl) || '';
-  const afterUrl  = c.beforeAfter?.afterImageUrl || (c.steps && c.steps[c.steps.length - 1]?.imageUrl) || '';
+  const beforeUrl = c.beforeAfter?.beforeImageUrl || (c.steps && c.steps[0]?.imageUrl) || (c.photos && c.photos[0]?.url) || '';
+  const afterUrl  = c.beforeAfter?.afterImageUrl || (c.steps && c.steps[c.steps.length - 1]?.imageUrl) || (c.photos && c.photos[c.photos.length - 1]?.url) || '';
 
   if (beforeUrl && afterUrl) {
     theaterBaBeforeImg.src = beforeUrl;
     theaterBaAfterImg.src = afterUrl;
+    setupComparisonSlider(theaterBaSlider, theaterBaBeforeWrap, theaterBaHandle, 50);
+  } else {
+    theaterBaBeforeImg.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="%230b0e14" width="600" height="400"/><text fill="%2394a3b8" font-family="sans-serif" font-size="18" font-weight="bold" x="50%" y="45%" text-anchor="middle">🦷 No Initial Case Photos</text><text fill="%2364748b" font-family="sans-serif" font-size="14" x="50%" y="55%" text-anchor="middle">Upload before/after photos in case editor</text></svg>';
+    theaterBaAfterImg.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="%230f172a" width="600" height="400"/><text fill="%2338bdf8" font-family="sans-serif" font-size="18" font-weight="bold" x="50%" y="45%" text-anchor="middle">✨ Treatment Outcome</text><text fill="%2394a3b8" font-family="sans-serif" font-size="14" x="50%" y="55%" text-anchor="middle">Post-op photos will appear here</text></svg>';
     setupComparisonSlider(theaterBaSlider, theaterBaBeforeWrap, theaterBaHandle, 50);
   }
 
@@ -6059,6 +6063,8 @@ function switchFinanceView(viewMode) {
 
   if (viewMode === 'analytics') {
     loadFinanceAnalytics();
+  } else {
+    loadFinancePage();
   }
 }
 

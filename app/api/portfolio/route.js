@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server';
 import { getAuthUser, jsonError } from '@/lib/auth.js';
 import prisma from '@/lib/prisma.js';
 
-export async function GET(req) {
-  const auth = await getAuthUser(req);
-  let userId = auth.authenticated ? auth.userId : null;
+async function resolveUserId(req) {
+  const auth = getAuthUser(req);
+  if (auth && auth.authenticated && auth.userId) return auth.userId;
+  const user = await prisma.user.findFirst({ where: { email: 'jryusif@dashboard.com' } });
+  return user ? user.id : null;
+}
 
-  if (!userId) {
-    const fallbackUser = await prisma.user.findFirst({ where: { email: 'jryusif@dashboard.com' } });
-    if (fallbackUser) userId = fallbackUser.id;
-  }
+export async function GET(req) {
+  const userId = await resolveUserId(req);
 
   let assets = [];
   let goldLots = [];
@@ -25,12 +26,21 @@ export async function GET(req) {
     });
   }
 
+  const pricePerOunceUsd = 2750.50;
+  const pricePerGramUsd24 = 88.43;
+  const usdToEgp = 50.35;
+  const pricePerGramEgp24 = Math.round(pricePerGramUsd24 * usdToEgp);
+  const pricePerGramEgp21 = Math.round(pricePerGramEgp24 * (21 / 24));
+  const pricePerGramEgp18 = Math.round(pricePerGramEgp24 * (18 / 24));
+  const priceEgp = Math.round(pricePerOunceUsd * usdToEgp);
+
   const liveGoldPrice = {
-    pricePerOunceUsd: 2750.50,
-    pricePerGramUsd24: 88.43,
-    pricePerGramEgp24: 4360,
-    pricePerGramEgp21: 3815,
-    pricePerGramEgp18: 3270,
+    pricePerOunceUsd,
+    pricePerGramUsd24,
+    pricePerGramEgp24,
+    pricePerGramEgp21,
+    pricePerGramEgp18,
+    priceEgp,
     updatedAt: new Date().toISOString(),
     stale: false
   };
@@ -39,34 +49,34 @@ export async function GET(req) {
     ...assets.map(a => ({
       id: a.id,
       name: a.name,
-      assetType: a.type || 'Investment',
+      assetType: a.type || 'Other Assets',
       status: a.status || 'Owned',
       quantity: a.quantity,
       unit: a.unit || 'units',
       purchasePrice: a.purchasePrice || 0,
-      liveValue: a.purchasePrice || (a.quantity * 88.5),
+      liveValue: a.purchasePrice || (a.quantity * 100),
       date: a.purchaseDate,
       notes: a.notes,
       pnl: { isGain: true, diff: 0, pct: 0 }
     })),
     ...goldLots.map(g => {
-      const liveVal = g.grams24kEquivalent * liveGoldPrice.pricePerGramUsd24;
-      const cost = g.purchasePriceUsd || 0;
+      const karatRatio = (g.karat === '21k' ? 21/24 : (g.karat === '18k' ? 18/24 : 1));
+      const liveVal = g.grams * liveGoldPrice.pricePerGramEgp24 * karatRatio;
+      const cost = g.pricePaid || 0;
       const diff = cost > 0 ? liveVal - cost : 0;
       const pct = cost > 0 ? (diff / cost) * 100 : 0;
       return {
         id: g.id,
-        name: `${g.karat}k Gold Bullion Lot`,
+        name: g.name || `${g.karat.toUpperCase()} Gold Bullion`,
         assetType: 'Gold',
-        karat: `${g.karat}k`,
+        karat: g.karat,
         status: 'Owned',
-        quantity: g.weightGrams,
+        quantity: g.grams,
         unit: 'grams',
         purchasePrice: cost,
-        liveValue: liveVal,
+        liveValue: Math.round(liveVal),
         date: g.date,
-        notes: g.serialNumber ? `Serial: ${g.serialNumber}` : '',
-        pnl: { isGain: diff >= 0, diff: Math.abs(diff), pct: Math.abs(pct) }
+        pnl: { isGain: diff >= 0, diff: Math.abs(Math.round(diff)), pct: Math.abs(Math.round(pct * 10) / 10) }
       };
     })
   ];
@@ -99,7 +109,7 @@ export async function GET(req) {
     summary: {
       totalInvested,
       currentValue,
-      totalPnl: { isGain: totalDiff >= 0, diff: Math.abs(totalDiff), pct: Math.abs(totalPct) },
+      totalPnl: { isGain: totalDiff >= 0, diff: Math.abs(Math.round(totalDiff)), pct: Math.abs(Math.round(totalPct * 10) / 10) },
       goldWeight: {
         totalGrams: totalGoldGrams,
         byKarat
@@ -116,47 +126,65 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  const auth = await getAuthUser(req);
-  let userId = auth.authenticated ? auth.userId : null;
-
-  if (!userId) {
-    const fallbackUser = await prisma.user.findFirst({ where: { email: 'jryusif@dashboard.com' } });
-    if (fallbackUser) userId = fallbackUser.id;
-  }
-
+  const userId = await resolveUserId(req);
   if (!userId) return jsonError('User account not found', 401);
 
-  const { name, assetType, type, quantity, unit, purchasePrice, date, notes, status, karat } = await req.json();
+  const body = await req.json();
+  const { name, assetType, type, quantity, grams, unit, purchasePrice, pricePaid, date, notes, status, karat } = body;
 
-  if (assetType === 'Gold' || type === 'Gold') {
-    const weightGrams = parseFloat(quantity) || 10;
-    const karatNum = parseInt(karat, 10) || 24;
+  const resolvedType = assetType || type || 'Gold';
+  const qty = parseFloat(quantity || grams) || 1;
+  const cost = parseFloat(purchasePrice || pricePaid || 0);
+  const targetDate = date || new Date().toISOString().split('T')[0];
+
+  if (resolvedType === 'Gold') {
+    const karatStr = (karat || '21k').toLowerCase();
     const goldLot = await prisma.goldLot.create({
       data: {
         userId,
-        weightGrams,
-        karat: karatNum,
-        grams24kEquivalent: weightGrams * (karatNum / 24),
-        purchasePriceUsd: purchasePrice ? parseFloat(purchasePrice) : null,
-        date: date || new Date().toISOString().split('T')[0]
+        name: name ? name.trim() : `${karatStr.toUpperCase()} Gold Bullion Lot`,
+        grams: qty,
+        karat: karatStr,
+        pricePaid: cost,
+        date: targetDate
       }
     });
-    return NextResponse.json(goldLot, { status: 201 });
+
+    return NextResponse.json({
+      id: goldLot.id,
+      name: goldLot.name,
+      assetType: 'Gold',
+      karat: goldLot.karat,
+      status: 'Owned',
+      quantity: goldLot.grams,
+      unit: 'grams',
+      purchasePrice: goldLot.pricePaid,
+      date: goldLot.date
+    }, { status: 201 });
   }
 
   const asset = await prisma.asset.create({
     data: {
       userId,
-      name: name || 'New Asset',
-      type: assetType || type || 'Other',
+      name: name ? name.trim() : 'New Investment Asset',
+      type: resolvedType,
       status: status || 'Owned',
-      quantity: parseFloat(quantity) || 1,
+      quantity: qty,
       unit: unit || 'units',
-      purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
-      purchaseDate: date || null,
+      purchasePrice: cost > 0 ? cost : null,
+      purchaseDate: targetDate,
       notes: notes || null
     }
   });
 
-  return NextResponse.json(asset, { status: 201 });
+  return NextResponse.json({
+    id: asset.id,
+    name: asset.name,
+    assetType: asset.type,
+    status: asset.status,
+    quantity: asset.quantity,
+    unit: asset.unit,
+    purchasePrice: asset.purchasePrice,
+    date: asset.purchaseDate
+  }, { status: 201 });
 }

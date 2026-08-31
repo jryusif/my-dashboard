@@ -37,12 +37,12 @@ export async function GET() {
     console.warn('Live gold price fetch warning, using reference rate:', err);
   }
 
-  // 1 Troy Ounce = 31.1034768 Grams
   const gramsPerOunce = 31.1034768;
   const pricePerGramUsd24 = Math.round((pricePerOunceUsd / gramsPerOunce) * 100) / 100;
   const pricePerGramEgp24 = Math.round(pricePerGramUsd24 * usdToEgp);
   const pricePerGramEgp21 = Math.round(pricePerGramEgp24 * (21 / 24));
   const pricePerGramEgp18 = Math.round(pricePerGramEgp24 * (18 / 24));
+  const priceEgp = Math.round(pricePerOunceUsd * usdToEgp);
 
   cachedGoldPrice = {
     pricePerOunceUsd,
@@ -54,6 +54,7 @@ export async function GET() {
     pricePerGram21k: Math.round(pricePerGramUsd24 * (21 / 24) * 100) / 100,
     pricePerGram18k: Math.round(pricePerGramUsd24 * (18 / 24) * 100) / 100,
     pricePerOunce: pricePerOunceUsd,
+    priceEgp,
     usdToEgp,
     updatedAt: new Date().toISOString(),
     stale: false,
