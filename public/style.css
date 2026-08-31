@@ -7676,12 +7676,61 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   transform: scale(1.06);
 }
 
-.auth-modal {
-  max-width: 420px !important;
+/* =====================================================================
+   GLOBAL MODAL BACKDROP & DIALOG SYSTEM
+   ===================================================================== */
+.modal-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.78) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 999999 !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+}
+
+.modal-backdrop[hidden] {
+  display: none !important;
+}
+
+.modal {
+  position: relative !important;
+  background: linear-gradient(145deg, rgba(20, 26, 42, 0.96) 0%, rgba(10, 14, 24, 0.98) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: var(--radius-lg, 16px) !important;
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.85), 0 0 45px rgba(56, 189, 248, 0.2) !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
   padding: 28px !important;
-  background: linear-gradient(145deg, rgba(20, 26, 42, 0.9) 0%, rgba(10, 14, 24, 0.98) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(56, 189, 248, 0.15) !important;
+  box-sizing: border-box !important;
+  animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.auth-modal {
+  max-width: 440px !important;
+  padding: 32px !important;
 }
 
 .auth-modal-header {
