@@ -398,10 +398,12 @@ function showDashboard() {
 // =============================================================================
 
 async function loadTasks() {
-  const res = await fetch('/api/tasks');
+  const todayStr = toISODate(new Date());
+  renderDateLabel(todayStr);
+  const res = await fetch(`/api/tasks?date=${todayStr}`);
   if (!res.ok) return showToast('Could not load today\'s tasks.');
   const { date, tasks: allTasks } = await res.json();
-  renderDateLabel(date);
+  renderDateLabel(date || todayStr);
   const tasks = allTasks.filter(t => t.category !== 'Routine');
   const total = tasks.length;
   const done  = tasks.filter(t => t.completed).length;

@@ -27,10 +27,46 @@ export async function PATCH(req, { params }) {
 
   const { id } = await params;
   const body = await req.json();
-  const updated = await prisma.routine.updateMany({
-    where: { id, userId },
-    data: body
-  });
+  const targetDate = body.date || new Date().toISOString().split('T')[0];
 
-  return successResponse({ success: true, updated });
+  if (body.completed !== undefined) {
+    const existingLog = await prisma.routineLog.findUnique({
+      where: {
+        userId_routineId_date: {
+          userId,
+          routineId: id,
+          date: targetDate
+        }
+      }
+    });
+
+    if (existingLog) {
+      await prisma.routineLog.update({
+        where: { id: existingLog.id },
+        data: { completed: Boolean(body.completed) }
+      });
+    } else {
+      await prisma.routineLog.create({
+        data: {
+          userId,
+          routineId: id,
+          date: targetDate,
+          completed: Boolean(body.completed)
+        }
+      });
+    }
+  }
+
+  const routineUpdate = {};
+  if (body.name !== undefined) routineUpdate.title = body.name;
+  if (body.title !== undefined) routineUpdate.title = body.title;
+
+  if (Object.keys(routineUpdate).length > 0) {
+    await prisma.routine.updateMany({
+      where: { id, userId },
+      data: routineUpdate
+    });
+  }
+
+  return successResponse({ success: true });
 }
