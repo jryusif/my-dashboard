@@ -1,0 +1,513 @@
+{
+  "days": [
+    {
+      "id": "saturday",
+      "dayName": "Saturday",
+      "title": "Chest, Shoulders & Triceps Push Day",
+      "isRestDay": false,
+      "targetMuscles": [
+        "Chest",
+        "Triceps",
+        "Shoulders"
+      ],
+      "exercises": [
+        {
+          "id": "ex_push_bench",
+          "name": "Barbell Bench Press",
+          "muscleGroup": "Chest",
+          "sets": 4,
+          "reps": "8-10",
+          "weight": "90 kg",
+          "restTime": "90s",
+          "notes": "Touch chest gently, drive with legs and lock out elbows smoothly.",
+          "imageUrl": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=rT7DgCr-3pg",
+          "personalRecord": {
+            "weight": 90,
+            "reps": "8",
+            "sets": 4,
+            "date": "2026-08-31",
+            "notes": "New 90kg milestone hit!",
+            "achievedAt": "2026-08-31T19:02:52.072Z"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_1788202972071_166p",
+              "date": "2026-08-31",
+              "weight": 90,
+              "sets": 4,
+              "reps": "8",
+              "notes": "New 90kg milestone hit!",
+              "isPR": true,
+              "createdAt": "2026-08-31T19:02:52.072Z"
+            },
+            {
+              "id": "wlog_b1",
+              "date": "2026-08-29",
+              "weight": 85,
+              "sets": 4,
+              "reps": "8",
+              "notes": "New record hit! Felt strong",
+              "isPR": true
+            },
+            {
+              "id": "wlog_b2",
+              "date": "2026-08-22",
+              "weight": 80,
+              "sets": 4,
+              "reps": "10",
+              "notes": "Good warmup",
+              "isPR": false
+            },
+            {
+              "id": "wlog_b3",
+              "date": "2026-08-15",
+              "weight": 75,
+              "sets": 4,
+              "reps": "10",
+              "notes": "Starting cycle",
+              "isPR": false
+            }
+          ]
+        },
+        {
+          "id": "ex_push_incline_db",
+          "name": "Incline Dumbbell Press",
+          "muscleGroup": "Upper Chest",
+          "sets": 3,
+          "reps": "10-12",
+          "weight": "32 kg",
+          "restTime": "60s",
+          "notes": "30 degree bench incline, deep stretch at bottom.",
+          "imageUrl": "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=8iPEnn-ltC8",
+          "personalRecord": {
+            "weight": 32,
+            "reps": "10",
+            "sets": 3,
+            "date": "2026-08-29",
+            "notes": "32kg per dumbbell"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_i1",
+              "date": "2026-08-29",
+              "weight": 32,
+              "sets": 3,
+              "reps": "10",
+              "notes": "Great pump",
+              "isPR": true
+            }
+          ]
+        },
+        {
+          "id": "ex_push_triceps",
+          "name": "Triceps Rope Pushdown",
+          "muscleGroup": "Triceps",
+          "sets": 4,
+          "reps": "12-15",
+          "weight": "40 kg",
+          "restTime": "45s",
+          "notes": "Flare rope outwards at bottom for peak triceps contraction.",
+          "imageUrl": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=vB5OHsJ3EME",
+          "personalRecord": {
+            "weight": 40,
+            "reps": "12",
+            "sets": 4,
+            "date": "2026-08-29",
+            "notes": "Full extension"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_t1",
+              "date": "2026-08-29",
+              "weight": 40,
+              "sets": 4,
+              "reps": "12",
+              "notes": "Solid control",
+              "isPR": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sunday",
+      "dayName": "Sunday",
+      "title": "Back & Biceps Power Pull Routine",
+      "isRestDay": false,
+      "targetMuscles": [
+        "Back",
+        "Biceps"
+      ],
+      "exercises": [
+        {
+          "id": "ex_pull_deadlift",
+          "name": "Barbell Conventional Deadlift",
+          "muscleGroup": "Back / Posterior",
+          "sets": 4,
+          "reps": "6-8",
+          "weight": "140 kg",
+          "restTime": "120s",
+          "notes": "Brace core tight, neutral spine, pull slack before lifting.",
+          "imageUrl": "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=op9kVnSso6Q",
+          "personalRecord": {
+            "weight": 140,
+            "reps": "6",
+            "sets": 4,
+            "date": "2026-08-30",
+            "notes": "PR achieved with clean lockout"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_d1",
+              "date": "2026-08-30",
+              "weight": 140,
+              "sets": 4,
+              "reps": "6",
+              "notes": "Felt explosive",
+              "isPR": true
+            },
+            {
+              "id": "wlog_d2",
+              "date": "2026-08-23",
+              "weight": 130,
+              "sets": 4,
+              "reps": "8",
+              "notes": "Smooth technique",
+              "isPR": false
+            }
+          ]
+        },
+        {
+          "id": "ex_pull_lat",
+          "name": "Lat Pulldown (Wide Grip)",
+          "muscleGroup": "Lats",
+          "sets": 4,
+          "reps": "10-12",
+          "weight": "70 kg",
+          "restTime": "60s",
+          "notes": "Drive elbows down to waist, avoid excessive swinging.",
+          "imageUrl": "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=CAwf7n6Luuc",
+          "personalRecord": {
+            "weight": 70,
+            "reps": "10",
+            "sets": 4,
+            "date": "2026-08-30",
+            "notes": "Full contraction"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_l1",
+              "date": "2026-08-30",
+              "weight": 70,
+              "sets": 4,
+              "reps": "10",
+              "notes": "Heavy pull",
+              "isPR": true
+            }
+          ]
+        },
+        {
+          "id": "ex_pull_curls",
+          "name": "Incline Dumbbell Bicep Curls",
+          "muscleGroup": "Biceps",
+          "sets": 3,
+          "reps": "12",
+          "weight": "16 kg",
+          "restTime": "45s",
+          "notes": "Full bicep long-head stretch at the bottom.",
+          "imageUrl": "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=soxrZlIl35U",
+          "personalRecord": {
+            "weight": 16,
+            "reps": "12",
+            "sets": 3,
+            "date": "2026-08-30",
+            "notes": "16kg each side"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_c1",
+              "date": "2026-08-30",
+              "weight": 16,
+              "sets": 3,
+              "reps": "12",
+              "notes": "Strict form",
+              "isPR": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "monday",
+      "dayName": "Monday",
+      "title": "Heavy Leg Day & Quad Sculpt",
+      "isRestDay": false,
+      "targetMuscles": [
+        "Legs",
+        "Quads",
+        "Hamstrings",
+        "Calves"
+      ],
+      "exercises": [
+        {
+          "id": "ex_leg_squats",
+          "name": "Barbell Back Squats",
+          "muscleGroup": "Quads & Glutes",
+          "sets": 5,
+          "reps": "6-8",
+          "weight": "120 kg",
+          "restTime": "120s",
+          "notes": "Deep squat below parallel, knees track with toes.",
+          "imageUrl": "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=ultWZbUMPL8",
+          "personalRecord": {
+            "weight": 120,
+            "reps": "6",
+            "sets": 5,
+            "date": "2026-08-31",
+            "notes": "120 kg hit today!"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_s1",
+              "date": "2026-08-31",
+              "weight": 120,
+              "sets": 5,
+              "reps": "6",
+              "notes": "Deep depth, felt great",
+              "isPR": true
+            },
+            {
+              "id": "wlog_s2",
+              "date": "2026-08-24",
+              "weight": 115,
+              "sets": 5,
+              "reps": "8",
+              "notes": "Solid reps",
+              "isPR": false
+            },
+            {
+              "id": "wlog_s3",
+              "date": "2026-08-17",
+              "weight": 110,
+              "sets": 5,
+              "reps": "8",
+              "notes": "Base volume",
+              "isPR": false
+            }
+          ]
+        },
+        {
+          "id": "ex_leg_press",
+          "name": "45° Incline Leg Press",
+          "muscleGroup": "Quads",
+          "sets": 4,
+          "reps": "10-12",
+          "weight": "240 kg",
+          "restTime": "90s",
+          "notes": "Do not lock knees at top, slow controlled eccentric.",
+          "imageUrl": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=IZxyjW7MPJQ",
+          "personalRecord": {
+            "weight": 240,
+            "reps": "10",
+            "sets": 4,
+            "date": "2026-08-31",
+            "notes": "Heavy leg press PR"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_lp1",
+              "date": "2026-08-31",
+              "weight": 240,
+              "sets": 4,
+              "reps": "10",
+              "notes": "Clean reps",
+              "isPR": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tuesday",
+      "dayName": "Tuesday",
+      "title": "Shoulders & Arms Sculpt Session",
+      "isRestDay": false,
+      "targetMuscles": [
+        "Shoulders",
+        "Arms"
+      ],
+      "exercises": [
+        {
+          "id": "ex_sh_ohp",
+          "name": "Standing Overhead Barbell Press (OHP)",
+          "muscleGroup": "Shoulders",
+          "sets": 4,
+          "reps": "8-10",
+          "weight": "55 kg",
+          "restTime": "90s",
+          "notes": "Tight glutes and core, head through the window at top.",
+          "imageUrl": "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=2yjwXTZQDDI",
+          "personalRecord": {
+            "weight": 55,
+            "reps": "8",
+            "sets": 4,
+            "date": "2026-08-25",
+            "notes": "55kg clean reps"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_o1",
+              "date": "2026-08-25",
+              "weight": 55,
+              "sets": 4,
+              "reps": "8",
+              "notes": "Good stability",
+              "isPR": true
+            }
+          ]
+        },
+        {
+          "id": "ex_sh_lateral",
+          "name": "Dumbbell Lateral Raises",
+          "muscleGroup": "Side Deltoids",
+          "sets": 4,
+          "reps": "15",
+          "weight": "14 kg",
+          "restTime": "45s",
+          "notes": "Slight forward lean, lead with elbows for round boulder shoulders.",
+          "imageUrl": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=3VcKaXpzqRo",
+          "personalRecord": {
+            "weight": 14,
+            "reps": "15",
+            "sets": 4,
+            "date": "2026-08-25",
+            "notes": "14kg dumbbells"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_lat1",
+              "date": "2026-08-25",
+              "weight": 14,
+              "sets": 4,
+              "reps": "15",
+              "notes": "Peak contraction",
+              "isPR": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wednesday",
+      "dayName": "Wednesday",
+      "title": "Full Body Functional / High Intensity Workout",
+      "isRestDay": false,
+      "targetMuscles": [
+        "Full Body",
+        "HIIT"
+      ],
+      "exercises": [
+        {
+          "id": "ex_fb_split",
+          "name": "Dumbbell Bulgarian Split Squats",
+          "muscleGroup": "Quads & Glutes",
+          "sets": 3,
+          "reps": "10 / leg",
+          "weight": "24 kg",
+          "restTime": "60s",
+          "notes": "Keep torso slightly forward, knee stays stable.",
+          "imageUrl": "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=2C-uNgKwPLE",
+          "personalRecord": {
+            "weight": 24,
+            "reps": "10",
+            "sets": 3,
+            "date": "2026-08-26",
+            "notes": "24kg each hand"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_bss1",
+              "date": "2026-08-26",
+              "weight": 24,
+              "sets": 3,
+              "reps": "10",
+              "notes": "Burn was intense",
+              "isPR": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "thursday",
+      "dayName": "Thursday",
+      "title": "Cardio Endurance & Active Mobility Routine",
+      "isRestDay": false,
+      "targetMuscles": [
+        "Cardio",
+        "Mobility"
+      ],
+      "exercises": [
+        {
+          "id": "ex_cardio_kb",
+          "name": "Kettlebell Power Swings",
+          "muscleGroup": "Full Body / Hips",
+          "sets": 4,
+          "reps": "20",
+          "weight": "28 kg",
+          "restTime": "45s",
+          "notes": "Hips snap violently forward, glutes locked at top.",
+          "imageUrl": "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80",
+          "videoUrl": "https://www.youtube.com/watch?v=sSESeQEqu28",
+          "personalRecord": {
+            "weight": 28,
+            "reps": "20",
+            "sets": 4,
+            "date": "2026-08-27",
+            "notes": "28kg heavy kettlebell"
+          },
+          "weightLogs": [
+            {
+              "id": "wlog_kb1",
+              "date": "2026-08-27",
+              "weight": 28,
+              "sets": 4,
+              "reps": "20",
+              "notes": "Conditioning high",
+              "isPR": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "friday",
+      "dayName": "Friday",
+      "title": "Rest & Deep Muscle Recovery",
+      "isRestDay": true,
+      "targetMuscles": [
+        "Full Recovery"
+      ],
+      "exercises": []
+    }
+  ],
+  "completions": {
+    "2026-08-30": {
+      "completedExercises": [
+        "ex_push_bench"
+      ],
+      "updatedAt": "2026-08-29T22:59:06.076Z"
+    }
+  }
+}

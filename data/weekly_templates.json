@@ -1,0 +1,385 @@
+{
+  "Work": {
+    "category": "Work",
+    "days": {
+      "Saturday": [
+        {
+          "id": "tpl_work_sat_1",
+          "task": "Crystal Clinic — Patient Consultations & Cases",
+          "time": "09:00 AM - 05:00 PM",
+          "segment": "Clinic",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Sunday": [
+        {
+          "id": "tpl_work_sun_1",
+          "task": "White Plus Clinic — Aesthetic Veneers & Restorations",
+          "time": "10:00 AM - 06:00 PM",
+          "segment": "Clinic",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Monday": [],
+      "Tuesday": [
+        {
+          "id": "tpl_work_tue_mthk1ynq",
+          "task": "wfddsg",
+          "time": "",
+          "segment": "",
+          "priority": "Medium",
+          "isOff": false,
+          "enabled": true,
+          "notes": ""
+        }
+      ],
+      "Wednesday": [
+        {
+          "id": "tpl_work_wed_1",
+          "task": "White Plus Clinic — Comprehensive Dental Care",
+          "time": "10:00 AM - 06:00 PM",
+          "segment": "Clinic",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Thursday": [
+        {
+          "id": "tpl_work_thu_1",
+          "task": "Crystal Clinic — Prostho Delivery & Follow-ups",
+          "time": "09:00 AM - 04:00 PM",
+          "segment": "Clinic",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Friday": [
+        {
+          "id": "tpl_work_fri_1",
+          "task": "Weekly Off / Rest & Family Time",
+          "time": "All Day",
+          "segment": "Rest",
+          "priority": "Low",
+          "isOff": true,
+          "enabled": true
+        }
+      ]
+    }
+  },
+  "Trading": {
+    "category": "Trading",
+    "days": {
+      "Saturday": [
+        {
+          "id": "tpl_trade_sat_1",
+          "task": "Weekly Market Review & Crypto Watchlist Analysis",
+          "time": "11:00 AM",
+          "priority": "Medium",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Sunday": [
+        {
+          "id": "tpl_trade_sun_1",
+          "task": "Forex & Crypto Pre-Market Preparation & Key Levels",
+          "time": "08:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Monday": [
+        {
+          "id": "tpl_trade_mon_1",
+          "task": "London & NY Session Opening Setups & Risk Execution",
+          "time": "02:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Tuesday": [
+        {
+          "id": "tpl_trade_tue_1",
+          "task": "High Probability Trade Executions & Journaling",
+          "time": "02:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Wednesday": [
+        {
+          "id": "tpl_trade_wed_1",
+          "task": "Mid-Week Review & Position Sizing Adjustments",
+          "time": "02:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Thursday": [
+        {
+          "id": "tpl_trade_thu_1",
+          "task": "NY Session Trading & Trailing Stop Management",
+          "time": "02:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Friday": [
+        {
+          "id": "tpl_trade_fri_1",
+          "task": "Market Close P&L Journaling & Balance Sheet Update",
+          "time": "06:00 PM",
+          "priority": "Medium",
+          "isOff": false,
+          "enabled": true
+        }
+      ]
+    }
+  },
+  "Workouts": {
+    "category": "Workouts",
+    "days": {
+      "Saturday": [
+        {
+          "id": "tpl_fit_sat_1",
+          "task": "Chest & Triceps Hypertrophy Session",
+          "time": "06:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        },
+        {
+          "id": "tpl_work_sat_mthk77q9",
+          "task": "Chest, Shoulders & Triceps Push Day",
+          "time": "06:00 PM",
+          "segment": "",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true,
+          "notes": ""
+        }
+      ],
+      "Sunday": [
+        {
+          "id": "tpl_fit_sun_1",
+          "task": "Back & Biceps Power Pull Routine",
+          "time": "06:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Monday": [
+        {
+          "id": "tpl_fit_mon_1",
+          "task": "Heavy Leg Day & Quad Sculpt",
+          "time": "06:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Tuesday": [
+        {
+          "id": "tpl_fit_tue_1",
+          "task": "Shoulders & Arms Sculpt Session",
+          "time": "06:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Wednesday": [
+        {
+          "id": "tpl_fit_wed_1",
+          "task": "Full Body Functional / High Intensity Workout",
+          "time": "06:00 PM",
+          "priority": "Medium",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Thursday": [
+        {
+          "id": "tpl_fit_thu_1",
+          "task": "Cardio Endurance & Active Mobility Routine",
+          "time": "06:00 PM",
+          "priority": "Medium",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Friday": [
+        {
+          "id": "tpl_fit_fri_1",
+          "task": "Rest & Deep Muscle Recovery",
+          "time": "All Day",
+          "priority": "Low",
+          "isOff": true,
+          "enabled": true
+        }
+      ]
+    }
+  },
+  "Studies": {
+    "category": "Studies",
+    "days": {
+      "Saturday": [
+        {
+          "id": "tpl_std_sat_1",
+          "task": "Advanced Dental Biomaterials & Aesthetic Case Studies",
+          "time": "08:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Sunday": [
+        {
+          "id": "tpl_std_sun_1",
+          "task": "Endodontic Micro-Surgery Research & Video Analysis",
+          "time": "08:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Monday": [
+        {
+          "id": "tpl_std_mon_1",
+          "task": "Occlusion & Smile Design Literature Review",
+          "time": "08:00 PM",
+          "priority": "Medium",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Tuesday": [
+        {
+          "id": "tpl_std_tue_1",
+          "task": "Clinical Photography & Presentation Prep",
+          "time": "08:00 PM",
+          "priority": "Medium",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Wednesday": [
+        {
+          "id": "tpl_std_wed_1",
+          "task": "Financial Markets & Risk Management Deep Dive",
+          "time": "08:00 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Thursday": [
+        {
+          "id": "tpl_std_thu_1",
+          "task": "Medical Terminology & Clinical English Vocabulary",
+          "time": "08:00 PM",
+          "priority": "Medium",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Friday": [
+        {
+          "id": "tpl_std_fri_1",
+          "task": "Weekly Knowledge Synthesis & Book Reading",
+          "time": "05:00 PM",
+          "priority": "Low",
+          "isOff": false,
+          "enabled": true
+        }
+      ]
+    }
+  },
+  "Religion": {
+    "category": "Religion",
+    "days": {
+      "Saturday": [
+        {
+          "id": "tpl_rel_sat_1",
+          "task": "Fajr Adhkar & Morning Quran Reading (1 Juz)",
+          "time": "05:30 AM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Sunday": [
+        {
+          "id": "tpl_rel_sun_1",
+          "task": "Tafsir Reflection & Evening Supplications",
+          "time": "06:30 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Monday": [
+        {
+          "id": "tpl_rel_mon_1",
+          "task": "Sunnah Fasting & Daily Dhikr Routine",
+          "time": "All Day",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Tuesday": [
+        {
+          "id": "tpl_rel_tue_1",
+          "task": "Quran Recitation & Evening Adhkar",
+          "time": "06:30 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Wednesday": [
+        {
+          "id": "tpl_rel_wed_1",
+          "task": "Islamic Lecture Study & Charity / Sadakah",
+          "time": "07:00 PM",
+          "priority": "Medium",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Thursday": [
+        {
+          "id": "tpl_rel_thu_1",
+          "task": "Sunnah Fasting & Surat Al-Kahf Preparation",
+          "time": "All Day",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ],
+      "Friday": [
+        {
+          "id": "tpl_rel_fri_1",
+          "task": "Jumu'ah Prayer at Mosque, Surat Al-Kahf, & Salawat",
+          "time": "12:30 PM",
+          "priority": "High",
+          "isOff": false,
+          "enabled": true
+        }
+      ]
+    }
+  }
+}

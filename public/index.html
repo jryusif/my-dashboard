@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Personal Dashboard</title>
+<meta name="description" content="A premium personal life management system — tasks, finance, gold portfolio, and daily routines in one place." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700;800&family=Oswald:wght@500;600;700&family=Pathway+Gothic+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=7.0" />
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- ===================================================================
+         SIDEBAR — clock, date, and Today's Tasks
+         =================================================================== -->
+    <aside class="sidebar">
+
+      <div class="sidebar-clock-block">
+        <div class="sidebar-top-meta-row">
+          <div class="sidebar-live-tag">
+            <span class="live-pulse-dot"></span>
+            <span class="live-tag-text">LIVE STATION</span>
+          </div>
+          <button type="button" class="btn-sidebar-collapse" id="btnSidebarCollapse" title="Hide Sidebar (Transfer Clock to Main Screen)" aria-label="Hide Sidebar">
+            <span class="collapse-arrow">◀</span>
+          </button>
+        </div>
+        <div class="clock-wrap">
+          <div class="clock" id="clock">--:--:--</div>
+        </div>
+        <div class="date-capsule" id="dateCapsule">
+          <span class="date-capsule-icon">📅</span>
+          <span class="date-capsule-text" id="dateLabel">Loading&hellip;</span>
+        </div>
+
+        <!-- Notifications & Reminders Quick Bar -->
+        <div class="sidebar-notification-bar">
+          <button type="button" class="btn-notification-bell" id="btnNotificationBell" title="Reminders & Notifications" aria-haspopup="dialog">
+            <span class="bell-icon">🔔</span>
+            <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+          </button>
+          <div class="notification-status-capsule" id="notificationStatusCapsule" title="Click to manage reminder permissions and times">
+            <span class="status-indicator-dot" id="notificationStatusDot"></span>
+            <span class="status-text" id="notificationStatusText">Reminders: OFF</span>
+          </div>
+          <button type="button" class="btn-notification-settings" id="btnOpenNotificationSettings" title="Notification & Reminder Settings">
+            <span>⚙️</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-scroll">
+        <div class="sidebar-section-header">
+          <h2>Today&rsquo;s Tasks</h2>
+          <div class="ring-wrap ring-wrap-sm" aria-hidden="true">
+            <svg viewBox="0 0 120 120" class="ring">
+              <circle cx="60" cy="60" r="52" class="ring-track" />
+              <circle cx="60" cy="60" r="52" class="ring-fill" id="ringFill" />
+            </svg>
+            <span class="ring-count" id="ringCount">0/0</span>
+          </div>
+        </div>
+        <p class="subtitle" id="progressLabel">Your day at a glance</p>
+
+        <!-- Compact Sidebar Glass Progress Bar -->
+        <div class="mini-glass-progress sidebar-progress" id="sidebarGlassProgress">
+          <div class="mini-progress-info">
+            <span class="mini-progress-label">Today's Progress</span>
+            <span class="mini-progress-val" id="sidebarProgressPct">0% (0/0)</span>
+          </div>
+          <div class="mini-progress-track">
+            <div class="mini-progress-fill" id="sidebarProgressFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div id="board" class="board sidebar-board" aria-live="polite">
+          <!-- category sections rendered by app.js -->
+        </div>
+
+        <div class="routine-buttons">
+          <button type="button" class="routine-btn" id="morningRoutineBtn" aria-haspopup="dialog">
+            <span class="routine-btn-icon">🌅</span> Morning Routine
+          </button>
+          <button type="button" class="routine-btn" id="eveningRoutineBtn" aria-haspopup="dialog">
+            <span class="routine-btn-icon">🌙</span> Evening Routine
+          </button>
+          <button type="button" class="routine-btn analytics-quick-btn" id="sidebarAnalyticsBtn" style="grid-column: 1 / -1; background: rgba(56, 189, 248, 0.08); border-color: rgba(56, 189, 248, 0.3);">
+            <span class="routine-btn-icon">📊</span> Progress &amp; Charts Hub
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="fab sidebar-fab" id="addTaskBtn" aria-haspopup="dialog">
+          <span class="fab-icon">+</span> Add Task
+        </button>
+      </div>
+    </aside>
+
+    <!-- ===================================================================
+         MAIN COLUMN
+         =================================================================== -->
+    <main class="main-content">
+
+      <!-- ===================================================================
+           MAIN TOP NAVIGATION & DYNAMIC 3D FLIP-CLOCK HEADER
+           =================================================================== -->
+      <header class="main-top-navbar" id="mainTopNavbar">
+        <div class="top-nav-left">
+          <button type="button" class="btn-sidebar-toggle" id="btnSidebarToggle" title="Show Sidebar (Ctrl+\)" aria-label="Show Tasks &amp; Routines Sidebar">
+            <span class="toggle-bars-icon">☰</span>
+            <span class="toggle-label-text">Show Tasks &amp; Routines</span>
+          </button>
+        </div>
+
+        <!-- MASTER LIVE STATION DOCK (When sidebar is hidden) -->
+        <div class="header-flip-clock-wrap" id="headerFlipClockWrap">
+          <div class="header-live-dock">
+            
+            <!-- 1. Live Indicator & Calendar Badge -->
+            <div class="dock-meta-group">
+              <div class="flip-clock-live-badge">
+                <span class="live-pulse-dot"></span>
+                <span>LIVE</span>
+              </div>
+              <div class="flip-paper-calendar" id="flipPaperCalendar" title="Current Live Date">
+                <span class="calendar-flip-pin">📅</span>
+                <span class="calendar-flip-text" id="headerFlipDateText">Monday, August 31</span>
+              </div>
+            </div>
+
+            <div class="dock-divider"></div>
+
+            <!-- 2. Centerpiece 3D Mechanical Flip Clock -->
+            <div class="mechanical-flip-clock" id="mechanicalFlipClock" title="Real-Time 3D Mechanical Flip Clock">
+              <!-- Hours -->
+              <div class="flip-digit-tile" id="flipTileHours">
+                <span class="flip-digit-val" id="flipValHours">10</span>
+                <div class="flip-seam-line"></div>
+              </div>
+              <span class="flip-colon">:</span>
+              <!-- Minutes -->
+              <div class="flip-digit-tile" id="flipTileMinutes">
+                <span class="flip-digit-val" id="flipValMinutes">06</span>
+                <div class="flip-seam-line"></div>
+              </div>
+              <span class="flip-colon">:</span>
+              <!-- Seconds -->
+              <div class="flip-digit-tile" id="flipTileSeconds">
+                <span class="flip-digit-val" id="flipValSeconds">11</span>
+                <div class="flip-seam-line"></div>
+              </div>
+              <div class="flip-ampm-tag" id="flipAmpmTag">PM</div>
+            </div>
+
+            <div class="dock-divider"></div>
+
+            <!-- 3. Notification & Settings Quick Bar -->
+            <div class="dock-notification-group">
+              <button type="button" class="btn-dock-notification" id="btnHeaderNotificationBell" title="Reminders &amp; Notifications" aria-haspopup="dialog">
+                <span class="dock-bell-icon">🔔</span>
+                <span class="dock-notif-badge" id="headerNotificationBadge" style="display: none;">0</span>
+              </button>
+              <button type="button" class="btn-dock-settings" id="btnHeaderNotificationSettings" title="Reminder Settings">
+                <span>⚙️</span>
+              </button>
+            </div>
+
+            <div class="dock-divider"></div>
+
+            <!-- 4. User Account Capsule -->
+            <div class="dock-user-capsule" id="userAuthCapsule">
+              <button type="button" class="btn-dock-user" id="btnAuthProfile" title="Account / Profile">
+                <span class="user-avatar-icon">👤</span>
+                <span class="user-email-text" id="userEmailLabel">Sign In</span>
+              </button>
+              <button type="button" class="btn-dock-logout" id="btnAuthLogout" title="Sign Out" style="display: none;">
+                <span>🚪</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </header>
+
+      <!-- Dashboard Home -->
+      <section class="dashboard-section" id="dashboardSection">
+        <header class="dashboard-header">
+          <p class="eyebrow">Overview</p>
+          <h1>My Dashboard</h1>
+          <p class="subtitle">Jump into any area of your life</p>
+        </header>
+
+        <div class="wealth-card" id="wealthCard">
+          <div class="wealth-card-main">
+            <p class="wealth-label">Total Wealth</p>
+            <p class="wealth-value is-hidden" id="wealthValue">&bull;&bull;&bull;&bull;&bull;&bull;</p>
+            <p class="wealth-meta" id="wealthMeta">&nbsp;</p>
+          </div>
+          <button type="button" class="wealth-toggle" id="wealthToggle" aria-label="Show total wealth" aria-pressed="false">
+            <span id="wealthToggleIcon">👁️</span>
+          </button>
+        </div>
+
+        <div class="dashboard-grid" id="dashboardGrid">
+          <!-- dashboard cards rendered by app.js -->
+        </div>
+      </section>
+
+      <!-- ----------------------------------------------------------------
+           Category Page (Work, Studies, Workouts, Religion, Trading)
+           ---------------------------------------------------------------- -->
+      <section class="page-section category-page" id="categoryPageSection" hidden>
+        <button type="button" class="back-link" id="backToDashboardFromCategory">&larr; Back to Dashboard</button>
+        <header class="page-header">
+          <span class="page-icon" id="categoryPageIcon">&bull;</span>
+          <div>
+            <p class="eyebrow" id="categoryPageEyebrow">Category</p>
+            <h1 id="categoryPageTitle">&nbsp;</h1>
+          </div>
+        </header>
+
+        <!-- Category View Switcher Tabs -->
+        <div class="category-view-tabs" id="categoryViewTabs">
+          <button type="button" class="cat-view-tab active" id="btnCatViewTasks" data-view="tasks">
+            <span>📋</span> Active Tasks &amp; Schedule
+          </button>
+          <button type="button" class="cat-view-tab" id="btnCatViewTemplate" data-view="template">
+            <span>🔁</span> Weekly Repeating Schedule Template
+          </button>
+        </div>
+
+        <!-- View 1: Active Tasks & Daily Board -->
+        <div id="catTasksViewWrap">
+          <!-- Stats bar -->
+          <div class="category-stats" id="categoryStats">
+            <div class="cat-stat skeleton-block" style="height:72px;border-radius:12px;"></div>
+            <div class="cat-stat skeleton-block" style="height:72px;border-radius:12px;"></div>
+            <div class="cat-stat skeleton-block" style="height:72px;border-radius:12px;"></div>
+          </div>
+
+          <!-- Mini Glass Category Progress Bar -->
+          <div class="mini-glass-progress category-progress" id="categoryGlassProgress">
+            <div class="mini-progress-info">
+              <span class="mini-progress-label">Category Completion</span>
+              <span class="mini-progress-val" id="catProgressPct">0% · 0/0 done</span>
+            </div>
+            <div class="mini-progress-track">
+              <div class="mini-progress-fill" id="catProgressFill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- Task list area -->
+          <div id="categoryTaskArea" aria-live="polite">
+            <!-- rendered by app.js -->
+          </div>
+        </div>
+
+        <!-- View 2: Weekly Schedule Repeating Template Hub -->
+        <div id="catTemplateViewWrap" class="cat-template-view" hidden>
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </section>
+
+      <!-- Finance page -->
+      <section class="page-section" id="financeSection" hidden>
+        <button type="button" class="back-link" id="backToDashboardFromFinance">&larr; Back to Dashboard</button>
+        <header class="page-header">
+          <span class="page-icon" style="--card-color: var(--finance)">💰</span>
+          <div>
+            <p class="eyebrow">Overview</p>
+            <h1>Finances</h1>
+          </div>
+        </header>
+
+        <!-- Finance View Switcher Tabs -->
+        <div class="category-view-tabs" id="financeViewTabs">
+          <button type="button" class="cat-view-tab active" id="btnFinViewLedger" data-view="ledger">
+            <span>📋</span> Monthly Budget &amp; Ledger
+          </button>
+          <button type="button" class="cat-view-tab" id="btnFinViewAnalytics" data-view="analytics">
+            <span>📊</span> Financial Analytics &amp; Charts
+          </button>
+        </div>
+
+        <!-- View 1: Monthly Ledger & Budget -->
+        <div id="finLedgerViewWrap">
+          <!-- Mini Glass Finance Progress Bar -->
+          <div class="mini-glass-progress finance-progress" id="financeGlassProgress">
+            <div class="mini-progress-info">
+              <span class="mini-progress-label">Savings &amp; Net Rate</span>
+              <span class="mini-progress-val" id="financeProgressVal">0%</span>
+            </div>
+            <div class="mini-progress-track">
+              <div class="mini-progress-fill" id="financeProgressFill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- Month navigator injected here by app.js -->
+          <div id="financeMonthNav" class="month-nav"></div>
+          <div id="financeContent" class="finance-content" aria-live="polite">
+            <!-- rendered by app.js -->
+          </div>
+        </div>
+
+        <!-- View 2: Financial Analytics & Multi-Horizon Charts Hub -->
+        <div id="finAnalyticsViewWrap" hidden>
+          <!-- Time Horizon Switcher Tabs -->
+          <div class="analytics-horizon-tabs" id="finHorizonTabs" style="margin-top: 10px;">
+            <button type="button" class="horizon-tab active" data-horizon="overview" id="tabFinHorizonOverview">
+              <span>⚡</span> Complete Overview
+            </button>
+            <button type="button" class="horizon-tab" data-horizon="weekly" id="tabFinHorizonWeekly">
+              <span>📅</span> Weekly Flow (7 Days &amp; Trends)
+            </button>
+            <button type="button" class="horizon-tab" data-horizon="monthly" id="tabFinHorizonMonthly">
+              <span>🗓️</span> Monthly Savings (6 Months)
+            </button>
+            <button type="button" class="horizon-tab" data-horizon="yearly" id="tabFinHorizonYearly">
+              <span>📆</span> Yearly Trajectory (12 Months)
+            </button>
+          </div>
+
+          <!-- Top Financial KPI Scorecard Grid -->
+          <div class="analytics-kpi-grid" id="finKpiGrid">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <!-- Financial Charts Grid -->
+          <div class="analytics-charts-grid" id="finChartsGrid">
+            <!-- Chart 1: Cash Flow & Trajectory -->
+            <div class="glass-chart-card wide-chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h3 id="finFlowChartTitle">📈 Cash Flow &amp; Net Savings Trajectory</h3>
+                  <p class="chart-sub" id="finFlowChartSub">Income vs Expenses vs Net Savings over time</p>
+                </div>
+                <span class="chart-badge" id="finFlowChartBadge">Weekly 7-Day Flow</span>
+              </div>
+              <div class="chart-canvas-wrap" style="height: 290px; position: relative;">
+                <canvas id="canvasFinFlowChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart 2: Income Sources Distribution -->
+            <div class="glass-chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h3>💵 Income Streams Share</h3>
+                  <p class="chart-sub">Revenue breakdown across clinic &amp; investments</p>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap" style="height: 260px; position: relative;">
+                <canvas id="canvasFinIncomeChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart 3: Expense Allocation Share -->
+            <div class="glass-chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h3>💳 Expense Categories Share</h3>
+                  <p class="chart-sub">Outflows by budget category</p>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap" style="height: 260px; position: relative;">
+                <canvas id="canvasFinExpenseChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart 4: Day-of-Week Spending Rhythm -->
+            <div class="glass-chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h3>⚡ Spending &amp; Income Rhythm</h3>
+                  <p class="chart-sub">Saturday &rarr; Friday cash flow pattern</p>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap" style="height: 260px; position: relative;">
+                <canvas id="canvasFinRhythmChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart 5: 12-Month Cumulative Wealth & Savings Trajectory -->
+            <div class="glass-chart-card wide-chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h3>📆 Annual Cumulative Savings &amp; Wealth Growth (2026)</h3>
+                  <p class="chart-sub">12-month Jan to Dec net accumulation trajectory</p>
+                </div>
+                <span class="chart-badge">Year 2026</span>
+              </div>
+              <div class="chart-canvas-wrap" style="height: 280px; position: relative;">
+                <canvas id="canvasFinCumulativeChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Financial Streams Deep Dive Matrix -->
+          <div class="analytics-category-matrix-section">
+            <div class="matrix-section-header">
+              <h3>🔬 Income Streams &amp; Outflow Matrix</h3>
+              <p class="subtitle">Detailed breakdown of active revenue sources and expense categories</p>
+            </div>
+            <div class="category-matrix-grid" id="finStreamsMatrixGrid">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Gold & Assets page -->
+      <section class="page-section" id="assetsSection" hidden>
+        <button type="button" class="back-link" id="backToDashboardFromAssets">&larr; Back to Dashboard</button>
+        <header class="page-header">
+          <span class="page-icon" style="--card-color: var(--gold)">🪙</span>
+          <div>
+            <p class="eyebrow">Overview</p>
+            <h1>Gold &amp; Assets</h1>
+          </div>
+        </header>
+
+        <!-- Mini Glass Assets Progress Bar -->
+        <div class="mini-glass-progress assets-progress" id="assetsGlassProgress">
+          <div class="mini-progress-info">
+            <span class="mini-progress-label">Owned vs Planned Goal</span>
+            <span class="mini-progress-val" id="assetsProgressVal">0% owned</span>
+          </div>
+          <div class="mini-progress-track">
+            <div class="mini-progress-fill" id="assetsProgressFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div id="assetsContent" class="finance-content" aria-live="polite">
+          <!-- rendered by app.js -->
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           DENTAL CASES & CLINICAL PATIENT GALLERY
+           =================================================================== -->
+      <section class="page-section dental-section" id="dentalCasesSection" hidden>
+        <button type="button" class="back-link" id="backToDashboardFromDental">&larr; Back to Dashboard</button>
+        
+        <header class="page-header dental-page-header">
+          <span class="page-icon" style="--card-color: var(--dental)">🦷</span>
+          <div class="dental-header-text">
+            <p class="eyebrow">Clinical Practice</p>
+            <h1>Dental Cases &amp; Patient Gallery</h1>
+            <p class="subtitle">Step-by-step clinical photo documentation, X-ray vault &amp; patient consultation gallery</p>
+          </div>
+          <div class="dental-header-actions">
+            <button type="button" class="btn-dental-presentation" id="btnLaunchPresentationMode" title="Open Clean Chairside Patient Presentation Mode">
+              <span class="btn-icon">🖥️</span> Present to Patient
+            </button>
+            <button type="button" class="btn-primary btn-dental-add" id="btnOpenNewCaseModal">
+              <span class="btn-icon">➕</span> New Clinical Case
+            </button>
+          </div>
+        </header>
+
+        <!-- Mini Glass Progress & Clinical Stats Bar -->
+        <div class="mini-glass-progress dental-progress" id="dentalGlassProgress">
+          <div class="mini-progress-info">
+            <span class="mini-progress-label">Clinical Case Archive</span>
+            <span class="mini-progress-val" id="dentalProgressVal">0 cases recorded</span>
+          </div>
+          <div class="mini-progress-track">
+            <div class="mini-progress-fill" id="dentalProgressFill" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- Interactive Search & Specialty Filters Toolbar -->
+        <div class="dental-toolbar">
+          <div class="dental-search-wrap">
+            <span class="dental-search-icon">🔍</span>
+            <input type="text" id="dentalSearchInput" placeholder="Search cases by tooth # (e.g. #11, #46), patient code, diagnosis, or technique..." />
+            <button type="button" id="dentalSearchClearBtn" class="dental-search-clear" hidden title="Clear search">&times;</button>
+          </div>
+
+          <div class="dental-filter-row">
+            <div class="dental-specialty-pills" id="dentalSpecialtyPills" role="tablist">
+              <button type="button" class="dental-pill active" data-specialty="All">All Disciplines</button>
+              <button type="button" class="dental-pill" data-specialty="Restorative &amp; Aesthetics">✨ Restorative &amp; Aesthetics</button>
+              <button type="button" class="dental-pill" data-specialty="Endodontics">🔬 Endodontics</button>
+              <button type="button" class="dental-pill" data-specialty="Prosthodontics">👑 Prosthodontics</button>
+              <button type="button" class="dental-pill" data-specialty="Implantology &amp; Surgery">🔩 Implants &amp; Surgery</button>
+              <button type="button" class="dental-pill" data-specialty="Orthodontics">📐 Orthodontics</button>
+              <button type="button" class="dental-pill" data-specialty="Bleaching">💎 Bleaching</button>
+            </div>
+
+            <div class="dental-quick-toggles">
+              <label class="dental-toggle-label">
+                <input type="checkbox" id="dentalShowcaseOnlyToggle" />
+                <span>🌟 Patient Showcase Only</span>
+              </label>
+              <select id="dentalSortSelect" class="dental-sort-select">
+                <option value="date_desc">📅 Newest Date First</option>
+                <option value="date_asc">📅 Oldest Date First</option>
+                <option value="title_asc">🔤 Title A &rarr; Z</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cases Grid -->
+        <div class="dental-cases-grid" id="dentalCasesGrid" aria-live="polite">
+          <!-- Dental Case cards rendered dynamically by app.js -->
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           ANALYTICS & PROGRESS INTELLIGENCE HUB (Weekly, Monthly, Yearly Charts)
+           =================================================================== -->
+      <section class="page-section analytics-section" id="analyticsProgressSection" hidden>
+        <button type="button" class="back-link" id="backToDashboardFromAnalytics">&larr; Back to Dashboard</button>
+
+        <header class="page-header analytics-page-header">
+          <span class="page-icon" style="--card-color: #38bdf8;">📊</span>
+          <div class="analytics-header-text">
+            <p class="eyebrow">Performance Intelligence</p>
+            <h1>Progress &amp; Analytics Hub</h1>
+            <p class="subtitle">Weekly, Monthly, and Yearly execution trends across all tasks &amp; individual categories</p>
+          </div>
+          <div class="analytics-header-actions">
+            <button type="button" class="btn-refresh-analytics" id="btnRefreshAnalytics" title="Refresh Live Analytics">
+              <span>🔄</span> Refresh Stats
+            </button>
+          </div>
+        </header>
+
+        <!-- Time Horizon Switcher Tabs -->
+        <div class="analytics-horizon-tabs" id="analyticsHorizonTabs">
+          <button type="button" class="horizon-tab active" data-horizon="overview" id="tabHorizonOverview">
+            <span>⚡</span> Complete Overview
+          </button>
+          <button type="button" class="horizon-tab" data-horizon="weekly" id="tabHorizonWeekly">
+            <span>📅</span> Weekly Progress (7 Days &amp; Trends)
+          </button>
+          <button type="button" class="horizon-tab" data-horizon="monthly" id="tabHorizonMonthly">
+            <span>🗓️</span> Monthly Progress (6 Months)
+          </button>
+          <button type="button" class="horizon-tab" data-horizon="yearly" id="tabHorizonYearly">
+            <span>📆</span> Yearly Trajectory (12 Months)
+          </button>
+        </div>
+
+        <!-- Category Dimension Filter Pills -->
+        <div class="analytics-category-pills" id="analyticsCategoryPills">
+          <button type="button" class="cat-pill active" data-cat="ALL">
+            <span>🌐</span> All Categories Combined
+          </button>
+          <button type="button" class="cat-pill" data-cat="Work">
+            <span>💼</span> Work / Clinic
+          </button>
+          <button type="button" class="cat-pill" data-cat="Us stocks trading">
+            <span>📈</span> US Stocks Trading
+          </button>
+          <button type="button" class="cat-pill" data-cat="Workouts">
+            <span>🏋️</span> Workouts
+          </button>
+          <button type="button" class="cat-pill" data-cat="Studies">
+            <span>📚</span> Studies
+          </button>
+          <button type="button" class="cat-pill" data-cat="Religion">
+            <span>🌙</span> Religion
+          </button>
+          <button type="button" class="cat-pill" data-cat="Dental">
+            <span>🦷</span> Dental Cases
+          </button>
+          <button type="button" class="cat-pill" data-cat="Finance">
+            <span>💰</span> Finances
+          </button>
+        </div>
+
+        <!-- Top Scorecard KPI Grid -->
+        <div class="analytics-kpi-grid" id="analyticsKpiGrid">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Interactive Charts Stage -->
+        <div class="analytics-charts-grid" id="analyticsChartsGrid">
+          <!-- Chart 1: Main Velocity & Trajectory -->
+          <div class="glass-chart-card wide-chart-card">
+            <div class="chart-card-header">
+              <div>
+                <h3 id="mainChartTitle">📈 Execution Velocity &amp; Task Volume</h3>
+                <p class="chart-sub" id="mainChartSub">Completed vs Total tasks over time</p>
+              </div>
+              <span class="chart-badge" id="mainChartHorizonBadge">Weekly 7-Day View</span>
+            </div>
+            <div class="chart-canvas-wrap" style="height: 290px; position: relative;">
+              <canvas id="canvasVelocityChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: Category Distribution Doughnut -->
+          <div class="glass-chart-card" id="cardCategoryShare">
+            <div class="chart-card-header">
+              <div>
+                <h3>🍩 Category Task Share &amp; Mix</h3>
+                <p class="chart-sub">Volume allocation across life areas</p>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap" style="height: 260px; position: relative;">
+              <canvas id="canvasCategoryShareChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 3: Weekly Day-by-Day Adherence -->
+          <div class="glass-chart-card" id="cardDayRhythm">
+            <div class="chart-card-header">
+              <div>
+                <h3>⚡ Day-of-Week Consistency Rhythm</h3>
+                <p class="chart-sub">Saturday &rarr; Friday completion distribution</p>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap" style="height: 260px; position: relative;">
+              <canvas id="canvasDayRhythmChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 4: Priority & Intensity Distribution -->
+          <div class="glass-chart-card" id="cardPriorityMatrix">
+            <div class="chart-card-header">
+              <div>
+                <h3>🎯 Priority Completion Velocity</h3>
+                <p class="chart-sub">High vs Medium vs Low execution rate</p>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap" style="height: 260px; position: relative;">
+              <canvas id="canvasPriorityChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 5: 12-Month Year Progress Curve -->
+          <div class="glass-chart-card wide-chart-card" id="cardYearlyTrajectory">
+            <div class="chart-card-header">
+              <div>
+                <h3>📆 Annual Month-by-Month Trajectory (2026)</h3>
+                <p class="chart-sub">Full 12-month progress curve and completion rate</p>
+              </div>
+              <span class="chart-badge">Year 2026</span>
+            </div>
+            <div class="chart-canvas-wrap" style="height: 280px; position: relative;">
+              <canvas id="canvasYearlyTrajectoryChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Independent Category Cards Matrix -->
+        <div class="analytics-category-matrix-section" id="analyticsCategoryMatrixSection">
+          <div class="matrix-section-header">
+            <h3>🔬 Category-by-Category Deep Dive</h3>
+            <p class="subtitle">Click any card to isolate and inspect that specific category</p>
+          </div>
+          <div class="category-matrix-grid" id="categoryMatrixGrid">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           🧭 LIFE MASTER ROADMAP & VISION SPACE (Trading, Studying, Dental, Wealth)
+           =================================================================== -->
+      <section class="page-section roadmap-section" id="roadmapSection" hidden>
+        <button type="button" class="back-link" id="backToDashboardFromRoadmap">&larr; Back to Dashboard</button>
+
+        <header class="page-header roadmap-page-header">
+          <span class="page-icon" style="--card-color: #f59e0b;">🧭</span>
+          <div class="roadmap-header-text">
+            <p class="eyebrow">Strategic Master Vision</p>
+            <h1>Life Roadmap &amp; Master Plan</h1>
+            <p class="subtitle">Long-term strategic milestones across Dental Career, Trading &amp; Markets, Studies &amp; Knowledge, and Wealth &amp; Freedom</p>
+          </div>
+          <div class="roadmap-header-actions">
+            <button type="button" class="btn-primary btn-roadmap-add" id="btnOpenNewMilestoneModal">
+              <span>+</span> New Milestone
+            </button>
+          </div>
+        </header>
+
+        <!-- Vital Scorecards Island -->
+        <div class="roadmap-scorecard-grid">
+          <div class="rm-score-card">
+            <div class="rm-score-icon">🎯</div>
+            <div class="rm-score-info">
+              <span class="rm-score-label">Total Milestones</span>
+              <span class="rm-score-value" id="rmTotalCount">0</span>
+            </div>
+          </div>
+          <div class="rm-score-card">
+            <div class="rm-score-icon">⚡</div>
+            <div class="rm-score-info">
+              <span class="rm-score-label">Active Sprints</span>
+              <span class="rm-score-value text-amber" id="rmInProgressCount">0</span>
+            </div>
+          </div>
+          <div class="rm-score-card">
+            <div class="rm-score-icon">🏆</div>
+            <div class="rm-score-info">
+              <span class="rm-score-label">Achieved Victories</span>
+              <span class="rm-score-value text-emerald" id="rmCompletedCount">0</span>
+            </div>
+          </div>
+          <div class="rm-score-card">
+            <div class="rm-score-icon">📈</div>
+            <div class="rm-score-info">
+              <span class="rm-score-label">Master Vision Completion</span>
+              <span class="rm-score-value text-cyan" id="rmGlobalProgressVal">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pillar Filter Pills -->
+        <div class="roadmap-pillar-pills" id="roadmapPillarPills" role="tablist">
+          <button type="button" class="rm-pill active" data-pillar="All">
+            <span>🌐</span> All Life Pillars
+          </button>
+          <button type="button" class="rm-pill" data-pillar="Dental Career">
+            <span>🦷</span> Dental Career
+          </button>
+          <button type="button" class="rm-pill" data-pillar="Trading & Markets">
+            <span>📈</span> Trading &amp; Markets
+          </button>
+          <button type="button" class="rm-pill" data-pillar="Studies & Knowledge">
+            <span>📚</span> Studies &amp; Knowledge
+          </button>
+          <button type="button" class="rm-pill" data-pillar="Wealth & Freedom">
+            <span>💎</span> Wealth &amp; Freedom
+          </button>
+        </div>
+
+        <!-- Roadmap Timeline / Phases Container -->
+        <div class="roadmap-phases-container" id="roadmapPhasesContainer" aria-live="polite">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </section>
+
+      <!-- Weekly Planner -->
+      <section class="weekly">
+        <div class="weekly-header">
+          <div class="weekly-header-text">
+            <h2>Weekly Planner</h2>
+            <p class="subtitle">Saturday &rarr; Friday &middot; same Main Database, one task list</p>
+          </div>
+          <div class="mini-glass-progress weekly-progress" id="weeklyGlassProgress">
+            <div class="mini-progress-info">
+              <span class="mini-progress-label">Weekly Completion</span>
+              <span class="mini-progress-val" id="weeklyProgressVal">0% (0/0 done)</span>
+            </div>
+            <div class="mini-progress-track">
+              <div class="mini-progress-fill" id="weeklyProgressFill" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <nav class="week-tabs" id="weekTabs" role="tablist" aria-label="Select a day">
+          <div class="indicator" id="weekIndicator" aria-hidden="true"></div>
+          <!-- day buttons rendered by app.js -->
+        </nav>
+
+        <div id="weeklyBoard" class="board weekly-board" aria-live="polite">
+          <!-- selected day's tasks rendered here -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===================================================================
+       ADD TASK MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <form class="modal" id="taskForm" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">Add Task</h2>
+
+      <label for="taskName">Task</label>
+      <input type="text" id="taskName" name="taskName" required placeholder="What needs to get done?" />
+
+      <label for="taskCategory">Category</label>
+      <select id="taskCategory" name="taskCategory" required></select>
+
+      <div id="segmentField">
+        <label for="taskSegment">Segment</label>
+        <select id="taskSegment" name="taskSegment"></select>
+      </div>
+
+      <label for="taskPriority">Priority</label>
+      <select id="taskPriority" name="taskPriority"></select>
+
+      <label for="taskDueDate">Due Date</label>
+      <input type="date" id="taskDueDate" name="taskDueDate" required />
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary">Add Task</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================================================================
+       EDIT TASK MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="editModalBackdrop" hidden>
+    <form class="modal" id="editTaskForm" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+      <h2 id="editModalTitle">Edit Task</h2>
+
+      <input type="hidden" id="editTaskId" />
+
+      <label for="editTaskName">Task</label>
+      <input type="text" id="editTaskName" name="editTaskName" required placeholder="Task name" />
+
+      <label for="editTaskPriority">Priority</label>
+      <select id="editTaskPriority" name="editTaskPriority"></select>
+
+      <label for="editTaskDueDate">Due Date</label>
+      <input type="date" id="editTaskDueDate" name="editTaskDueDate" required />
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="editCancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================================================================
+       EDIT ASSET / PORTFOLIO HOLDING MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="editHoldingModalBackdrop" hidden>
+    <form class="modal" id="editHoldingForm" role="dialog" aria-modal="true" aria-labelledby="editHoldingModalTitle">
+      <h2 id="editHoldingModalTitle">Edit Holding</h2>
+
+      <input type="hidden" id="editHoldingId" />
+      <input type="hidden" id="editHoldingIsLot" />
+
+      <label for="editHoldingName">Name / Description</label>
+      <input type="text" id="editHoldingName" placeholder="e.g. 24K Gold Bar, Jewelry..." required />
+
+      <div id="editHoldingKaratField">
+        <label for="editHoldingKarat">Karat</label>
+        <select id="editHoldingKarat">
+          <option value="24k">24K</option>
+          <option value="21k">21K</option>
+          <option value="18k">18K</option>
+        </select>
+      </div>
+
+      <label for="editHoldingQuantity" id="editHoldingQtyLabel">Weight / Quantity</label>
+      <input type="number" id="editHoldingQuantity" step="0.001" min="0" required />
+
+      <label for="editHoldingPrice">Total Cost / Price Paid (E£)</label>
+      <div class="amount-input-wrap">
+        <span class="amount-prefix">E£</span>
+        <input type="number" id="editHoldingPrice" step="0.01" min="0" placeholder="0.00" />
+      </div>
+
+      <label for="editHoldingDate">Purchase / Added Date</label>
+      <input type="date" id="editHoldingDate" required />
+
+      <label for="editHoldingStatus">Status</label>
+      <select id="editHoldingStatus">
+        <option value="Owned">Owned</option>
+        <option value="Planned">Planned to buy</option>
+      </select>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="editHoldingCancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================================================================
+       ADD / EDIT WORKOUT EXERCISE MODAL (With Direct File Upload & Media Preview)
+       =================================================================== -->
+  <div class="modal-backdrop" id="exerciseModalBackdrop" hidden>
+    <form class="modal workout-exercise-modal" id="exerciseForm" role="dialog" aria-modal="true" aria-labelledby="exerciseModalTitle">
+      <h2 id="exerciseModalTitle">Add Exercise</h2>
+
+      <input type="hidden" id="exerciseId" />
+
+      <div class="form-row-2">
+        <div>
+          <label for="exerciseDaySelect">Training Day</label>
+          <select id="exerciseDaySelect" required>
+            <option value="saturday">Saturday</option>
+            <option value="sunday">Sunday</option>
+            <option value="monday">Monday</option>
+            <option value="tuesday">Tuesday</option>
+            <option value="wednesday">Wednesday</option>
+            <option value="thursday">Thursday</option>
+            <option value="friday">Friday</option>
+          </select>
+        </div>
+        <div>
+          <label for="exerciseMuscleGroup">Target Muscle</label>
+          <input type="text" id="exerciseMuscleGroup" list="muscleGroupList" placeholder="e.g. Chest, Lats, Quads" required />
+          <datalist id="muscleGroupList">
+            <option value="Chest">
+            <option value="Upper Chest">
+            <option value="Lats">
+            <option value="Upper Back">
+            <option value="Shoulders">
+            <option value="Side Delts">
+            <option value="Rear Delts">
+            <option value="Biceps">
+            <option value="Triceps">
+            <option value="Quads">
+            <option value="Hamstrings">
+            <option value="Glutes">
+            <option value="Calves">
+            <option value="Abs / Core">
+            <option value="Full Body">
+          </datalist>
+        </div>
+      </div>
+
+      <label for="exerciseName">Exercise Name</label>
+      <input type="text" id="exerciseName" placeholder="e.g. Incline Dumbbell Bench Press" required />
+
+      <div class="form-row-2">
+        <div>
+          <label for="exerciseSets">Sets</label>
+          <input type="number" id="exerciseSets" min="1" max="20" value="4" required />
+        </div>
+        <div>
+          <label for="exerciseReps">Reps</label>
+          <input type="text" id="exerciseReps" placeholder="e.g. 8-10 or 12" value="8-10" required />
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div>
+          <label for="exerciseWeight">Target Load / Weight</label>
+          <input type="text" id="exerciseWeight" placeholder="e.g. 28 kg, 80 kg, BW" />
+        </div>
+        <div>
+          <label for="exerciseRestTime">Rest Period</label>
+          <input type="text" id="exerciseRestTime" placeholder="e.g. 90s, 2 min" value="90s" />
+        </div>
+      </div>
+
+      <label for="exerciseNotes">Form &amp; Technique Cues (Pro-Tips)</label>
+      <textarea id="exerciseNotes" rows="2" placeholder="e.g. 30° bench incline, 3s slow eccentric, pause at bottom"></textarea>
+
+      <!-- Media Upload & Video Link Section -->
+      <div class="modal-section-title">🖼️ Exercise Media &amp; Video</div>
+
+      <label>Demonstration Image</label>
+      <div class="upload-dropzone" id="exerciseImageDropzone">
+        <input type="file" id="exerciseImageFileInput" accept="image/*" style="display:none;" />
+        <div class="upload-prompt" id="exerciseUploadPrompt">
+          <span style="font-size:24px;">📁</span>
+          <span><strong>Click to upload an image</strong> or drag &amp; drop here</span>
+          <span style="font-size:11px;opacity:0.7;">PNG, JPG, WEBP, GIF (up to 25MB)</span>
+        </div>
+        <div class="upload-preview-container" id="exercisePreviewContainer" hidden>
+          <img id="exercisePreviewImg" src="" alt="Preview" />
+          <button type="button" class="upload-remove-btn" id="exerciseRemoveImgBtn" title="Remove image">&times;</button>
+        </div>
+      </div>
+
+      <input type="url" id="exerciseImageUrl" placeholder="Or paste image URL: https://..." style="margin-top:6px;" />
+
+      <label for="exerciseVideoUrl" style="margin-top:10px;">Video Tutorial (YouTube / Video URL)</label>
+      <input type="url" id="exerciseVideoUrl" placeholder="https://youtube.com/watch?v=... or search link" />
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="exerciseCancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="exerciseSaveBtn">Save Exercise</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================================================================
+       EDIT WORKOUT DAY SPLIT MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="editDayModalBackdrop" hidden>
+    <form class="modal" id="editDayForm" role="dialog" aria-modal="true" aria-labelledby="editDayModalTitle">
+      <h2 id="editDayModalTitle">Edit Day Workout</h2>
+
+      <input type="hidden" id="editDayId" />
+
+      <label for="editDayTitle">Day Focus &amp; Title</label>
+      <input type="text" id="editDayTitle" placeholder="e.g. Push 1 — Chest &amp; Shoulders" required />
+
+      <label for="editDayMuscles">Target Muscles (comma-separated tags)</label>
+      <input type="text" id="editDayMuscles" placeholder="e.g. Chest, Front Delts, Triceps" />
+
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;margin-bottom:12px;">
+        <input type="checkbox" id="editDayIsRest" class="checkbox" style="width:20px;height:20px;" />
+        <label for="editDayIsRest" style="margin:0;cursor:pointer;font-weight:600;">Mark as Rest &amp; Recovery Day</label>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="editDayCancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary">Save Day</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================================================================
+       VIDEO TUTORIAL PLAYER — Cinematic Minimal Overlay
+       =================================================================== -->
+  <div class="video-overlay-backdrop" id="videoModalBackdrop" hidden>
+    <div class="video-overlay-inner">
+      <!-- Top bar -->
+      <div class="video-overlay-topbar">
+        <span class="video-overlay-title" id="videoModalTitle">Exercise Video</span>
+        <button type="button" class="video-overlay-close" id="videoModalCloseBtn" aria-label="Close video">&times;</button>
+      </div>
+
+      <!-- 16:9 Video Frame -->
+      <div class="video-overlay-frame" id="videoIframeContainer">
+        <!-- iframe or video injected by app.js -->
+      </div>
+
+      <!-- Footer -->
+      <div class="video-overlay-footer">
+        <a id="videoExternalLink" href="#" target="_blank" rel="noopener" class="video-overlay-ext-link">
+          Open in browser &nearr;
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       CUSTOM PROGRAM TEMPLATE MODAL (Create Your Own from Scratch)
+       =================================================================== -->
+  <div class="modal-backdrop" id="programTemplateModalBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="templateModalTitle">
+      <h2 id="templateModalTitle">Customize Workout Program</h2>
+      <p class="subtitle">Choose how you want to configure your weekly training schedule.</p>
+
+      <div class="template-choice-cards">
+        <div class="template-choice-card" id="btnTemplateBlank">
+          <div class="choice-icon">✍️</div>
+          <div class="choice-info">
+            <div class="choice-title">Start Blank &amp; Build Custom Routine</div>
+            <div class="choice-desc">Clears preset exercises so you can add your exact exercises, loads, uploaded pictures, and video links from scratch.</div>
+          </div>
+        </div>
+
+        <div class="template-choice-card" id="btnTemplateCurated">
+          <div class="choice-icon">🔥</div>
+          <div class="choice-info">
+            <div class="choice-title">Reset to Curated 6-Day Hypertrophy Split</div>
+            <div class="choice-desc">Restores the standard 6-day Push/Pull/Legs program with complete exercise cues, sets/reps, and demos.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:16px;">
+        <button type="button" class="btn-secondary" id="templateModalCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       ROUTINE MODAL (Morning / Evening)
+       =================================================================== -->
+  <div class="modal-backdrop" id="routineModalBackdrop" hidden>
+    <div class="modal routine-modal" role="dialog" aria-modal="true" aria-labelledby="routineModalTitle">
+      <h2 id="routineModalTitle">Morning Routine</h2>
+      <div class="routine-repeats-pill"><span>🔄</span> Repeats automatically every day</div>
+      <p class="subtitle" id="routineModalSubtitle">Check off your habits for today — they repeat automatically every day.</p>
+
+      <div class="routine-list" id="routineList" aria-live="polite">
+        <!-- routine items rendered by app.js -->
+      </div>
+
+      <form class="routine-add-form" id="routineAddForm">
+        <input type="text" id="routineAddInput" placeholder="Add a habit or supplement&hellip;" required />
+        <button type="submit" class="btn-primary">Add</button>
+      </form>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="routineCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       DENTAL CASE DETAILS DRAWER & GALLERY VIEWER
+       =================================================================== -->
+  <div class="dental-drawer-backdrop" id="dentalCaseDrawerBackdrop" hidden>
+    <div class="dental-drawer" role="dialog" aria-modal="true" aria-labelledby="dentalDrawerTitle">
+      <!-- Drawer Top Header -->
+      <div class="dental-drawer-header">
+        <div class="dental-drawer-header-left">
+          <div class="dental-drawer-tags-row">
+            <span class="dental-specialty-badge" id="drawerSpecialtyBadge">Restorative</span>
+            <span class="dental-tooth-chip" id="drawerTeethChip">🦷 #11, #21</span>
+            <span class="dental-date-badge" id="drawerDateBadge">📅 2026-08-28</span>
+            <span class="dental-showcase-badge" id="drawerShowcaseBadge" hidden>🌟 Showcase Ready</span>
+          </div>
+          <h2 class="dental-drawer-title" id="dentalDrawerTitle">Case Title</h2>
+          <p class="dental-drawer-sub" id="dentalDrawerPatientCode">Patient ID: PT-0000</p>
+        </div>
+        <div class="dental-drawer-header-right">
+          <button type="button" class="btn-secondary btn-drawer-present" id="btnDrawerPresentCase" title="Present this case to patient">
+            <span>🖥️</span> Present
+          </button>
+          <button type="button" class="btn-secondary btn-drawer-edit" id="btnDrawerEditCase" title="Edit Case Details">
+            <span>✏️</span> Edit
+          </button>
+          <button type="button" class="dental-drawer-close" id="btnDentalDrawerClose" aria-label="Close case">&times;</button>
+        </div>
+      </div>
+
+      <!-- Drawer Tab Navigation -->
+      <div class="dental-drawer-tabs" role="tablist">
+        <button type="button" class="dental-tab-btn active" data-tab="steps" id="tabBtnSteps">📸 Step-by-Step Photos (<span id="drawerStepsCount">0</span>)</button>
+        <button type="button" class="dental-tab-btn" data-tab="xrays" id="tabBtnXrays">🩻 Radiographic X-Rays (<span id="drawerXraysCount">0</span>)</button>
+        <button type="button" class="dental-tab-btn" data-tab="protocol" id="tabBtnProtocol">📋 Clinical Chart &amp; Protocol</button>
+      </div>
+
+      <!-- Drawer Body Content -->
+      <div class="dental-drawer-body">
+        <!-- TAB 1: Clinical Photo Steps -->
+        <div class="dental-tab-content active" id="tabContentSteps">
+          <!-- Before & After Comparison Slider Hero -->
+          <div class="dental-ba-container" id="drawerBeforeAfterWrap" hidden>
+            <div class="dental-ba-title-row">
+              <span class="dental-ba-heading">⚡ Before &amp; After Comparison</span>
+              <span class="dental-ba-hint">Drag divider left/right to compare</span>
+            </div>
+            <div class="dental-ba-slider" id="drawerBaSlider">
+              <img id="drawerBaAfterImg" src="" alt="After Treatment" class="dental-ba-img-after" />
+              <div class="dental-ba-before-wrap" id="drawerBaBeforeWrap">
+                <img id="drawerBaBeforeImg" src="" alt="Before Treatment" class="dental-ba-img-before" />
+              </div>
+              <div class="dental-ba-handle" id="drawerBaHandle">
+                <div class="dental-ba-handle-line"></div>
+                <div class="dental-ba-handle-btn">
+                  <span>&#10094;</span><span>&#10095;</span>
+                </div>
+              </div>
+              <span class="dental-ba-badge badge-before">BEFORE</span>
+              <span class="dental-ba-badge badge-after">AFTER</span>
+            </div>
+          </div>
+
+          <!-- Chronological Step-by-Step Gallery -->
+          <h3 class="dental-section-heading">Clinical Execution Steps</h3>
+          <div class="dental-steps-timeline" id="drawerStepsTimeline">
+            <!-- Rendered by app.js -->
+          </div>
+        </div>
+
+        <!-- TAB 2: Radiographic X-Rays -->
+        <div class="dental-tab-content" id="tabContentXrays" hidden>
+          <div class="dental-xray-toolbar">
+            <span class="dental-xray-tip">🔬 High-Contrast Radiographic Viewer</span>
+            <div class="dental-xray-controls">
+              <button type="button" class="btn-xray-ctrl" id="btnXrayInvert" title="Invert X-ray tones (B/W)">🌓 Invert</button>
+              <button type="button" class="btn-xray-ctrl" id="btnXrayEnhance" title="Boost radiograph contrast">🔆 Contrast Boost</button>
+            </div>
+          </div>
+          <div class="dental-xrays-grid" id="drawerXraysGrid">
+            <!-- X-Ray cards rendered by app.js -->
+          </div>
+        </div>
+
+        <!-- TAB 3: Clinical Protocol & Chart -->
+        <div class="dental-tab-content" id="tabContentProtocol" hidden>
+          <div class="dental-protocol-grid">
+            <div class="dental-protocol-card">
+              <span class="protocol-card-icon">🩺</span>
+              <h4>Diagnosis &amp; Pre-op State</h4>
+              <p id="drawerDiagnosisText">Diagnosis details...</p>
+            </div>
+            <div class="dental-protocol-card">
+              <span class="protocol-card-icon">🧪</span>
+              <h4>Treatment Protocol &amp; Materials</h4>
+              <p id="drawerTreatmentPlanText">Protocol details...</p>
+            </div>
+            <div class="dental-protocol-card full-width">
+              <span class="protocol-card-icon">📝</span>
+              <h4>Clinical Notes &amp; Follow-up</h4>
+              <p id="drawerClinicalNotesText">Clinical notes...</p>
+            </div>
+            <div class="dental-protocol-card full-width" id="drawerTagsCard">
+              <span class="protocol-card-icon">🏷️</span>
+              <h4>Technique &amp; Material Tags</h4>
+              <div class="dental-tags-list" id="drawerTagsList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       FULLSCREEN CHAIRSIDE PATIENT PRESENTATION THEATER
+       =================================================================== -->
+  <div class="dental-theater-backdrop" id="dentalPresentationTheater" hidden>
+    <div class="dental-theater-container">
+      <div class="dental-theater-topbar">
+        <div class="theater-patient-info">
+          <div class="theater-info-tags-row">
+            <span class="theater-badge">PATIENT CONSULTATION MODE</span>
+            <span class="theater-scope-pill" id="theaterScopePill">📂 All Cases (4)</span>
+          </div>
+          <h2 class="theater-case-title" id="theaterCaseTitle">Case Presentation</h2>
+          <p class="theater-case-sub" id="theaterCaseSubtitle">Tooth #11, #21 • Restorative &amp; Aesthetics</p>
+        </div>
+
+        <!-- Central Case Switcher Navigator -->
+        <div class="theater-case-navigator" id="theaterCaseNavigator">
+          <button type="button" class="btn-theater-case-nav" id="btnTheaterPrevCase" title="Previous Case (Shortcut: [ or P)">
+            <span>⏮️</span> Prev Case
+          </button>
+          
+          <div class="theater-case-selector-wrap">
+            <select id="theaterCaseSelect" class="theater-case-dropdown" title="Select specific clinical case to present">
+              <!-- Dynamically populated with all/filtered cases -->
+            </select>
+            <span class="theater-case-counter-badge" id="theaterCaseCounterBadge">1 / 4</span>
+          </div>
+
+          <button type="button" class="btn-theater-case-nav" id="btnTheaterNextCase" title="Next Case (Shortcut: ] or N)">
+            Next Case <span>⏭️</span>
+          </button>
+        </div>
+
+        <div class="theater-topbar-actions">
+          <button type="button" class="btn-theater-close" id="btnTheaterClose" aria-label="Exit presentation">&times; Exit Consultation</button>
+        </div>
+      </div>
+
+      <div class="dental-theater-stage">
+        <!-- Main Big Screen Stage (Split Slider + Step Focus Mode) -->
+        <div class="theater-main-stage">
+          <!-- Stage Top Toolbar & Mode Switcher -->
+          <div class="theater-stage-toolbar">
+            <div class="theater-mode-pills">
+              <button type="button" class="theater-mode-pill" id="btnTheaterModeSplit" title="View Before & After Comparison Slider (Shortcut: B)">
+                <span>⚡</span> Before &amp; After Slider
+              </button>
+              <button type="button" class="theater-mode-pill active" id="btnTheaterModeStep" title="View Step-by-Step Clinical Photos">
+                <span>📸</span> Step Focus View
+              </button>
+            </div>
+            <div class="theater-keyboard-hint">
+              <span>⌨️</span> <strong>← / →</strong> Steps &middot; <strong>[ / ]</strong> Prev/Next Case &middot; <strong>B</strong> Before/After &middot; <strong>ESC</strong> Exit
+            </div>
+          </div>
+
+          <!-- View 1: Step-by-Step Focus Cinematic Stage -->
+          <div class="theater-step-focus-wrap" id="theaterStepFocusWrap">
+            <div class="theater-focus-frame">
+              <img id="theaterStepFocusImg" src="" alt="Clinical Step" class="theater-focus-img" />
+              
+              <!-- Floating On-Screen Navigation Arrows -->
+              <button type="button" class="theater-stage-nav-btn btn-prev" id="btnTheaterPrev" aria-label="Previous clinical step" title="Previous Step (Left Arrow)">&#10094;</button>
+              <button type="button" class="theater-stage-nav-btn btn-next" id="btnTheaterNext" aria-label="Next clinical step" title="Next Step (Right Arrow)">&#10095;</button>
+
+              <!-- Frosted Step Caption Banner -->
+              <div class="theater-focus-caption" id="theaterFocusCaption">
+                <div class="focus-caption-header">
+                  <span class="focus-step-badge" id="theaterFocusStepBadge">Step 1 of 4</span>
+                  <h3 class="focus-step-title" id="theaterFocusStepTitle">Step Title</h3>
+                </div>
+                <p class="focus-step-desc" id="theaterFocusStepDesc">Step description explaining the procedure...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- View 2: Interactive Before & After Split Slider Stage -->
+          <div class="theater-slider-wrap" id="theaterBaSliderWrap" hidden>
+            <div class="dental-ba-slider theater-slider" id="theaterBaSlider">
+              <img id="theaterBaAfterImg" src="" alt="After Treatment" class="dental-ba-img-after" />
+              <div class="dental-ba-before-wrap" id="theaterBaBeforeWrap">
+                <img id="theaterBaBeforeImg" src="" alt="Before Treatment" class="dental-ba-img-before" />
+              </div>
+              <div class="dental-ba-handle" id="theaterBaHandle">
+                <div class="dental-ba-handle-line"></div>
+                <div class="dental-ba-handle-btn">
+                  <span>&#10094;</span><span>&#10095;</span>
+                </div>
+              </div>
+              <span class="dental-ba-badge badge-before">INITIAL STATE</span>
+              <span class="dental-ba-badge badge-after">TREATMENT OUTCOME</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Theater Step Walkthrough Rail -->
+        <div class="theater-steps-rail">
+          <div class="theater-rail-header">
+            <h3>Treatment Walkthrough</h3>
+            <span class="theater-rail-count" id="theaterStepCount">4 Steps</span>
+          </div>
+          <div class="theater-steps-scroll" id="theaterStepsScroll">
+            <!-- Stepped thumbnails and patient-friendly descriptions rendered by app.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       ADD / EDIT DENTAL CASE MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="dentalCaseModalBackdrop" hidden>
+    <form class="modal dental-form-modal" id="dentalCaseForm" role="dialog" aria-modal="true" aria-labelledby="dentalFormModalTitle">
+      <input type="hidden" id="dentalFormCaseId" />
+      <h2 id="dentalFormModalTitle">New Clinical Case</h2>
+      <p class="subtitle">Document clinical photos, X-rays, diagnosis, and treatment steps.</p>
+
+      <div class="dental-form-grid">
+        <div class="form-group full-width">
+          <label for="dentalFormTitle">Case Title *</label>
+          <input type="text" id="dentalFormTitle" required placeholder="e.g., Direct Composite Veneers &amp; Diastema Closure" />
+        </div>
+
+        <div class="form-group">
+          <label for="dentalFormPatientCode">Patient Code / ID</label>
+          <input type="text" id="dentalFormPatientCode" placeholder="e.g., PT-4028 or Anonymous" />
+        </div>
+
+        <div class="form-group">
+          <label for="dentalFormDate">Treatment Date *</label>
+          <input type="date" id="dentalFormDate" required />
+        </div>
+
+        <div class="form-group">
+          <label for="dentalFormSpecialty">Clinical Specialty *</label>
+          <select id="dentalFormSpecialty" required>
+            <option value="Restorative &amp; Aesthetics">Restorative &amp; Aesthetics</option>
+            <option value="Endodontics">Endodontics</option>
+            <option value="Prosthodontics">Prosthodontics</option>
+            <option value="Implantology &amp; Surgery">Implantology &amp; Surgery</option>
+            <option value="Orthodontics">Orthodontics</option>
+            <option value="Periodontics">Periodontics</option>
+            <option value="Pedodontics">Pedodontics</option>
+            <option value="Bleaching">Bleaching</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="dentalFormTeeth">Teeth Notation / Region *</label>
+          <input type="text" id="dentalFormTeeth" placeholder="e.g., #11, #21 or #46 Molar" required />
+        </div>
+
+        <div class="form-group full-width">
+          <label for="dentalFormDiagnosis">Diagnosis / Chief Complaint</label>
+          <textarea id="dentalFormDiagnosis" rows="2" placeholder="Pre-operative condition, pathology, symptoms..."></textarea>
+        </div>
+
+        <div class="form-group full-width">
+          <label for="dentalFormTreatmentPlan">Treatment Protocol &amp; Materials Used</label>
+          <textarea id="dentalFormTreatmentPlan" rows="2" placeholder="Layering technique, rotary instrumentation, materials, isolation..."></textarea>
+        </div>
+
+        <div class="form-group full-width">
+          <label for="dentalFormClinicalNotes">Clinical Notes &amp; Follow-up</label>
+          <textarea id="dentalFormClinicalNotes" rows="2" placeholder="Occlusion checks, recall intervals, special observations..."></textarea>
+        </div>
+
+        <div class="form-group full-width">
+          <label for="dentalFormTags">Tags (Comma-separated)</label>
+          <input type="text" id="dentalFormTags" placeholder="e.g., Composite, Rubber Dam, Before &amp; After, Root Canal" />
+        </div>
+
+        <div class="form-group full-width">
+          <label class="dental-toggle-label" style="margin-top:4px;">
+            <input type="checkbox" id="dentalFormShowcase" />
+            <span>🌟 Feature in Patient Presentation Showcase</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Before & After Image Upload Section -->
+      <div class="dental-form-section-divider">
+        <h3>⚡ Before &amp; After Photos (For Comparison Slider)</h3>
+      </div>
+      <div class="dental-ba-form-row">
+        <div class="ba-upload-box">
+          <label>Pre-op / Before Photo</label>
+          <div class="ba-preview-wrap" id="beforePreviewWrap">
+            <img id="beforeImgPreview" class="ba-thumb-img" alt="Before Preview" hidden />
+            <div class="ba-empty-placeholder" id="beforeEmptyPlaceholder">📷 Drop / Select Before Photo</div>
+          </div>
+          <input type="file" id="beforeFileInput" accept="image/*" class="dental-file-input" />
+          <input type="url" id="beforeUrlInput" placeholder="or paste Image URL..." class="dental-url-input" />
+        </div>
+
+        <div class="ba-upload-box">
+          <label>Post-op / After Photo</label>
+          <div class="ba-preview-wrap" id="afterPreviewWrap">
+            <img id="afterImgPreview" class="ba-thumb-img" alt="After Preview" hidden />
+            <div class="ba-empty-placeholder" id="afterEmptyPlaceholder">✨ Drop / Select After Photo</div>
+          </div>
+          <input type="file" id="afterFileInput" accept="image/*" class="dental-file-input" />
+          <input type="url" id="afterUrlInput" placeholder="or paste Image URL..." class="dental-url-input" />
+        </div>
+      </div>
+
+      <!-- Step-by-Step Clinical Photos Builder -->
+      <div class="dental-form-section-divider">
+        <div class="divider-title-row">
+          <h3>📸 Step-by-Step Clinical Photos</h3>
+          <button type="button" class="btn-secondary btn-sm" id="btnAddFormStep">➕ Add Step</button>
+        </div>
+      </div>
+      <div class="dental-form-steps-container" id="dentalFormStepsContainer">
+        <!-- Step builder rows dynamically managed -->
+      </div>
+
+      <!-- Radiographic X-Rays Builder -->
+      <div class="dental-form-section-divider">
+        <div class="divider-title-row">
+          <h3>🩻 Radiographic X-Rays</h3>
+          <button type="button" class="btn-secondary btn-sm" id="btnAddFormXray">➕ Add X-Ray</button>
+        </div>
+      </div>
+      <div class="dental-form-xrays-container" id="dentalFormXraysContainer">
+        <!-- X-ray builder rows dynamically managed -->
+      </div>
+
+      <div class="modal-actions" style="margin-top:24px;">
+        <button type="button" class="btn-secondary" id="dentalFormCancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="dentalFormSubmitBtn">Save Clinical Case</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================================================================
+       WEEKLY REPEATING SCHEDULE TEMPLATE MODAL (Add / Edit Repeating Task)
+       =================================================================== -->
+  <div class="modal-backdrop" id="weeklyTemplateModalBackdrop" hidden>
+    <form class="modal weekly-template-modal" id="weeklyTemplateForm" role="dialog" aria-modal="true" aria-labelledby="weeklyTemplateModalTitle">
+      <h2 id="weeklyTemplateModalTitle">Add Repeating Weekly Task</h2>
+      <p class="modal-sub" id="weeklyTemplateModalSub">Set up a recurring task that repeats automatically every week.</p>
+      
+      <input type="hidden" id="tplFormCategory" value="" />
+      <input type="hidden" id="tplFormItemId" value="" />
+
+      <label for="tplFormDay">Day of the Week *</label>
+      <select id="tplFormDay" required>
+        <option value="Saturday">Saturday</option>
+        <option value="Sunday">Sunday</option>
+        <option value="Monday">Monday</option>
+        <option value="Tuesday">Tuesday</option>
+        <option value="Wednesday">Wednesday</option>
+        <option value="Thursday">Thursday</option>
+        <option value="Friday">Friday</option>
+      </select>
+
+      <label for="tplFormTask">Task Title / Activity *</label>
+      <input type="text" id="tplFormTask" placeholder="e.g. Crystal Clinic, White Plus Clinic, Chest Hypertrophy, etc." required />
+
+      <div class="form-row-2col">
+        <div>
+          <label for="tplFormTime">Time / Shift Window (Optional)</label>
+          <input type="text" id="tplFormTime" placeholder="e.g. 09:00 AM - 05:00 PM, 06:00 PM, etc." />
+        </div>
+        <div>
+          <label for="tplFormPriority">Priority</label>
+          <select id="tplFormPriority">
+            <option value="High">🔴 High Priority</option>
+            <option value="Medium" selected>🟡 Medium Priority</option>
+            <option value="Low">🟢 Low Priority</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="tplFormSegment">Segment / Venue Tag (Optional)</label>
+      <input type="text" id="tplFormSegment" placeholder="e.g. Clinic, Hospital, Gym, Research, Library" />
+
+      <div class="checkbox-row" style="margin-top: 10px; padding: 8px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+        <label class="toggle-switch-label" style="cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink-mid);">
+          <input type="checkbox" id="tplFormIsOff" />
+          <span>Mark as <strong>Off / Rest Day</strong> (No active clinic/work shift)</span>
+        </label>
+      </div>
+
+      <div class="modal-actions" style="margin-top:20px;">
+        <button type="button" class="btn-secondary" id="weeklyTemplateCancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="weeklyTemplateSubmitBtn">Save Repeating Item</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================================================================
+       NOTIFICATION & REMINDER CENTER DRAWER
+       =================================================================== -->
+  <div class="modal-backdrop notification-center-backdrop" id="notificationCenterModalBackdrop" hidden>
+    <div class="modal notification-center-modal" id="notificationCenterModal" role="dialog" aria-modal="true" aria-labelledby="notificationCenterTitle">
+      <div class="notification-center-header">
+        <div class="notification-title-wrap">
+          <span class="notification-title-icon">🔔</span>
+          <div>
+            <h2 id="notificationCenterTitle">Reminders &amp; Notification Center</h2>
+            <p class="subtitle">Real-time alerts for scheduled tasks, clinic shifts &amp; progress reports</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-notification" id="btnCloseNotificationCenter" aria-label="Close notifications">&times;</button>
+      </div>
+
+      <!-- Permission Activation Banner (Shown if notifications not granted) -->
+      <div class="notification-permission-card" id="notificationPermissionCard" style="display: none;">
+        <div class="permission-card-icon">⚡</div>
+        <div class="permission-card-info">
+          <h4>Enable Desktop &amp; Device Reminders</h4>
+          <p>Get instant reminders for your upcoming tasks, daily routines, and evening progress reports even when the tab is minimized.</p>
+        </div>
+        <button type="button" class="btn-enable-permission" id="btnRequestNotificationPermission">
+          <span>🔔</span> Enable Reminders
+        </button>
+      </div>
+
+      <!-- Notification Filter Tabs & Actions -->
+      <div class="notification-filter-bar">
+        <div class="notification-filter-pills" id="notificationFilterPills">
+          <button type="button" class="notif-pill active" data-filter="all">All Alerts</button>
+          <button type="button" class="notif-pill" data-filter="tasks">Tasks &amp; Shifts</button>
+          <button type="button" class="notif-pill" data-filter="reports">Reports</button>
+          <button type="button" class="notif-pill" data-filter="routines">Routines</button>
+        </div>
+        <div class="notification-quick-actions">
+          <button type="button" class="btn-notif-action" id="btnMarkAllNotifsRead" title="Mark all as read">✓ Mark All Read</button>
+          <button type="button" class="btn-notif-action" id="btnClearAllNotifs" title="Clear all">🗑️ Clear</button>
+          <button type="button" class="btn-notif-action btn-notif-settings-link" id="btnOpenNotifSettingsFromCenter" title="Settings">⚙️ Settings</button>
+        </div>
+      </div>
+
+      <!-- Notification Items List -->
+      <div class="notification-items-list" id="notificationItemsList">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       NOTIFICATION & REMINDER SETTINGS MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="notificationSettingsModalBackdrop" hidden>
+    <div class="modal notification-settings-modal" id="notificationSettingsModal" role="dialog" aria-modal="true" aria-labelledby="notificationSettingsTitle">
+      <div class="settings-modal-header">
+        <div class="settings-title-wrap">
+          <span class="settings-icon">⚙️</span>
+          <div>
+            <h2 id="notificationSettingsTitle">Notification &amp; Reminder Settings</h2>
+            <p class="subtitle">Configure automated task alerts, audio chimes, and scheduled reports</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-notification" id="btnCloseNotificationSettings">&times;</button>
+      </div>
+
+      <div class="notification-settings-body">
+        <!-- Section 1: Delivery Channels -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">Delivery Channels &amp; Audio</h3>
+
+          <div class="setting-toggle-row">
+            <div class="setting-toggle-info">
+              <label class="setting-label" for="settingDesktopNotifs">Browser Desktop Reminders</label>
+              <p class="setting-desc">Display native system notifications on your desktop or phone even when working in another tab</p>
+            </div>
+            <label class="switch-ui">
+              <input type="checkbox" id="settingDesktopNotifs" />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-toggle-row">
+            <div class="setting-toggle-info">
+              <label class="setting-label" for="settingAudioChime">Sound Chime &amp; Audio Alerts</label>
+              <p class="setting-desc">Play a subtle, pleasant crystal chime when a reminder triggers</p>
+            </div>
+            <label class="switch-ui">
+              <input type="checkbox" id="settingAudioChime" checked />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Section 2: Daily Briefings & Reports -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">Scheduled Reports &amp; Daily Briefings</h3>
+
+          <div class="setting-toggle-row">
+            <div class="setting-toggle-info">
+              <label class="setting-label" for="settingMorningBriefing">Morning Routine &amp; Day Briefing</label>
+              <p class="setting-desc">Daily notification summarizing today's clinic shifts, workouts &amp; schedule</p>
+            </div>
+            <div class="setting-time-toggle">
+              <input type="time" id="settingMorningTime" value="08:30" class="setting-time-input" />
+              <label class="switch-ui">
+                <input type="checkbox" id="settingMorningBriefing" checked />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-toggle-row">
+            <div class="setting-toggle-info">
+              <label class="setting-label" for="settingEveningReport">Evening Progress Wrap-up &amp; Report</label>
+              <p class="setting-desc">Evening alert with your daily completion rate and reminder to log routines</p>
+            </div>
+            <div class="setting-time-toggle">
+              <input type="time" id="settingEveningTime" value="21:00" class="setting-time-input" />
+              <label class="switch-ui">
+                <input type="checkbox" id="settingEveningReport" checked />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Tasks & Weekly Digests -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">Tasks, Workouts &amp; Weekly Review</h3>
+
+          <div class="setting-toggle-row">
+            <div class="setting-toggle-info">
+              <label class="setting-label" for="settingTaskReminders">Task &amp; Clinic Shift Reminders</label>
+              <p class="setting-desc">Alerts for scheduled repeating appointments (Crystal Clinic, White Plus) &amp; workout focus</p>
+            </div>
+            <label class="switch-ui">
+              <input type="checkbox" id="settingTaskReminders" checked />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-toggle-row">
+            <div class="setting-toggle-info">
+              <label class="setting-label" for="settingWeeklyDigest">Weekly Progress Digest (Friday Review)</label>
+              <p class="setting-desc">Reminds you to inspect your weekly charts and performance trajectory on Friday evening</p>
+            </div>
+            <label class="switch-ui">
+              <input type="checkbox" id="settingWeeklyDigest" checked />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-toggle-row">
+            <div class="setting-toggle-info">
+              <label class="setting-label" for="settingMonthlyFinance">Monthly Finance &amp; Budget Review</label>
+              <p class="setting-desc">Monthly reminder to review cash flow, savings rate, and wealth growth</p>
+            </div>
+            <label class="switch-ui">
+              <input type="checkbox" id="settingMonthlyFinance" checked />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-modal-footer">
+        <button type="button" class="btn-test-notification" id="btnTestNotification">
+          <span>🧪</span> Test Notification &amp; Chime
+        </button>
+        <button type="button" class="btn-primary" id="btnSaveNotificationSettings">
+          <span>💾</span> Save Preferences
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       EXERCISE WEIGHT & PERSONAL RECORD (PR) STUDIO MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="exerciseWeightModalBackdrop" hidden>
+    <div class="modal exercise-weight-modal" id="exerciseWeightModal" role="dialog" aria-modal="true" aria-labelledby="exWeightModalTitle">
+      <div class="ex-weight-modal-header">
+        <div class="ex-weight-title-row">
+          <span class="ex-weight-icon">🏋️</span>
+          <div>
+            <h2 id="exWeightModalTitle">Barbell Bench Press</h2>
+            <p class="subtitle" id="exWeightModalMuscle">Chest • Strength &amp; Progression Tracker</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-notification" id="btnCloseExerciseWeightModal" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Triumphant PR Celebration Banner (Shown when new PR logged) -->
+      <div class="pr-celebration-banner" id="exPRCelebrationBanner" style="display: none;">
+        <div class="pr-celebration-sparkle">🏆</div>
+        <div class="pr-celebration-text">
+          <h3 id="exPRCelebrationTitle">NEW PERSONAL RECORD ACHIEVED!</h3>
+          <p id="exPRCelebrationSub">+5 kg increase from previous record! Keep crushing your training.</p>
+        </div>
+      </div>
+
+      <!-- Top PR & Stats Scorecard Grid -->
+      <div class="ex-pr-stats-grid">
+        <div class="ex-pr-card gold-pr-glow">
+          <div class="ex-pr-label">
+            <span>🏆 All-Time Record (PR)</span>
+            <span class="ex-pr-tag">BEST</span>
+          </div>
+          <div class="ex-pr-val" id="exModalPRValue">0 kg</div>
+          <div class="ex-pr-sub" id="exModalPRDate">No record set yet</div>
+        </div>
+
+        <div class="ex-pr-card">
+          <div class="ex-pr-label">
+            <span>⚡ Last Logged Session</span>
+            <span class="ex-pr-tag">RECENT</span>
+          </div>
+          <div class="ex-pr-val" id="exModalRecentValue">0 kg</div>
+          <div class="ex-pr-sub" id="exModalRecentDate">--</div>
+        </div>
+
+        <div class="ex-pr-card">
+          <div class="ex-pr-label">
+            <span>📈 Overall Progression</span>
+            <span class="ex-pr-tag">DELTA</span>
+          </div>
+          <div class="ex-pr-val" id="exModalDeltaValue">+0 kg</div>
+          <div class="ex-pr-sub" id="exModalSessionsCount">0 total sessions</div>
+        </div>
+      </div>
+
+      <!-- Interactive Weight Trajectory Chart -->
+      <div class="ex-chart-container">
+        <div class="ex-chart-head">
+          <h4>📈 Weight Progression Trajectory</h4>
+          <span class="ex-chart-badge">Session-by-Session</span>
+        </div>
+        <div class="ex-canvas-wrap" style="height: 200px; position: relative;">
+          <canvas id="canvasExerciseWeightChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Quick Session Weight Log Form -->
+      <form class="ex-log-form" id="exWeightLogForm">
+        <input type="hidden" id="exLogExerciseId" />
+        <h4 class="ex-form-title">➕ Log Today's Weight &amp; Sets</h4>
+        
+        <div class="ex-form-grid">
+          <div class="form-group">
+            <label for="exLogWeight">Weight (kg) *</label>
+            <div class="ex-weight-input-stepper">
+              <input type="number" id="exLogWeight" step="0.5" min="0" required placeholder="e.g. 100" />
+              <div class="ex-stepper-pills">
+                <button type="button" class="stepper-btn" data-step="-5">-5</button>
+                <button type="button" class="stepper-btn" data-step="-2.5">-2.5</button>
+                <button type="button" class="stepper-btn" data-step="+2.5">+2.5</button>
+                <button type="button" class="stepper-btn" data-step="+5">+5</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="exLogSets">Sets Completed</label>
+            <input type="number" id="exLogSets" min="1" max="20" value="4" required />
+          </div>
+
+          <div class="form-group">
+            <label for="exLogReps">Reps per Set</label>
+            <input type="text" id="exLogReps" placeholder="e.g. 8 or 8-10" value="8" required />
+          </div>
+
+          <div class="form-group">
+            <label for="exLogDate">Date</label>
+            <input type="date" id="exLogDate" required />
+          </div>
+
+          <div class="form-group full-width">
+            <label for="exLogNotes">Session Notes / Form Feeling (Optional)</label>
+            <input type="text" id="exLogNotes" placeholder="e.g. Fast lockout, felt light, 1 RIR..." />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary ex-submit-btn" id="exLogSubmitBtn">
+          <span>💾</span> Log Weight &amp; Update Record
+        </button>
+      </form>
+
+      <!-- Session History Table -->
+      <div class="ex-history-section">
+        <h4>📋 Training Session History</h4>
+        <div class="ex-history-table-wrap">
+          <table class="ex-history-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Weight</th>
+                <th>Volume (Sets &times; Reps)</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="exWeightHistoryTbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  <!-- ===================================================================
+       ROADMAP MILESTONE MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="roadmapModalBackdrop" hidden>
+    <form class="modal roadmap-modal" id="roadmapMilestoneForm" role="dialog" aria-modal="true" aria-labelledby="roadmapModalTitle">
+      <h2 id="roadmapModalTitle">Add Life Milestone</h2>
+      <input type="hidden" id="roadmapMilestoneId" name="milestoneId" value="" />
+
+      <label for="roadmapPillarSelect">Life Pillar</label>
+      <select id="roadmapPillarSelect" name="pillar" required>
+        <option value="Dental Career">🦷 Dental Career</option>
+        <option value="Trading & Markets">📈 Trading &amp; Markets</option>
+        <option value="Studies & Knowledge">📚 Studies &amp; Knowledge</option>
+        <option value="Wealth & Freedom">💎 Wealth &amp; Freedom</option>
+      </select>
+
+      <label for="roadmapPhaseSelect">Strategic Phase</label>
+      <select id="roadmapPhaseSelect" name="phase" required>
+        <option value="Phase 1: Foundation (Now)">Phase 1: Foundation (Now)</option>
+        <option value="Phase 2: Acceleration (6-12M)">Phase 2: Acceleration (6-12M)</option>
+        <option value="Phase 3: Mastery & Scale (1-3Y)">Phase 3: Mastery &amp; Scale (1-3Y)</option>
+        <option value="Phase 4: Freedom & Legacy (5Y+)">Phase 4: Freedom &amp; Legacy (5Y+)</option>
+      </select>
+
+      <label for="roadmapTitleInput">Milestone Title</label>
+      <input type="text" id="roadmapTitleInput" name="title" required placeholder="e.g. Master Advanced Rotary Endo or Pass $100k Prop Challenge" />
+
+      <div class="modal-row-2">
+        <div>
+          <label for="roadmapHorizonInput">Target Horizon</label>
+          <input type="text" id="roadmapHorizonInput" name="targetHorizon" placeholder="e.g. Q4 2026 or 2027" />
+        </div>
+        <div>
+          <label for="roadmapStatusSelect">Current Status</label>
+          <select id="roadmapStatusSelect" name="status">
+            <option value="in_progress">● In Progress</option>
+            <option value="upcoming">🔒 Upcoming / Horizon</option>
+            <option value="completed">✓ Completed / Achieved</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="roadmapStrategyInput">Action Strategy &amp; Blueprint</label>
+      <textarea id="roadmapStrategyInput" name="actionStrategy" rows="2" placeholder="Key execution rules, schedule blocks, risk management..."></textarea>
+
+      <label for="roadmapKeyResultsInput">Key Results (One per line)</label>
+      <textarea id="roadmapKeyResultsInput" name="keyResultsRaw" rows="3" placeholder="Complete 50 clinical cases&#10;Pass Phase 1 evaluation challenge&#10;Maintain >90% mock exam score"></textarea>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="btnCancelRoadmapModal">Cancel</button>
+        <button type="submit" class="btn-primary" id="btnSaveRoadmapMilestone">Save Milestone</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================================================================
+       USER AUTHENTICATION MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="authModalBackdrop" hidden>
+    <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <div class="auth-modal-header">
+        <div class="auth-brand-badge">⚡ Cloud Database Active</div>
+        <h2 id="authModalTitle">Welcome to Your Personal HQ</h2>
+        <p class="auth-modal-sub" id="authModalSubtitle">Sign in or create an account to access your workspace</p>
+      </div>
+
+      <!-- Auth Tabs -->
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="authTabLogin" data-mode="login">Sign In</button>
+        <button type="button" class="auth-tab" id="authTabRegister" data-mode="register">Create Account</button>
+      </div>
+
+      <form id="authForm" class="auth-form">
+        <div class="form-group" id="authNameGroup" style="display: none;">
+          <label for="authNameInput">Your Name</label>
+          <input type="text" id="authNameInput" placeholder="e.g. Dr. Alex" autocomplete="name" />
+        </div>
+
+        <div class="form-group">
+          <label for="authEmailInput">Email Address</label>
+          <input type="email" id="authEmailInput" required placeholder="you@example.com" autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label for="authPasswordInput">Password</label>
+          <input type="password" id="authPasswordInput" required placeholder="••••••••" autocomplete="current-password" minlength="6" />
+        </div>
+
+        <div class="auth-error-msg" id="authErrorMsg" style="display: none;"></div>
+
+        <button type="submit" class="btn-primary auth-submit-btn" id="authSubmitBtn">
+          <span>🚀</span> Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <!-- Chart.js Engine -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

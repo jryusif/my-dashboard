@@ -1,0 +1,263 @@
+[
+  {
+    "id": "case_1740842000_composite",
+    "title": "Direct Composite Veneers & Diastema Closure",
+    "patientCode": "PT-4028",
+    "date": "2026-08-28",
+    "specialty": "Restorative & Aesthetics",
+    "teeth": "#11, #21 (Maxillary Centrals)",
+    "diagnosis": "Midline diastema (2.5mm) with incisal edge chipping and slight enamel hypoplasia on tooth #11.",
+    "treatmentPlan": "Direct polychromatic composite resin layering following customized silicone index. Multi-shade stratification (Dentin A2, Body A1, Enamel Translucent Neutral) with anatomical macro/micro-texture and diamond paste polishing.",
+    "clinicalNotes": "Isolation achieved with heavy rubber dam and Teflon tape on lateral incisors. Total-etch 37% H3PO4 (20s enamel, 10s dentin) + universal adhesive. Finishing with 12-fluted carbide burs, Sof-Lex discs (coarse to superfine), and diamond felt wheel at 8,000 RPM. Occlusion checked in centric and protrusive guidance.",
+    "showcaseForPatients": true,
+    "tags": [
+      "Aesthetics",
+      "Composite Layering",
+      "Diastema Closure",
+      "Before & After",
+      "Rubber Dam"
+    ],
+    "beforeAfter": {
+      "beforeImageUrl": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80",
+      "afterImageUrl": "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=80",
+      "beforeLabel": "Initial Smile — 2.5mm Diastema & Chipping",
+      "afterLabel": "Final Result — Natural Symmetry & Vitality"
+    },
+    "steps": [
+      {
+        "stepNumber": 1,
+        "title": "Initial Clinical State & Diagnosis",
+        "imageUrl": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80",
+        "description": "Pre-operative frontal smile analysis showing midline gap, asymmetric central widths, and defective incisal margin on #11.",
+        "isBefore": true,
+        "isAfter": false
+      },
+      {
+        "stepNumber": 2,
+        "title": "Rubber Dam Isolation & Palatal Shell Layer",
+        "imageUrl": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80",
+        "description": "Strict isolation with rubber dam. Palatal enamel shelf established using pre-formed silicone index with translucent enamel composite (0.5mm thickness).",
+        "isBefore": false,
+        "isAfter": false
+      },
+      {
+        "stepNumber": 3,
+        "title": "Dentin Stratification & Mamelon Anatomy",
+        "imageUrl": "https://images.unsplash.com/photo-1609840114035-3c981b782dfe?auto=format&fit=crop&w=800&q=80",
+        "description": "Dentin body (A2/A1) layered to reproduce natural dentinal lobes/mamelons with slight incisal halo effect using effect shade.",
+        "isBefore": false,
+        "isAfter": false
+      },
+      {
+        "stepNumber": 4,
+        "title": "Macro/Micro-Texture & High Gloss Polishing",
+        "imageUrl": "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=80",
+        "description": "Primary anatomy refined, developmental grooves created with fine diamond flame bur. Multi-step polishing with aluminum oxide paste and cotton wheel.",
+        "isBefore": false,
+        "isAfter": true
+      }
+    ],
+    "xrays": [
+      {
+        "id": "xr_1",
+        "label": "Pre-op Periapical X-Ray #11, #21",
+        "url": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80",
+        "date": "2026-08-28",
+        "notes": "Normal bone levels, intact lamina dura, no periapical pathology."
+      }
+    ],
+    "createdAt": "2026-08-28T10:00:00.000Z",
+    "updatedAt": "2026-08-28T10:00:00.000Z"
+  },
+  {
+    "id": "case_1740842001_endo",
+    "title": "Complex 4-Canal Endodontic Treatment on #46",
+    "patientCode": "PT-3910",
+    "date": "2026-08-22",
+    "specialty": "Endodontics",
+    "teeth": "#46 (Mandibular Right First Molar)",
+    "diagnosis": "Symptomatic Irreversible Pulpitis with Symptomatic Apical Periodontitis. Deep distal caries extending subgingivally.",
+    "treatmentPlan": "Single-visit root canal treatment. Caries excavation, composite pre-endo build-up, rotary nickel-titanium instrumentation (Protaper Next X1-X3), warm vertical hydraulic compaction with bioceramic sealer, fiber post and core.",
+    "clinicalNotes": "Found 4 canals: MB, ML, DB, DL. Working lengths verified with electronic apex locator and confirmation radiographs: MB 21.5mm, ML 21.0mm, DB 22.0mm, DL 21.5mm. Irrigated with 5.25% NaOCl heated and ultrasonic activation, followed by 17% EDTA flush.",
+    "showcaseForPatients": true,
+    "tags": [
+      "Root Canal",
+      "Endodontics",
+      "Molar",
+      "X-Ray Series",
+      "Bioceramic"
+    ],
+    "beforeAfter": {
+      "beforeImageUrl": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80",
+      "afterImageUrl": "https://images.unsplash.com/photo-1629909615184-74f495363b67?auto=format&fit=crop&w=800&q=80",
+      "beforeLabel": "Pre-op: Deep Distal Pulp Exposure",
+      "afterLabel": "Post-op: 3D Hermetic Obturation"
+    },
+    "steps": [
+      {
+        "stepNumber": 1,
+        "title": "Access Cavity & Orifice Location",
+        "imageUrl": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80",
+        "description": "Conservative access cavity with straight-line vision to all 4 canal orifices under dental operating microscope.",
+        "isBefore": true,
+        "isAfter": false
+      },
+      {
+        "stepNumber": 2,
+        "title": "Rotary Instrumentation & Sonic Activation",
+        "imageUrl": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80",
+        "description": "Glide path established with #10/#15 K-files, shaped with rotary NiTi files with continuous NaOCl activation.",
+        "isBefore": false,
+        "isAfter": false
+      },
+      {
+        "stepNumber": 3,
+        "title": "Bioceramic Hydraulic Obturation",
+        "imageUrl": "https://images.unsplash.com/photo-1629909615184-74f495363b67?auto=format&fit=crop&w=800&q=80",
+        "description": "Complete 3D obturation using gutta-percha with calcium silicate bioceramic sealer and coronal composite seal.",
+        "isBefore": false,
+        "isAfter": true
+      }
+    ],
+    "xrays": [
+      {
+        "id": "xr_endo_1",
+        "label": "Pre-op Diagnostic X-Ray",
+        "url": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80",
+        "date": "2026-08-22",
+        "notes": "Deep distal radiolucency encroaching on pulp chamber, widening of PDL space on distal root."
+      },
+      {
+        "id": "xr_endo_2",
+        "label": "Master Cone Trial Fit X-Ray",
+        "url": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80",
+        "date": "2026-08-22",
+        "notes": "Master gutta-percha cones seated to full working length with apical tugback in all 4 canals."
+      },
+      {
+        "id": "xr_endo_3",
+        "label": "Final Post-Obturation X-Ray",
+        "url": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80",
+        "date": "2026-08-22",
+        "notes": "Dense, void-free 3D obturation extending exactly 0.5mm from radiographic apex with lateral canal seals."
+      }
+    ],
+    "createdAt": "2026-08-22T14:30:00.000Z",
+    "updatedAt": "2026-08-22T14:30:00.000Z"
+  },
+  {
+    "id": "case_1740842002_veneer",
+    "title": "Full Anterior Aesthetic Smile Transformation (6 E.max Veneers)",
+    "patientCode": "PT-4215",
+    "date": "2026-08-15",
+    "specialty": "Prosthodontics",
+    "teeth": "#13, #12, #11, #21, #22, #23",
+    "diagnosis": "Severe tetracycline discoloration, uneven gingival zeniths, worn incisal edges, and reverse smile arc.",
+    "treatmentPlan": "Digital Smile Design (DSD) guided minimal preparation (0.3 - 0.5mm), diode laser gingivoplasty on #12 and #22, 6 bonded lithium disilicate (IPS e.max CAD HT BL2) ceramic veneers.",
+    "clinicalNotes": "Photographic DSD protocol, intraoral 3D scan with Medit i700. Try-in with neutral glycerin paste for shade confirmation. Adhesive cementation with light-cure veneer resin cement under total rubber dam isolation.",
+    "showcaseForPatients": true,
+    "tags": [
+      "Smile Design",
+      "Veneers",
+      "E.max",
+      "Cosmetic",
+      "Digital Dentistry"
+    ],
+    "beforeAfter": {
+      "beforeImageUrl": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80",
+      "afterImageUrl": "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=80",
+      "beforeLabel": "Initial: Severe Discoloration & Wear",
+      "afterLabel": "Final: Harmonious Natural Bleach Smile"
+    },
+    "steps": [
+      {
+        "stepNumber": 1,
+        "title": "Digital Smile Design (DSD) & Diagnostic Mock-up",
+        "imageUrl": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80",
+        "description": "Facial and smile symmetry analysis, digital 3D aesthetic planning, and direct intraoral bis-acryl mock-up trial with patient approval.",
+        "isBefore": true,
+        "isAfter": false
+      },
+      {
+        "stepNumber": 2,
+        "title": "Minimal Enamel Preparation & Digital 3D Scanning",
+        "imageUrl": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80",
+        "description": "Enamel-driven depth cut preparation (0.3mm cervical, 0.5mm middle third, 1.0mm incisal reduction) preserving >90% enamel bonding substrate.",
+        "isBefore": false,
+        "isAfter": false
+      },
+      {
+        "stepNumber": 3,
+        "title": "Adhesive Delivery & Polishing",
+        "imageUrl": "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=80",
+        "description": "Hydrofluoric acid 9.5% etch (20s) on ceramic + silane coupling. Light-cured for 60s per surface under oxygen-inhibiting gel.",
+        "isBefore": false,
+        "isAfter": true
+      }
+    ],
+    "xrays": [
+      {
+        "id": "xr_veneer_1",
+        "label": "Post-Cementation Margin Verification Bitewings",
+        "url": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80",
+        "date": "2026-08-15",
+        "notes": "Flush subgingival and equigingival ceramic-to-tooth margins, zero excess resin cement detected."
+      }
+    ],
+    "createdAt": "2026-08-15T09:00:00.000Z",
+    "updatedAt": "2026-08-15T09:00:00.000Z"
+  },
+  {
+    "id": "case_1740842003_bleach",
+    "title": "In-Office Laser-Assisted Power Teeth Whitening",
+    "patientCode": "PT-4390",
+    "date": "2026-08-10",
+    "specialty": "Bleaching",
+    "teeth": "Full Arch (Maxilla & Mandible)",
+    "diagnosis": "Extrinsic and mild intrinsic yellowish discoloration (Baseline Shade: VITA A3.5).",
+    "treatmentPlan": "Professional oral prophylaxis, gingival resin barrier isolation, 3 x 15-minute cycles of 38% Hydrogen Peroxide with 810nm diode laser photo-activation, post-treatment ACP desensitizing remineralization.",
+    "clinicalNotes": "No spontaneous post-operative tooth sensitivity reported. Achieved 6 shades of shade guide improvement from A3.5 down to VITA BL2 / B1. Patient instructed on white diet for 48 hours.",
+    "showcaseForPatients": true,
+    "tags": [
+      "Teeth Whitening",
+      "Laser Bleaching",
+      "Aesthetics",
+      "Before & After"
+    ],
+    "beforeAfter": {
+      "beforeImageUrl": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80",
+      "afterImageUrl": "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=80",
+      "beforeLabel": "Initial Shade: VITA A3.5",
+      "afterLabel": "Final Shade: VITA BL2 (Bleach)"
+    },
+    "steps": [
+      {
+        "stepNumber": 1,
+        "title": "Gingival Barrier Isolation & Desensitizing Pre-treatment",
+        "imageUrl": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80",
+        "description": "Liquid dam light-cured along all marginal and interdental gingiva to prevent chemical tissue irritation.",
+        "isBefore": true,
+        "isAfter": false
+      },
+      {
+        "stepNumber": 2,
+        "title": "Hydrogen Peroxide Application & Diode Laser Activation",
+        "imageUrl": "https://images.unsplash.com/photo-1609840114035-3c981b782dfe?auto=format&fit=crop&w=800&q=80",
+        "description": "38% HP gel applied uniformly across vestibular surfaces, activated with diode laser for fast oxidation of chromophore pigments.",
+        "isBefore": false,
+        "isAfter": false
+      },
+      {
+        "stepNumber": 3,
+        "title": "Final Shade Verification & Enamel Remineralization",
+        "imageUrl": "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=80",
+        "description": "High-gloss fluoride & amorphous calcium phosphate (ACP) mousse applied to seal open enamel tubules and maximize shade retention.",
+        "isBefore": false,
+        "isAfter": true
+      }
+    ],
+    "xrays": [],
+    "createdAt": "2026-08-10T11:00:00.000Z",
+    "updatedAt": "2026-08-10T11:00:00.000Z"
+  }
+]

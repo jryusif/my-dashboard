@@ -1,0 +1,374 @@
+[
+  {
+    "id": "rm_dental_01",
+    "pillar": "Dental Career",
+    "phase": "Phase 1: Foundation (Now)",
+    "title": "Master Advanced Rotary Endodontics & Aesthetic Layering",
+    "targetHorizon": "Q4 2026",
+    "status": "completed",
+    "priority": "High",
+    "progressPct": 100,
+    "keyResults": [
+      {
+        "id": "kr_d1",
+        "title": "Complete 50 complex molar rotary endo cases",
+        "done": true
+      },
+      {
+        "id": "kr_d2",
+        "title": "Master anterior polychromatic composite layering technique",
+        "done": true
+      },
+      {
+        "id": "kr_d3",
+        "title": "Document every case with high-resolution clinical SLR photography",
+        "done": true
+      }
+    ],
+    "actionStrategy": "Refine apex locator precision and 3D continuous wave obturation during clinic shifts.",
+    "metricsTarget": "50 Cases Documented",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_dental_02",
+    "pillar": "Dental Career",
+    "phase": "Phase 2: Acceleration (6-12M)",
+    "title": "Complete Surgical Implantology & Hard Tissue Grafting Residency",
+    "targetHorizon": "Q2 2027",
+    "status": "in_progress",
+    "priority": "High",
+    "progressPct": 67,
+    "keyResults": [
+      {
+        "id": "kr_d4",
+        "title": "Enroll in accredited surgical implantology diploma",
+        "done": true
+      },
+      {
+        "id": "kr_d5",
+        "title": "Place 25 supervised single & multi-unit dental implants",
+        "done": true
+      },
+      {
+        "id": "kr_d6",
+        "title": "Master CBCT surgical guide design & 3D guided surgery workflows",
+        "done": false
+      }
+    ],
+    "actionStrategy": "Dedicate weekend clinical workshops to live patient implant surgical placements.",
+    "metricsTarget": "25 Implants Placed",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_dental_03",
+    "pillar": "Dental Career",
+    "phase": "Phase 3: Mastery & Scale (1-3Y)",
+    "title": "Establish Premier Private Dental Clinic & Digital Lab",
+    "targetHorizon": "2028 - 2029",
+    "status": "upcoming",
+    "priority": "High",
+    "progressPct": 0,
+    "keyResults": [
+      {
+        "id": "kr_d7",
+        "title": "Secure prime clinic real estate location & architectural layout",
+        "done": false
+      },
+      {
+        "id": "kr_d8",
+        "title": "Install 3 modern operatory chairs + in-house 3D CAD/CAM milling",
+        "done": false
+      },
+      {
+        "id": "kr_d9",
+        "title": "Build premium patient referral network & digital booking engine",
+        "done": false
+      }
+    ],
+    "actionStrategy": "Reinvest dental earnings and trading payouts into private clinic venture equity.",
+    "metricsTarget": "3-Chair Fully Operational Practice",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_trading_01",
+    "pillar": "Trading & Markets",
+    "phase": "Phase 1: Foundation (Now)",
+    "title": "Achieve Consistent Funded Trader Status (+ Allocation)",
+    "targetHorizon": "Q4 2026",
+    "status": "completed",
+    "priority": "High",
+    "progressPct": 100,
+    "keyResults": [
+      {
+        "id": "kr_t1",
+        "title": "Pass Phase 1 evaluation challenge with strict 1% risk rule",
+        "done": true
+      },
+      {
+        "id": "kr_t2",
+        "title": "Pass Phase 2 verification challenge within drawdown limits",
+        "done": true
+      },
+      {
+        "id": "kr_t3",
+        "title": "Receive first 3 consecutive live account profit split payouts",
+        "done": true
+      }
+    ],
+    "actionStrategy": "Trade only New York session opening liquidity sweeps on EUR/USD, GBP/USD and NASDAQ.",
+    "metricsTarget": ",000 Funded Account",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_trading_02",
+    "pillar": "Trading & Markets",
+    "phase": "Phase 2: Acceleration (6-12M)",
+    "title": "Scale Capital Allocation to ,000+ & Build Systematic Edge",
+    "targetHorizon": "Q3 2027",
+    "status": "upcoming",
+    "priority": "High",
+    "progressPct": 15,
+    "keyResults": [
+      {
+        "id": "kr_t4",
+        "title": "Scale across 2 premier prop firms to reach  active funding",
+        "done": false
+      },
+      {
+        "id": "kr_t5",
+        "title": "Maintain 4-6% average monthly return with max drawdown <3%",
+        "done": false
+      },
+      {
+        "id": "kr_t6",
+        "title": "Complete 100-trade audited psychology & trade execution journal",
+        "done": false
+      }
+    ],
+    "actionStrategy": "Automate trade journal tagging and execute strict A+ setups only.",
+    "metricsTarget": ",000 Capital Allocation",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_trading_03",
+    "pillar": "Trading & Markets",
+    "phase": "Phase 3: Mastery & Scale (1-3Y)",
+    "title": "Establish Independent Multi-Asset Investment & Macro Fund",
+    "targetHorizon": "2028 - 2030",
+    "status": "upcoming",
+    "priority": "Medium",
+    "progressPct": 0,
+    "keyResults": [
+      {
+        "id": "kr_t7",
+        "title": "Accumulate  personal trading equity buffer",
+        "done": false
+      },
+      {
+        "id": "kr_t8",
+        "title": "Deploy algorithmic volatility filters & options hedging strategies",
+        "done": false
+      },
+      {
+        "id": "kr_t9",
+        "title": "Generate reliable full-time monthly trading cashflow >,000/mo",
+        "done": false
+      }
+    ],
+    "actionStrategy": "Transition from prop firms to compounding personal capital account.",
+    "metricsTarget": "+/month Trading Cashflow",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_studies_01",
+    "pillar": "Studies & Knowledge",
+    "phase": "Phase 1: Foundation (Now)",
+    "title": "Pass National Dental Licensing & Specialty Board Examinations",
+    "targetHorizon": "Q1 2027",
+    "status": "completed",
+    "priority": "High",
+    "progressPct": 100,
+    "keyResults": [
+      {
+        "id": "kr_s1",
+        "title": "Complete 1,500 comprehensive board review question bank",
+        "done": true
+      },
+      {
+        "id": "kr_s2",
+        "title": "Score >90% on 3 consecutive full-length clinical mock exams",
+        "done": true
+      },
+      {
+        "id": "kr_s3",
+        "title": "Finalize official exam registration & pass with honors",
+        "done": true
+      }
+    ],
+    "actionStrategy": "Maintain 2-hour morning daily study block before clinic shifts.",
+    "metricsTarget": "Licensure / Specialty Certification",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_studies_02",
+    "pillar": "Studies & Knowledge",
+    "phase": "Phase 2: Acceleration (6-12M)",
+    "title": "Master Advanced Digital Dentistry, CAD/CAM & Smile Design",
+    "targetHorizon": "Q4 2027",
+    "status": "upcoming",
+    "priority": "Medium",
+    "progressPct": 25,
+    "keyResults": [
+      {
+        "id": "kr_s4",
+        "title": "Master 3Shape / Exocad digital wax-up and crown design",
+        "done": true
+      },
+      {
+        "id": "kr_s5",
+        "title": "Complete Digital Smile Design (DSD) masterclass certification",
+        "done": false
+      },
+      {
+        "id": "kr_s6",
+        "title": "Publish 1 peer-reviewed clinical case report in dental journal",
+        "done": false
+      }
+    ],
+    "actionStrategy": "Design 2 digital cases weekly and review with mentor.",
+    "metricsTarget": "DSD Master Certification",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_wealth_01",
+    "pillar": "Wealth & Freedom",
+    "phase": "Phase 1: Foundation (Now)",
+    "title": "Build 6-Month Liquid Emergency Vault & Zero High-Interest Debt",
+    "targetHorizon": "Q4 2026",
+    "status": "completed",
+    "priority": "High",
+    "progressPct": 100,
+    "keyResults": [
+      {
+        "id": "kr_w1",
+        "title": "Save 6 months of living expenses in high-yield liquid vault",
+        "done": true
+      },
+      {
+        "id": "kr_w2",
+        "title": "Eliminate 100% of consumer / high-interest debt",
+        "done": true
+      },
+      {
+        "id": "kr_w3",
+        "title": "Establish automated 50/30/20 savings and wealth split",
+        "done": true
+      }
+    ],
+    "actionStrategy": "Automated paycheck split on the 1st of every month.",
+    "metricsTarget": "6-Month Liquid Fortress",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_wealth_02",
+    "pillar": "Wealth & Freedom",
+    "phase": "Phase 2: Acceleration (6-12M)",
+    "title": "Cross ,000 Liquid Net Worth & 250g Physical Gold Bullion",
+    "targetHorizon": "2027",
+    "status": "in_progress",
+    "priority": "High",
+    "progressPct": 45,
+    "keyResults": [
+      {
+        "id": "kr_w4",
+        "title": "Accumulate 250 grams of 24K Swiss stamped gold bars",
+        "done": true
+      },
+      {
+        "id": "kr_w5",
+        "title": "Build ,000 index fund dividend & equity portfolio",
+        "done": false
+      },
+      {
+        "id": "kr_w6",
+        "title": "Reach ,000 total net worth milestone across assets",
+        "done": false
+      }
+    ],
+    "actionStrategy": "Deploy 40% of trading profits and 30% of clinic income into physical gold & index assets.",
+    "metricsTarget": ",000 Net Worth Milestone",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_wealth_03",
+    "pillar": "Wealth & Freedom",
+    "phase": "Phase 3: Mastery & Scale (1-3Y)",
+    "title": "Reach ,000 Wealth Portfolio & Acquire Real Estate Assets",
+    "targetHorizon": "2028 - 2030",
+    "status": "upcoming",
+    "priority": "High",
+    "progressPct": 0,
+    "keyResults": [
+      {
+        "id": "kr_w7",
+        "title": "Acquire first commercial/residential cashflow rental property",
+        "done": false
+      },
+      {
+        "id": "kr_w8",
+        "title": "Scale physical gold reserves to 1,000 grams (1 Kilogram)",
+        "done": false
+      },
+      {
+        "id": "kr_w9",
+        "title": "Generate ,000+/month passive cashflow from non-active work",
+        "done": false
+      }
+    ],
+    "actionStrategy": "Leverage clinic cashflow and asset equity to acquire income-producing real estate.",
+    "metricsTarget": ",000 Portfolio",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  },
+  {
+    "id": "rm_wealth_04",
+    "pillar": "Wealth & Freedom",
+    "phase": "Phase 4: Freedom & Legacy (5Y+)",
+    "title": "Complete Financial Freedom (,000,000+ Net Worth & Sovereign Independence)",
+    "targetHorizon": "2031+",
+    "status": "upcoming",
+    "priority": "High",
+    "progressPct": 0,
+    "keyResults": [
+      {
+        "id": "kr_w10",
+        "title": "Surpass ,000,000 audited liquid & hard asset net worth",
+        "done": false
+      },
+      {
+        "id": "kr_w11",
+        "title": "Passive cashflow covers 300% of all luxury living costs",
+        "done": false
+      },
+      {
+        "id": "kr_w12",
+        "title": "Establish philanthropic medical/dental foundation endowment",
+        "done": false
+      }
+    ],
+    "actionStrategy": "Compound diversified dividend, gold, real estate, and clinic equity returns perpetually.",
+    "metricsTarget": "+ Complete Sovereign Freedom",
+    "createdAt": "2026-08-31",
+    "updatedAt": "2026-08-31"
+  }
+]

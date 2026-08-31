@@ -1,0 +1,302 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String                  @id @default(cuid())
+  email                   String                  @unique
+  password                String                  // Hashed with bcrypt
+  name                    String?
+  avatar                  String?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+
+  // Tenant-isolated relations
+  tasks                   Task[]
+  routines                Routine[]
+  routineLogs             RoutineLog[]
+  dentalCases             DentalCase[]
+  workoutSplits           WorkoutSplit[]
+  workoutExercises        WorkoutExercise[]
+  exerciseWeightLogs      ExerciseWeightLog[]
+  roadmapMilestones       RoadmapMilestone[]
+  financialTransactions   FinancialTransaction[]
+  financialGoals          FinancialGoal[]
+  financialSetting        FinancialSetting?
+  assets                  Asset[]
+  goldLots                GoldLot[]
+  notificationPreference  NotificationPreference?
+  notificationLogs        NotificationLog[]
+
+  @@map("users")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  title       String
+  category    String   // 'Work', 'Studies', 'Workouts', 'Us stocks trading', 'Religion', etc.
+  segment     String?
+  date        String   // 'YYYY-MM-DD'
+  completed   Boolean  @default(false)
+  timeBlock   String?  @map("time_block")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, category])
+  @@map("tasks")
+}
+
+model Routine {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id")
+  title       String
+  type        String       // 'morning' | 'evening'
+  time        String?
+  order       Int          @default(0)
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs        RoutineLog[]
+
+  @@index([userId, type])
+  @@map("routines")
+}
+
+model RoutineLog {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  routineId   String   @map("routine_id")
+  date        String   // 'YYYY-MM-DD'
+  completed   Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, routineId, date])
+  @@index([userId, date])
+  @@map("routine_logs")
+}
+
+model DentalCase {
+  id                  String   @id @default(cuid())
+  userId              String   @map("user_id")
+  patientCode         String   @map("patient_code") // e.g. "PT-1042"
+  title               String
+  specialty           String   // 'Restorative & Aesthetics', 'Endodontics', 'Implantology', etc.
+  teeth               String?
+  diagnosis           String?  @db.Text
+  treatmentPlan       String?  @map("treatment_plan") @db.Text
+  clinicalNotes       String?  @map("clinical_notes") @db.Text
+  materialsUsed       String?  @map("materials_used")
+  totalCost           Float?   @map("total_cost")
+  status              String   @default("In Progress") // 'In Progress', 'Completed', 'Maintenance'
+  showcaseForPatients Boolean  @default(false) @map("showcase_for_patients")
+  date                String   // 'YYYY-MM-DD'
+  photos              Json?    // Array of photo objects [{id, stage, url, caption, order}]
+  steps               Json?    // Array of treatment steps [{id, title, details, date, completed, order}]
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, specialty])
+  @@index([userId, patientCode])
+  @@map("dental_cases")
+}
+
+model WorkoutSplit {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  dayName     String   @map("day_name") // 'Saturday', 'Sunday', etc.
+  muscleGroup String   @map("muscle_group") // 'Chest & Triceps (Push A)', etc.
+  order       Int      @default(0)
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayName])
+  @@map("workout_splits")
+}
+
+model WorkoutExercise {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  dayName     String   @map("day_name")
+  name        String
+  targetSets  Int      @default(3) @map("target_sets")
+  targetReps  String   @default("8-12") @map("target_reps")
+  order       Int      @default(0)
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dayName])
+  @@map("workout_exercises")
+}
+
+model ExerciseWeightLog {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  exerciseName String   @map("exercise_name")
+  weightKg     Float    @map("weight_kg")
+  weightLbs    Float    @map("weight_lbs")
+  setsReps     String?  @map("sets_reps") // e.g. "3x10"
+  isPr         Boolean  @default(false) @map("is_pr")
+  notes        String?
+  date         String   // 'YYYY-MM-DD'
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, exerciseName])
+  @@index([userId, date])
+  @@map("exercise_weight_logs")
+}
+
+model RoadmapMilestone {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  pillar         String   // 'Dental Career', 'Trading & Markets', 'Studies & Knowledge', 'Wealth & Freedom'
+  phase          String   // 'Phase 1: Foundation (Now)', etc.
+  title          String
+  targetHorizon  String?  @map("target_horizon") // 'Q4 2026'
+  status         String   @default("in_progress") // 'in_progress', 'upcoming', 'completed'
+  priority       String   @default("High") // 'High', 'Medium', 'Low'
+  progressPct    Int      @default(0) @map("progress_pct")
+  keyResults     Json?    @map("key_results") // Array of [{id, title, done}]
+  actionStrategy String?  @map("action_strategy") @db.Text
+  metricsTarget  String?  @map("metrics_target")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, pillar])
+  @@index([userId, phase])
+  @@map("roadmap_milestones")
+}
+
+model FinancialTransaction {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  type        String   // 'income' | 'expense'
+  category    String
+  amount      Float
+  date        String   // 'YYYY-MM-DD'
+  description String?
+  account     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, type])
+  @@map("financial_transactions")
+}
+
+model FinancialGoal {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  title         String
+  targetAmount  Float    @map("target_amount")
+  currentAmount Float    @default(0) @map("current_amount")
+  deadline      String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("financial_goals")
+}
+
+model FinancialSetting {
+  id               String   @id @default(cuid())
+  userId           String   @unique @map("user_id")
+  currency         String   @default("USD")
+  monthlyBudget    Float    @default(3000) @map("monthly_budget")
+  savingsTargetPct Float    @default(20) @map("savings_target_pct")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("financial_settings")
+}
+
+model Asset {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  name          String
+  type          String   // 'Gold Bullion', 'Gold Coin', 'Stock', 'Real Estate', 'Crypto', 'Cash'
+  status        String   @default("Owned") // 'Owned', 'Planned'
+  quantity      Float
+  unit          String?  // 'gram', 'ounce', 'kg', 'shares', 'units'
+  purchasePrice Float?   @map("purchase_price")
+  purchaseDate  String?  @map("purchase_date")
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("assets")
+}
+
+model GoldLot {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  name        String
+  grams       Float
+  karat       String   @default("24k")
+  pricePaid   Float    @map("price_paid")
+  date        String   // 'YYYY-MM-DD'
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("gold_lots")
+}
+
+model NotificationPreference {
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id")
+  tasksReminder  Boolean  @default(true) @map("tasks_reminder")
+  reportsDigest  Boolean  @default(true) @map("reports_digest")
+  scheduledTimes Json?    @map("scheduled_times") // e.g. ["09:00", "14:00", "21:00"]
+  soundEnabled   Boolean  @default(true) @map("sound_enabled")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model NotificationLog {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  type         String   // 'tasks' | 'reports' | 'system'
+  title        String
+  message      String
+  linkCategory String?  @map("link_category")
+  read         Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notification_logs")
+}
