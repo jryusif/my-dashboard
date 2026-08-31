@@ -5926,7 +5926,7 @@ function renderCategoryMatrixGrid() {
     if (c.key === 'Dental') {
       total = dentalStats.totalCases || 0;
       done = dentalStats.showcaseCases || 0;
-      pct = 100;
+      pct = total > 0 ? Math.round((done / total) * 100) : 0;
     } else {
       const prof = categoryProfiles?.[c.key];
       if (prof) {
@@ -5935,12 +5935,12 @@ function renderCategoryMatrixGrid() {
           done = prof.weekly?.done ?? prof.done ?? 0;
           pct = prof.weekly?.pct ?? prof.pct ?? 0;
         } else if (activeAnalyticsHorizon === 'monthly') {
-          total = prof.monthly?.total ?? (prof.total ? prof.total * 4 : 0);
-          done = prof.monthly?.done ?? (prof.done ? prof.done * 4 : 0);
+          total = prof.monthly?.total ?? prof.total ?? 0;
+          done = prof.monthly?.done ?? prof.done ?? 0;
           pct = prof.monthly?.pct ?? prof.pct ?? 0;
         } else if (activeAnalyticsHorizon === 'yearly') {
-          total = prof.yearly?.total ?? (prof.total ? prof.total * 48 : 0);
-          done = prof.yearly?.done ?? (prof.done ? prof.done * 48 : 0);
+          total = prof.yearly?.total ?? prof.total ?? 0;
+          done = prof.yearly?.done ?? prof.done ?? 0;
           pct = prof.yearly?.pct ?? prof.pct ?? 0;
         } else {
           total = prof.allTime?.total ?? prof.total ?? 0;
@@ -5949,6 +5949,9 @@ function renderCategoryMatrixGrid() {
         }
       }
     }
+
+    done = Math.min(done, total);
+    pct = total > 0 ? Math.min(100, Math.max(0, pct)) : 0;
 
     const isSelected = activeAnalyticsCategory === c.key;
 
