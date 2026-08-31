@@ -5912,24 +5912,24 @@ function renderCategoryMatrixGrid() {
       done = dentalStats.showcaseCases || 0;
       pct = 100;
     } else {
-      const prof = categoryProfiles[c.key];
+      const prof = categoryProfiles?.[c.key];
       if (prof) {
         if (activeAnalyticsHorizon === 'weekly') {
-          total = prof.weekly.total;
-          done = prof.weekly.done;
-          pct = prof.weekly.pct;
+          total = prof.weekly?.total ?? prof.total ?? 0;
+          done = prof.weekly?.done ?? prof.done ?? 0;
+          pct = prof.weekly?.pct ?? prof.pct ?? 0;
         } else if (activeAnalyticsHorizon === 'monthly') {
-          total = prof.monthly.total;
-          done = prof.monthly.done;
-          pct = prof.monthly.pct;
+          total = prof.monthly?.total ?? (prof.total ? prof.total * 4 : 0);
+          done = prof.monthly?.done ?? (prof.done ? prof.done * 4 : 0);
+          pct = prof.monthly?.pct ?? prof.pct ?? 0;
         } else if (activeAnalyticsHorizon === 'yearly') {
-          total = prof.yearly.total;
-          done = prof.yearly.done;
-          pct = prof.yearly.pct;
+          total = prof.yearly?.total ?? (prof.total ? prof.total * 48 : 0);
+          done = prof.yearly?.done ?? (prof.done ? prof.done * 48 : 0);
+          pct = prof.yearly?.pct ?? prof.pct ?? 0;
         } else {
-          total = prof.allTime.total;
-          done = prof.allTime.done;
-          pct = prof.allTime.pct;
+          total = prof.allTime?.total ?? prof.total ?? 0;
+          done = prof.allTime?.done ?? prof.done ?? 0;
+          pct = prof.allTime?.pct ?? prof.pct ?? 0;
         }
       }
     }
@@ -5985,13 +5985,20 @@ if (sidebarAnalyticsBtn) {
   sidebarAnalyticsBtn.addEventListener('click', () => openAnalyticsPage());
 }
 
+window.selectAnalyticsHorizon = function(horizonKey) {
+  activeAnalyticsHorizon = horizonKey || 'overview';
+  if (analyticsHorizonTabs) {
+    analyticsHorizonTabs.querySelectorAll('.horizon-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.horizon === activeAnalyticsHorizon);
+    });
+  }
+  renderAnalyticsIntelligence();
+};
+
 if (analyticsHorizonTabs) {
   analyticsHorizonTabs.querySelectorAll('.horizon-tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      analyticsHorizonTabs.querySelectorAll('.horizon-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeAnalyticsHorizon = tab.dataset.horizon || 'overview';
-      renderAnalyticsIntelligence();
+      window.selectAnalyticsHorizon(tab.dataset.horizon || 'overview');
     });
   });
 }
@@ -5999,14 +6006,7 @@ if (analyticsHorizonTabs) {
 if (analyticsCategoryPills) {
   analyticsCategoryPills.querySelectorAll('.cat-pill').forEach(pill => {
     pill.addEventListener('click', () => {
-      analyticsCategoryPills.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      activeAnalyticsCategory = pill.dataset.cat || 'ALL';
-      if (activeAnalyticsCategory === 'Finance') {
-        openFinancePage('analytics');
-        return;
-      }
-      renderAnalyticsIntelligence();
+      window.selectAnalyticsCategory(pill.dataset.cat || 'ALL');
     });
   });
 }

@@ -548,44 +548,44 @@
 
         <!-- Time Horizon Switcher Tabs -->
         <div class="analytics-horizon-tabs" id="analyticsHorizonTabs">
-          <button type="button" class="horizon-tab active" data-horizon="overview" id="tabHorizonOverview">
+          <button type="button" class="horizon-tab active" data-horizon="overview" id="tabHorizonOverview" onclick="selectAnalyticsHorizon('overview')">
             <span>⚡</span> Complete Overview
           </button>
-          <button type="button" class="horizon-tab" data-horizon="weekly" id="tabHorizonWeekly">
+          <button type="button" class="horizon-tab" data-horizon="weekly" id="tabHorizonWeekly" onclick="selectAnalyticsHorizon('weekly')">
             <span>📅</span> Weekly Progress (7 Days &amp; Trends)
           </button>
-          <button type="button" class="horizon-tab" data-horizon="monthly" id="tabHorizonMonthly">
+          <button type="button" class="horizon-tab" data-horizon="monthly" id="tabHorizonMonthly" onclick="selectAnalyticsHorizon('monthly')">
             <span>🗓️</span> Monthly Progress (6 Months)
           </button>
-          <button type="button" class="horizon-tab" data-horizon="yearly" id="tabHorizonYearly">
+          <button type="button" class="horizon-tab" data-horizon="yearly" id="tabHorizonYearly" onclick="selectAnalyticsHorizon('yearly')">
             <span>📆</span> Yearly Trajectory (12 Months)
           </button>
         </div>
 
         <!-- Category Dimension Filter Pills -->
         <div class="analytics-category-pills" id="analyticsCategoryPills">
-          <button type="button" class="cat-pill active" data-cat="ALL">
+          <button type="button" class="cat-pill active" data-cat="ALL" onclick="selectAnalyticsCategory('ALL')">
             <span>🌐</span> All Categories Combined
           </button>
-          <button type="button" class="cat-pill" data-cat="Work">
+          <button type="button" class="cat-pill" data-cat="Work" onclick="selectAnalyticsCategory('Work')">
             <span>💼</span> Work / Clinic
           </button>
-          <button type="button" class="cat-pill" data-cat="Us stocks trading">
+          <button type="button" class="cat-pill" data-cat="Us stocks trading" onclick="selectAnalyticsCategory('Us stocks trading')">
             <span>📈</span> US Stocks Trading
           </button>
-          <button type="button" class="cat-pill" data-cat="Workouts">
+          <button type="button" class="cat-pill" data-cat="Workouts" onclick="selectAnalyticsCategory('Workouts')">
             <span>🏋️</span> Workouts
           </button>
-          <button type="button" class="cat-pill" data-cat="Studies">
+          <button type="button" class="cat-pill" data-cat="Studies" onclick="selectAnalyticsCategory('Studies')">
             <span>📚</span> Studies
           </button>
-          <button type="button" class="cat-pill" data-cat="Religion">
+          <button type="button" class="cat-pill" data-cat="Religion" onclick="selectAnalyticsCategory('Religion')">
             <span>🌙</span> Religion
           </button>
-          <button type="button" class="cat-pill" data-cat="Dental">
+          <button type="button" class="cat-pill" data-cat="Dental" onclick="selectAnalyticsCategory('Dental')">
             <span>🦷</span> Dental Cases
           </button>
-          <button type="button" class="cat-pill" data-cat="Finance">
+          <button type="button" class="cat-pill" data-cat="Finance" onclick="selectAnalyticsCategory('Finance')">
             <span>💰</span> Finances
           </button>
         </div>

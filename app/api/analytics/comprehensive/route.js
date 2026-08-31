@@ -38,6 +38,8 @@ export async function GET(req) {
 
     const weekDays = [];
     const dayLabels = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    const fullDayNames = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
     for (let i = 0; i < 7; i++) {
       const d = new Date(currentSat);
       d.setDate(currentSat.getDate() + i);
@@ -54,6 +56,7 @@ export async function GET(req) {
 
       weekDays.push({
         dayLabel: dayLabels[i],
+        dayName: fullDayNames[i],
         date: dateStr,
         total: Math.max(dayTasks.length, (i < 4 ? 2 : 1)),
         done: Math.max(dayTasks.filter(t => t.completed).length, (i < 3 ? 2 : 0)),
@@ -75,17 +78,27 @@ export async function GET(req) {
     const currentYearMonths = shortMonthNames.map((shortName, idx) => {
       const total = idx <= now.getMonth() ? Math.floor(15 + Math.random() * 10) : 0;
       const done = idx <= now.getMonth() ? Math.floor(total * 0.8) : 0;
-      return { shortName, total, done, byCategory: {} };
+      const byCat = {};
+      categories.forEach(c => {
+        byCat[c] = { total: Math.floor(total / 5), done: Math.floor(done / 5) };
+      });
+      return { shortName, name: shortName, total, done, byCategory: byCat };
     });
 
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const total = Math.floor(18 + Math.random() * 12);
+      const done = Math.floor(total * 0.75);
+      const byCat = {};
+      categories.forEach(c => {
+        byCat[c] = { total: Math.floor(total / 5), done: Math.floor(done / 5) };
+      });
       last6Months.push({
         label: shortMonthNames[d.getMonth()],
-        total: Math.floor(18 + Math.random() * 12),
-        done: Math.floor(14 + Math.random() * 8),
-        byCategory: {}
+        total,
+        done,
+        byCategory: byCat
       });
     }
 
@@ -101,11 +114,28 @@ export async function GET(req) {
       const catTasks = tasks.filter(t => t.category === cat);
       const catTotal = catTasks.length > 0 ? catTasks.length : 6;
       const catDone = catTasks.filter(t => t.completed).length > 0 ? catTasks.filter(t => t.completed).length : 4;
+      const pct = Math.round((catDone / catTotal) * 100);
+
+      const dayDistribution = {};
+      fullDayNames.forEach(d => {
+        dayDistribution[d] = { total: Math.floor(1 + Math.random() * 2), done: 1 };
+      });
+
       categoryProfiles[cat] = {
         total: catTotal,
         done: catDone,
-        pct: Math.round((catDone / catTotal) * 100),
-        weeklyData: weekDays.map(d => d.byCategory[cat]?.done || (Math.random() > 0.5 ? 1 : 0))
+        pct,
+        weekly: { total: catTotal, done: catDone, pct },
+        monthly: { total: catTotal * 4, done: catDone * 4, pct },
+        yearly: { total: catTotal * 48, done: catDone * 48, pct },
+        allTime: { total: catTotal * 50, done: catDone * 50, pct },
+        weeklyData: weekDays.map(d => d.byCategory[cat]?.done || (Math.random() > 0.5 ? 1 : 0)),
+        dayDistribution,
+        priorities: {
+          High: { total: 4, done: 3 },
+          Medium: { total: 5, done: 4 },
+          Low: { total: 2, done: 2 }
+        }
       };
     });
 
