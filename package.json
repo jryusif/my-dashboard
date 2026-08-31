@@ -10,7 +10,8 @@
     "migrate:deploy": "prisma migrate deploy",
     "start": "node server.js",
     "dev": "node server.js",
-    "deploy:prod": "prisma migrate deploy && node server.js"
+    "deploy:prod": "prisma migrate deploy && node server.js",
+    "test:db": "node scripts/test-db.js"
   },
   "devDependencies": {
     "prisma": "^5.22.0"
