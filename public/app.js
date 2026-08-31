@@ -4476,29 +4476,38 @@ if (theaterCaseSelect) {
   });
 }
 
-function displayTheaterStep(index) {
+function displayTheaterStep(index = 0) {
   if (!currentTheaterCase) return;
   const steps = currentTheaterCase.steps || [];
-  if (!steps.length) {
-    displayTheaterSplit();
-    return;
-  }
 
   currentTheaterMode = 'step';
-  currentTheaterStepIndex = Math.max(0, Math.min(steps.length - 1, index));
-  const step = steps[currentTheaterStepIndex];
-
-  // Toggle stage view
   if (theaterStepFocusWrap) theaterStepFocusWrap.hidden = false;
   if (theaterBaSliderWrap) theaterBaSliderWrap.hidden = true;
   if (btnTheaterModeStep) btnTheaterModeStep.classList.add('active');
   if (btnTheaterModeSplit) btnTheaterModeSplit.classList.remove('active');
 
+  if (!steps.length) {
+    if (theaterStepFocusImg) {
+      const casePhoto = (currentTheaterCase.photos && currentTheaterCase.photos[0]?.url) || currentTheaterCase.beforeAfter?.afterImageUrl || '';
+      theaterStepFocusImg.src = casePhoto || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="%230b0e14" width="600" height="400"/><text fill="%2338bdf8" font-family="sans-serif" font-size="20" font-weight="bold" x="50%" y="45%" text-anchor="middle">📸 Step Focus Mode</text><text fill="%2394a3b8" font-family="sans-serif" font-size="14" x="50%" y="55%" text-anchor="middle">No individual procedure steps added yet</text></svg>';
+      theaterStepFocusImg.alt = currentTheaterCase.title || 'Case Overview';
+    }
+    if (theaterFocusStepBadge) theaterFocusStepBadge.textContent = 'Overview · 0 Steps';
+    if (theaterFocusStepTitle) theaterFocusStepTitle.textContent = currentTheaterCase.title || 'Clinical Case';
+    if (theaterFocusStepDesc) theaterFocusStepDesc.textContent = currentTheaterCase.diagnosis || 'Add detailed procedure steps in the Case Editor to walkthrough each step.';
+    if (btnTheaterPrev) btnTheaterPrev.disabled = true;
+    if (btnTheaterNext) btnTheaterNext.disabled = true;
+    return;
+  }
+
+  currentTheaterStepIndex = Math.max(0, Math.min(steps.length - 1, index));
+  const step = steps[currentTheaterStepIndex];
+
   // Update big screen image with smooth fade
   if (theaterStepFocusImg) {
     theaterStepFocusImg.classList.remove('fade-in');
     void theaterStepFocusImg.offsetWidth; // force reflow for animation
-    theaterStepFocusImg.src = step.imageUrl || currentTheaterCase.beforeAfter?.afterImageUrl || '';
+    theaterStepFocusImg.src = step.imageUrl || currentTheaterCase.beforeAfter?.afterImageUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="%230f172a" width="600" height="400"/><text fill="%2338bdf8" font-family="sans-serif" font-size="18" font-weight="bold" x="50%" y="45%" text-anchor="middle">🦷 Step</text></svg>';
     theaterStepFocusImg.alt = step.title || 'Clinical Step';
     theaterStepFocusImg.classList.add('fade-in');
   }
@@ -4527,6 +4536,9 @@ function displayTheaterStep(index) {
     }
   });
 }
+
+window.displayTheaterStep = displayTheaterStep;
+window.displayTheaterSplit = displayTheaterSplit;
 
 function displayTheaterSplit() {
   currentTheaterMode = 'split';
