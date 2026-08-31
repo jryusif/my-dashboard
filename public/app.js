@@ -5978,11 +5978,15 @@ function renderCategoryMatrixGrid() {
 }
 
 window.selectAnalyticsCategory = function(catKey) {
-  activeAnalyticsCategory = (activeAnalyticsCategory === catKey) ? 'ALL' : catKey;
+  activeAnalyticsCategory = catKey || 'ALL';
   if (analyticsCategoryPills) {
     analyticsCategoryPills.querySelectorAll('.cat-pill').forEach(p => {
       p.classList.toggle('active', p.dataset.cat === activeAnalyticsCategory);
     });
+  }
+  if (catKey === 'Finance') {
+    openFinancePage('analytics');
+    return;
   }
   renderAnalyticsIntelligence();
 };
@@ -6010,22 +6014,6 @@ window.selectAnalyticsHorizon = function(horizonKey) {
   }
   renderAnalyticsIntelligence();
 };
-
-if (analyticsHorizonTabs) {
-  analyticsHorizonTabs.querySelectorAll('.horizon-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      window.selectAnalyticsHorizon(tab.dataset.horizon || 'overview');
-    });
-  });
-}
-
-if (analyticsCategoryPills) {
-  analyticsCategoryPills.querySelectorAll('.cat-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      window.selectAnalyticsCategory(pill.dataset.cat || 'ALL');
-    });
-  });
-}
 
 // =============================================================================
 // FINANCIAL ANALYTICS & MULTI-HORIZON CHARTS CONTROLLER

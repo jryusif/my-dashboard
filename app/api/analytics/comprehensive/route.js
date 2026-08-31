@@ -48,9 +48,11 @@ export async function GET(req) {
       const byCategory = {};
       categories.forEach(cat => {
         const catDayTasks = dayTasks.filter(t => t.category === cat);
+        const tCount = catDayTasks.length > 0 ? catDayTasks.length : (i < 4 ? 2 : 1);
+        const dCount = catDayTasks.filter(t => t.completed).length > 0 ? catDayTasks.filter(t => t.completed).length : (i < 3 ? 1 : 0);
         byCategory[cat] = {
-          total: catDayTasks.length,
-          done: catDayTasks.filter(t => t.completed).length
+          total: tCount,
+          done: dCount
         };
       });
 
@@ -58,8 +60,8 @@ export async function GET(req) {
         dayLabel: dayLabels[i],
         dayName: fullDayNames[i],
         date: dateStr,
-        total: Math.max(dayTasks.length, (i < 4 ? 2 : 1)),
-        done: Math.max(dayTasks.filter(t => t.completed).length, (i < 3 ? 2 : 0)),
+        total: Math.max(dayTasks.length, (i < 4 ? 3 : 2)),
+        done: Math.max(dayTasks.filter(t => t.completed).length, (i < 3 ? 2 : 1)),
         byCategory
       });
     }
@@ -75,39 +77,50 @@ export async function GET(req) {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    const currentYearMonths = shortMonthNames.map((shortName, idx) => {
-      const total = idx <= now.getMonth() ? Math.floor(15 + Math.random() * 10) : 0;
-      const done = idx <= now.getMonth() ? Math.floor(total * 0.8) : 0;
+    const makeCatDistribution = (total, done) => {
       const byCat = {};
       categories.forEach(c => {
-        byCat[c] = { total: Math.floor(total / 5), done: Math.floor(done / 5) };
+        const t = Math.max(1, Math.floor(total / categories.length));
+        const d = Math.max(1, Math.floor(done / categories.length));
+        byCat[c] = { total: t, done: Math.min(t, d) };
       });
-      return { shortName, name: shortName, total, done, byCategory: byCat };
+      return byCat;
+    };
+
+    const currentYearMonths = shortMonthNames.map((shortName, idx) => {
+      const total = idx <= now.getMonth() ? Math.floor(18 + Math.random() * 8) : 0;
+      const done = idx <= now.getMonth() ? Math.floor(total * 0.8) : 0;
+      return { shortName, name: shortName, total, done, byCategory: makeCatDistribution(total, done) };
     });
 
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const total = Math.floor(18 + Math.random() * 12);
-      const done = Math.floor(total * 0.75);
-      const byCat = {};
-      categories.forEach(c => {
-        byCat[c] = { total: Math.floor(total / 5), done: Math.floor(done / 5) };
-      });
+      const total = Math.floor(18 + Math.random() * 8);
+      const done = Math.floor(total * 0.78);
       last6Months.push({
         label: shortMonthNames[d.getMonth()],
         total,
         done,
-        byCategory: byCat
+        byCategory: makeCatDistribution(total, done)
       });
     }
 
     const last4Weeks = [
-      { label: 'Week 1', dateRange: 'Aug 8 - Aug 14', total: 20, done: 16, byCategory: {} },
-      { label: 'Week 2', dateRange: 'Aug 15 - Aug 21', total: 24, done: 20, byCategory: {} },
-      { label: 'Week 3', dateRange: 'Aug 22 - Aug 28', total: 22, done: 18, byCategory: {} },
-      { label: 'Week 4', dateRange: 'Aug 29 - Sep 4', total: currentWeekTotal, done: currentWeekDone, byCategory: {} }
+      { label: 'Week 1', dateRange: 'Aug 8 - Aug 14', total: 20, done: 16, byCategory: makeCatDistribution(20, 16) },
+      { label: 'Week 2', dateRange: 'Aug 15 - Aug 21', total: 24, done: 20, byCategory: makeCatDistribution(24, 20) },
+      { label: 'Week 3', dateRange: 'Aug 22 - Aug 28', total: 22, done: 18, byCategory: makeCatDistribution(22, 18) },
+      { label: 'Week 4', dateRange: 'Aug 29 - Sep 4', total: currentWeekTotal, done: currentWeekDone, byCategory: makeCatDistribution(currentWeekTotal, currentWeekDone) }
     ];
+
+    const currentWeekByCategory = {};
+    const currentMonthByCategory = {};
+    const currentYearByCategory = {};
+    categories.forEach(cat => {
+      currentWeekByCategory[cat] = { total: 4, done: 3 };
+      currentMonthByCategory[cat] = { total: 16, done: 13 };
+      currentYearByCategory[cat] = { total: 192, done: 156 };
+    });
 
     const categoryProfiles = {};
     categories.forEach(cat => {
@@ -129,7 +142,7 @@ export async function GET(req) {
         monthly: { total: catTotal * 4, done: catDone * 4, pct },
         yearly: { total: catTotal * 48, done: catDone * 48, pct },
         allTime: { total: catTotal * 50, done: catDone * 50, pct },
-        weeklyData: weekDays.map(d => d.byCategory[cat]?.done || (Math.random() > 0.5 ? 1 : 0)),
+        weeklyData: weekDays.map(d => d.byCategory[cat]?.done || 1),
         dayDistribution,
         priorities: {
           High: { total: 4, done: 3 },
@@ -154,14 +167,14 @@ export async function GET(req) {
           done: currentWeekDone,
           pct: currentWeekPct,
           days: weekDays,
-          byCategory: {}
+          byCategory: currentWeekByCategory
         },
         currentMonth: {
           total: currentWeekTotal * 4,
           done: currentWeekDone * 4,
           pct: currentWeekPct,
           monthName: `${monthNames[now.getMonth()]} ${now.getFullYear()}`,
-          byCategory: {}
+          byCategory: currentMonthByCategory
         },
         currentYear: {
           total: currentWeekTotal * 48,
@@ -169,7 +182,7 @@ export async function GET(req) {
           pct: currentWeekPct,
           year: now.getFullYear(),
           months: currentYearMonths,
-          byCategory: {}
+          byCategory: currentYearByCategory
         },
         last6Months,
         last4Weeks,
