@@ -1,0 +1,3 @@
+{
+  "/api/workouts/pr-stats/route": "app/api/workouts/pr-stats/route.js"
+}

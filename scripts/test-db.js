@@ -3,16 +3,17 @@
 // Run: node scripts/test-db.js
 // =============================================================================
 
-require('dotenv').config();
-const { PrismaClient } = require('@prisma/client');
+import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
 
 async function testConnection() {
   console.log('\n🔍 Testing PostgreSQL & Prisma connection...');
   console.log('DATABASE_URL:', process.env.DATABASE_URL ? `${process.env.DATABASE_URL.split('@')[0]}@*****` : 'NOT SET');
+  console.log('DIRECT_URL:  ', process.env.DIRECT_URL ? `${process.env.DIRECT_URL.split('@')[0]}@*****` : 'NOT SET');
 
   if (!process.env.DATABASE_URL) {
     console.error('\n❌ DATABASE_URL is not set in your .env file!');
-    console.log('👉 Please set DATABASE_URL="postgresql://user:password@host:5432/dbname?sslmode=require" in your .env file.\n');
+    console.log('👉 Please set DATABASE_URL (Neon pooled) and DIRECT_URL (Neon direct) in your .env file.\n');
     process.exit(1);
   }
 
@@ -30,8 +31,8 @@ async function testConnection() {
     console.error('\n❌ Database connection failed:');
     console.error(err.message);
     console.log('\n👉 Troubleshooting checklist:');
-    console.log('1. Verify your database password is correct (URL-encode special characters like @, #, $, % in the password).');
-    console.log('2. Ensure ?sslmode=require is appended to the connection string for Railway / Supabase / Neon / Render.');
+    console.log('1. Verify your database password is correct (URL-encode special characters in the password).');
+    console.log('2. Ensure ?sslmode=require is appended to the connection string for Neon / Supabase / Vercel.');
     console.log('3. Ensure your IP or cloud service has permission to connect.\n');
   } finally {
     await prisma.$disconnect();

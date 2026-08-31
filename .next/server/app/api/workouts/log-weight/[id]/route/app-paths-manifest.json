@@ -1,0 +1,3 @@
+{
+  "/api/workouts/log-weight/[id]/route": "app/api/workouts/log-weight/[id]/route.js"
+}
