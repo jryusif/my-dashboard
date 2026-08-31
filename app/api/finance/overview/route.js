@@ -54,7 +54,8 @@ export async function GET(req) {
       }
     }
 
-    const monthIncomeTx = transactions.filter(t => t.type === 'income' && (!monthPrefix || (t.date && t.date.startsWith(monthPrefix))));
+    // Regular month income (excluding pre-existing baseline savings)
+    const monthIncomeTx = transactions.filter(t => t.type === 'income' && t.category !== 'Saved Cash Baseline' && (!monthPrefix || (t.date && t.date.startsWith(monthPrefix))));
     const monthExpenseTx = transactions.filter(t => t.type === 'expense' && (!monthPrefix || (t.date && t.date.startsWith(monthPrefix))));
 
     const totalIncome = monthIncomeTx.reduce((sum, t) => sum + t.amount, 0);
@@ -63,15 +64,15 @@ export async function GET(req) {
     const savingsRatePct = totalIncome > 0 ? Math.max(0, Math.round((netIncome / totalIncome) * 100)) : 0;
     const expenseRatePct = totalIncome > 0 ? Math.min(100, Math.round((totalExpenses / totalIncome) * 100)) : 0;
 
-    // Real All-Time Totals
-    const allIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    // Real All-Time Regular Transactions
+    const allRegularIncome = transactions.filter(t => t.type === 'income' && t.category !== 'Saved Cash Baseline').reduce((sum, t) => sum + t.amount, 0);
     const allExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-    const netCashSurplus = allIncome - allExpenses;
 
     // Saved Cash Baseline ("Money I Already Have")
     const cashAsset = assets.find(a => a.type === 'Cash');
-    const savedCashBaseline = cashAsset ? (cashAsset.purchasePrice || cashAsset.quantity || 0) : 0;
-    const totalWalletCash = Math.max(0, savedCashBaseline + netCashSurplus);
+    const baselineTx = transactions.find(t => t.category === 'Saved Cash Baseline');
+    const savedCashBaseline = baselineTx ? baselineTx.amount : (cashAsset ? (cashAsset.purchasePrice || cashAsset.quantity || 0) : 0);
+    const totalWalletCash = Math.max(0, savedCashBaseline + allRegularIncome - allExpenses);
 
     // Real Gold Lots Valuation in EGP
     const goldLotsTotalEgp = goldLots.reduce((sum, g) => {

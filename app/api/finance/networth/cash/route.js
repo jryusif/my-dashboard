@@ -16,8 +16,9 @@ export async function POST(req) {
   const body = await req.json();
   const rawAmount = body.amount !== undefined ? body.amount : (body.cash !== undefined ? body.cash : 0);
   const amount = Math.max(0, parseFloat(rawAmount) || 0);
+  const today = new Date().toISOString().split('T')[0];
 
-  // Find or create user's Liquid Cash Asset in database
+  // 1. Find or create user's Liquid Cash Asset in database
   const existingCashAsset = await prisma.asset.findFirst({
     where: { userId, type: 'Cash' }
   });
@@ -29,8 +30,8 @@ export async function POST(req) {
       data: {
         quantity: amount,
         purchasePrice: amount,
-        purchaseDate: new Date().toISOString().split('T')[0],
-        notes: 'Money I Already Have (Liquid Cash Savings)'
+        purchaseDate: today,
+        notes: 'Money I Already Have (Pre-existing Cash Savings)'
       }
     });
   } else {
@@ -43,11 +44,44 @@ export async function POST(req) {
         quantity: amount,
         unit: 'EGP',
         purchasePrice: amount,
-        purchaseDate: new Date().toISOString().split('T')[0],
-        notes: 'Money I Already Have (Liquid Cash Savings)'
+        purchaseDate: today,
+        notes: 'Money I Already Have (Pre-existing Cash Savings)'
       }
     });
   }
 
-  return NextResponse.json({ success: true, cash: amount, asset });
+  // 2. Upsert official transaction history baseline record
+  const existingBaselineTx = await prisma.financialTransaction.findFirst({
+    where: {
+      userId,
+      category: 'Saved Cash Baseline'
+    }
+  });
+
+  let tx;
+  if (existingBaselineTx) {
+    tx = await prisma.financialTransaction.update({
+      where: { id: existingBaselineTx.id },
+      data: {
+        amount,
+        description: 'Initial Saved Cash Reserve (Starting Balance)',
+        date: existingBaselineTx.date || today,
+        account: 'Cash Wallet'
+      }
+    });
+  } else {
+    tx = await prisma.financialTransaction.create({
+      data: {
+        userId,
+        type: 'income',
+        category: 'Saved Cash Baseline',
+        amount,
+        description: 'Initial Saved Cash Reserve (Starting Balance)',
+        account: 'Cash Wallet',
+        date: today
+      }
+    });
+  }
+
+  return NextResponse.json({ success: true, cash: amount, asset, transaction: tx });
 }

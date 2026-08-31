@@ -3057,17 +3057,20 @@ async function loadFinanceHistoryLedger() {
     }
 
     container.innerHTML = transactions.map(t => {
+      const isBaseline = t.category === 'Saved Cash Baseline';
       const isInc = t.type === 'income';
-      const icon = isInc ? '💰' : '💸';
+      const icon = isBaseline ? '💵' : (isInc ? '💰' : '💸');
       return `
         <div class="ledger-row" id="ledgerRow_${t.id}">
           <div class="ledger-row-left">
-            <div class="ledger-icon-badge ${t.type}">${icon}</div>
+            <div class="ledger-icon-badge ${isBaseline ? 'income' : t.type}">${icon}</div>
             <div class="ledger-row-details">
               <div class="ledger-row-title">${escapeHtml(t.description || (isInc ? 'Income Deposit' : 'Expense Outflow'))}</div>
               <div class="ledger-row-meta">
                 <span>${fmtDateFull(t.date)}</span>
-                <span class="ledger-tag-chip">${escapeHtml(t.category || 'General')}</span>
+                ${isBaseline 
+                  ? `<span class="ledger-tag-chip" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);">💵 Starting Cash Baseline</span>` 
+                  : `<span class="ledger-tag-chip">${escapeHtml(t.category || 'General')}</span>`}
                 ${t.account ? `<span class="ledger-tag-chip" style="opacity:0.85;">💳 ${escapeHtml(t.account)}</span>` : ''}
               </div>
             </div>
