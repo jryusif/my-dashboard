@@ -8772,7 +8772,13 @@ async function loadProfileData() {
     if (profileInputFocus) profileInputFocus.value = user.primaryFocus || '';
     if (profileBudgetCurrencySymbol) {
       const currencySymbols = { USD: '$', EUR: '€', GBP: '£', EGP: 'E£', SAR: '﷼', AED: 'د.إ' };
-      profileBudgetCurrencySymbol.textContent = currencySymbols[user.currency || 'USD'] || '$';
+      const sym = currencySymbols[user.currency || 'USD'] || '$';
+      profileBudgetCurrencySymbol.textContent = `${user.currency || 'USD'} ${sym}`;
+    }
+    const profileBudgetCurrencyPrefix = document.getElementById('profileBudgetCurrencyPrefix');
+    if (profileBudgetCurrencyPrefix) {
+      const currencySymbols = { USD: '$', EUR: '€', GBP: '£', EGP: 'E£', SAR: '﷼', AED: 'د.إ' };
+      profileBudgetCurrencyPrefix.textContent = currencySymbols[user.currency || 'USD'] || '$';
     }
 
     const defaultSegments = PERSONA_PRESETS[user.persona || 'DOCTOR']?.departmentSegments || PERSONA_PRESETS.DOCTOR.departmentSegments;
@@ -8819,6 +8825,16 @@ async function loadProfileData() {
   }
 }
 
+function updateSavingsRateSlider(val) {
+  const display = document.getElementById('savingsRateDisplayVal');
+  const hidden = document.getElementById('profileSavingsTargetPct');
+  const range = document.getElementById('profileSavingsTargetRange');
+  if (display) display.textContent = val;
+  if (hidden) hidden.value = val;
+  if (range && range.value !== String(val)) range.value = val;
+}
+window.updateSavingsRateSlider = updateSavingsRateSlider;
+
 let profileAllocationsState = [
   { name: 'Construction', pct: 25 },
   { name: 'Emergency', pct: 15 },
@@ -8834,11 +8850,8 @@ async function loadProfileFinanceSettings() {
     const { setting } = await res.json();
     if (setting) {
       const budgetInput = document.getElementById('profileMonthlyBudget');
-      const targetPctInput = document.getElementById('profileSavingsTargetPct');
-      const targetRangeInput = document.getElementById('profileSavingsTargetRange');
       if (budgetInput) budgetInput.value = setting.monthlyBudget || 3000;
-      if (targetPctInput) targetPctInput.value = setting.savingsTargetPct || 25;
-      if (targetRangeInput) targetRangeInput.value = setting.savingsTargetPct || 25;
+      updateSavingsRateSlider(setting.savingsTargetPct || 25);
 
       if (setting.allocations && Array.isArray(setting.allocations) && setting.allocations.length > 0) {
         profileAllocationsState = setting.allocations;

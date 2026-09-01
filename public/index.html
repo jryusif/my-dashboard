@@ -1188,22 +1188,46 @@
               </div>
             </div>
 
-            <!-- Financial Rules, Budget Percentages & Targets -->
-            <div class="segments-editor-section" style="margin-top: 24px;">
-              <h3 class="segment-editor-title">💰 Financial Variables, Budgets &amp; Savings Rates</h3>
-              <p class="segment-editor-desc">Set your personalized monthly spending ceiling and targeted savings allocation percentages.</p>
-
-              <div class="form-grid-2">
-                <div class="form-group">
-                  <label for="profileMonthlyBudget">Monthly Spending Budget Limit (<span id="profileBudgetCurrencySymbol">$</span>)</label>
-                  <input type="number" id="profileMonthlyBudget" step="50" min="0" placeholder="3000" />
+            <!-- Financial Rules, Budget Percentages & Targets Card -->
+            <div class="financial-rule-glass-card">
+              <div class="rule-card-header">
+                <span class="rule-card-icon">💰</span>
+                <div>
+                  <h3 class="rule-card-title">Financial Variables, Budgets &amp; Savings Rates</h3>
+                  <p class="rule-card-desc">Set your personalized monthly spending ceiling and targeted savings allocation percentages.</p>
                 </div>
-                <div class="form-group">
-                  <label for="profileSavingsTargetPct">Target Savings Rate (%)</label>
-                  <div style="display: flex; align-items: center; gap: 10px;">
-                    <input type="range" id="profileSavingsTargetRange" min="5" max="90" step="5" value="25" style="flex: 1;" oninput="document.getElementById('profileSavingsTargetPct').value = this.value" />
-                    <input type="number" id="profileSavingsTargetPct" min="5" max="90" value="25" style="width: 70px; text-align: center;" oninput="document.getElementById('profileSavingsTargetRange').value = this.value" />
-                    <span style="font-weight: 600; color: var(--accent);">%</span>
+              </div>
+
+              <div class="financial-controls-grid">
+                <!-- Control 1: Monthly Budget -->
+                <div class="glass-control-group">
+                  <label class="glass-control-label" for="profileMonthlyBudget">
+                    <span>Monthly Spending Budget Limit</span>
+                    <span class="currency-tag-pill" id="profileBudgetCurrencySymbol">USD $</span>
+                  </label>
+                  <div class="glass-input-wrapper">
+                    <span class="input-currency-icon" id="profileBudgetCurrencyPrefix">$</span>
+                    <input type="number" id="profileMonthlyBudget" class="glass-number-input" step="50" min="0" placeholder="3000" />
+                  </div>
+                </div>
+
+                <!-- Control 2: Target Savings Rate -->
+                <div class="glass-control-group">
+                  <div class="slider-header-row">
+                    <label class="glass-control-label" for="profileSavingsTargetRange">Target Savings Rate</label>
+                    <div class="slider-val-badge">
+                      <span id="savingsRateDisplayVal">25</span>%
+                    </div>
+                  </div>
+                  <div class="glass-slider-wrapper">
+                    <input type="range" id="profileSavingsTargetRange" class="glass-slider" min="5" max="90" step="5" value="25" 
+                           oninput="updateSavingsRateSlider(this.value)" />
+                    <input type="hidden" id="profileSavingsTargetPct" value="25" />
+                  </div>
+                  <div class="slider-ticks-row">
+                    <span>Conservative (5%)</span>
+                    <span>Balanced (25%)</span>
+                    <span>Aggressive (50%+)</span>
                   </div>
                 </div>
               </div>
