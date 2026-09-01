@@ -8729,21 +8729,6 @@ function closePendingApprovalModal() {
 }
 window.closePendingApprovalModal = closePendingApprovalModal;
 
-function updateUserUi() {
-  const userEmailLabel = document.getElementById('userEmailLabel');
-  const dockUserAvatar = document.getElementById('dockUserAvatar');
-  const btnAuthProfile = document.getElementById('btnAuthProfile');
-  const btnAuthLogout = document.getElementById('btnAuthLogout');
-  const authCalloutBanner = document.getElementById('authCalloutBanner');
-  const btnDockAdminQuick = document.getElementById('btnDockAdminQuick');
-  const ddUserName = document.getElementById('ddUserName');
-  const ddUserEmail = document.getElementById('ddUserEmail');
-  const ddUserRoleTag = document.getElementById('ddUserRoleTag');
-  const ddAvatarWrap = document.getElementById('ddAvatarWrap');
-  const ddAdminItem = document.getElementById('ddAdminItem');
-  const sidebarAdminBtn = document.getElementById('sidebarAdminBtn');
-  const profileGoToAdminBtn = document.getElementById('profileGoToAdminBtn');
-
 function renderAvatarHtml(avatar, defaultIcon = '👤', extraClass = '') {
   if (!avatar) return `<span class="avatar-emoji ${extraClass}">${defaultIcon}</span>`;
   const a = String(avatar).trim();
