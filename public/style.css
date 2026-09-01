@@ -8954,39 +8954,39 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 /* Sidebar User Account Capsule in Sidebar Drawer */
 .sidebar-user-capsule {
   margin: 12px 14px 6px;
-  padding: 12px 14px;
+  padding: 14px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  gap: 12px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   box-sizing: border-box;
 }
 
 .sidebar-user-info {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
   width: 100%;
 }
 
 .sidebar-user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   overflow: hidden;
   background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.35);
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 20px;
   flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
 }
 
 .sidebar-user-details {
@@ -8994,11 +8994,11 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .sidebar-user-details strong {
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 700;
   color: #fff;
   white-space: nowrap;
@@ -9007,7 +9007,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 }
 
 .sidebar-user-details span {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--ink-soft);
   white-space: nowrap;
   overflow: hidden;
@@ -9020,7 +9020,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   color: #94a3b8;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 999px;
   text-transform: uppercase;
   flex-shrink: 0;
@@ -9031,66 +9031,65 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   color: #fef08a;
   background: rgba(232, 180, 74, 0.2);
   border-color: rgba(232, 180, 74, 0.45);
+  box-shadow: 0 0 10px rgba(232, 180, 74, 0.2);
 }
 
 .sidebar-user-actions {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  padding-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
   width: 100%;
   box-sizing: border-box;
 }
 
 .btn-sidebar-user-act {
-  flex: 1 1 0;
-  min-width: 0;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
-  font-size: 11px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  font-size: 12px;
   font-weight: 700;
-  padding: 6px 4px;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   box-sizing: border-box;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-sidebar-user-act:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(56, 189, 248, 0.4);
   transform: translateY(-1px);
 }
 
 .btn-sidebar-user-act.admin-act {
   color: #fef08a;
-  border-color: rgba(232, 180, 74, 0.35);
+  border-color: rgba(232, 180, 74, 0.4);
   background: rgba(232, 180, 74, 0.12);
 }
 
 .btn-sidebar-user-act.admin-act:hover {
-  background: rgba(232, 180, 74, 0.24);
+  background: rgba(232, 180, 74, 0.25);
   border-color: #fef08a;
+  box-shadow: 0 0 12px rgba(232, 180, 74, 0.35);
 }
 
 .btn-sidebar-user-act.logout-act {
   color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
 }
 
 .btn-sidebar-user-act.logout-act:hover {
-  background: rgba(239, 68, 68, 0.24);
+  background: rgba(239, 68, 68, 0.26);
   border-color: #f87171;
   color: #fff;
 }
