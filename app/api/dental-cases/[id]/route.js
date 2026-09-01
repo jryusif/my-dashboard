@@ -1,17 +1,27 @@
 import { prisma } from '@/lib/prisma.js';
 import { getAuthUser, errorResponse, successResponse } from '@/lib/auth.js';
 
-async function resolveUserId(req) {
+async function resolveAndCheckDentalUser(req) {
   const auth = getAuthUser(req);
-  if (auth && auth.authenticated && auth.userId) return auth.userId;
-  const user = await prisma.user.findFirst({ where: { email: 'jryusif@dashboard.com' } });
-  return user ? user.id : null;
+  if (!auth || !auth.authenticated || !auth.userId) return { error: 'Unauthorized', status: 401 };
+  const user = await prisma.user.findUnique({
+    where: { id: auth.userId },
+    select: { id: true, role: true, persona: true, dentalApproved: true }
+  });
+  if (!user) return { error: 'User not found', status: 404 };
+  const isMasterAdmin = user.role === 'ADMIN';
+  const isApprovedDentist = user.persona === 'DOCTOR' && user.dentalApproved;
+  if (!isMasterAdmin && !isApprovedDentist) {
+    return { error: 'Dental Cases archive requires Dentist specialization and Administrator approval.', status: 403 };
+  }
+  return { userId: user.id };
 }
 
 export async function PUT(req, { params }) {
   try {
-    const userId = await resolveUserId(req);
-    if (!userId) return errorResponse('Unauthorized', 401);
+    const authCheck = await resolveAndCheckDentalUser(req);
+    if (authCheck.error) return errorResponse(authCheck.error, authCheck.status);
+    const userId = authCheck.userId;
 
     const { id } = await params;
     const body = await req.json();
@@ -36,8 +46,9 @@ export async function PUT(req, { params }) {
 
 export async function DELETE(req, { params }) {
   try {
-    const userId = await resolveUserId(req);
-    if (!userId) return errorResponse('Unauthorized', 401);
+    const authCheck = await resolveAndCheckDentalUser(req);
+    if (authCheck.error) return errorResponse(authCheck.error, authCheck.status);
+    const userId = authCheck.userId;
 
     const { id } = await params;
     const existing = await prisma.dentalCase.findFirst({

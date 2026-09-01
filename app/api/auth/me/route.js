@@ -22,6 +22,8 @@ export async function GET(req) {
         experienceLevel: true,
         primaryFocus: true,
         currency: true,
+        dentalApproved: true,
+        tradingApproved: true,
         departmentSegments: true,
         customCategories: true,
         onboardingCompleted: true,

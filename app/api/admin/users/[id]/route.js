@@ -24,7 +24,7 @@ export async function PATCH(req, context) {
     }
 
     const body = await req.json();
-    const { status, role } = body;
+    const { status, role, dentalApproved, tradingApproved } = body;
 
     // Safety guard: Admin cannot reject or demote themselves
     if (targetUser.id === adminCheck.user.id) {
@@ -51,6 +51,14 @@ export async function PATCH(req, context) {
       updateData.role = role;
     }
 
+    if (dentalApproved !== undefined) {
+      updateData.dentalApproved = Boolean(dentalApproved);
+    }
+
+    if (tradingApproved !== undefined) {
+      updateData.tradingApproved = Boolean(tradingApproved);
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id },
       data: updateData,
@@ -64,6 +72,10 @@ export async function PATCH(req, context) {
         bio: true,
         specialty: true,
         phone: true,
+        persona: true,
+        experienceLevel: true,
+        dentalApproved: true,
+        tradingApproved: true,
         approvedAt: true,
         approvedBy: true,
         lastLoginAt: true,

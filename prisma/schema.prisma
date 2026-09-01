@@ -26,6 +26,8 @@ model User {
   experienceLevel         String?                 @map("experience_level") // 'Student / Junior' | 'Mid-Level' | 'Senior / Specialist' | 'Lead / Founder'
   primaryFocus            String?                 @map("primary_focus")
   currency                String                  @default("USD")
+  dentalApproved          Boolean                 @default(false) @map("dental_approved")
+  tradingApproved         Boolean                 @default(false) @map("trading_approved")
   departmentSegments      Json?                   @map("department_segments") // Custom segments per department
   customCategories        Json?                   @map("custom_categories") // Custom category definitions
   onboardingCompleted     Boolean                 @default(false) @map("onboarding_completed")

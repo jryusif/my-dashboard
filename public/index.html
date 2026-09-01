@@ -1027,9 +1027,15 @@
             </div>
 
             <div class="form-group">
-              <label for="profileInputAvatar">Avatar Emoji or Image URL</label>
+              <label for="profileInputAvatar">Avatar Emoji or Profile Photo</label>
               <div class="avatar-picker-row">
-                <input type="text" id="profileInputAvatar" placeholder="Paste image URL (https://...) or choose emoji below" />
+                <div style="display:flex; gap:8px; width:100%;">
+                  <input type="text" id="profileInputAvatar" placeholder="Paste image URL (https://...) or choose emoji / upload photo below" oninput="setAvatarPreset(this.value)" />
+                  <label class="btn-avatar-upload" title="Upload Photo" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:8px 14px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.35); border-radius:10px; font-size:12.5px; font-weight:700; color:#38bdf8; white-space:nowrap; transition:all 0.2s;">
+                    <span>📸</span> <span>Upload</span>
+                    <input type="file" id="profileAvatarFileInput" accept="image/*" style="display:none;" onchange="uploadProfileAvatarFile(this)" />
+                  </label>
+                </div>
                 <div class="avatar-preset-pills" id="avatarPresetPills">
                   <button type="button" class="avatar-pill" onclick="setAvatarPreset('👨‍⚕️')">👨‍⚕️</button>
                   <button type="button" class="avatar-pill" onclick="setAvatarPreset('🦷')">🦷</button>
@@ -1466,10 +1472,10 @@
               <thead>
                 <tr>
                   <th>User Details</th>
+                  <th>Persona &amp; Module Access</th>
                   <th>Role</th>
                   <th>Status</th>
                   <th>Joined Date</th>
-                  <th>Activity</th>
                   <th style="text-align: right;">Access Controls</th>
                 </tr>
               </thead>

@@ -797,7 +797,18 @@ const CATEGORY_SUBTITLE = {
 // =============================================================================
 
 function renderDashboard() {
-  dashboardGrid.innerHTML = DASHBOARD_CARDS.map(c => {
+  const isAdmin = currentUser && currentUser.role === 'ADMIN';
+  const persona = (currentUser && currentUser.persona) ? currentUser.persona.toUpperCase() : 'DOCTOR';
+  const canAccessDental = isAdmin || (persona === 'DOCTOR' && Boolean(currentUser?.dentalApproved));
+  const canAccessTrading = isAdmin || (persona === 'TRADER' && Boolean(currentUser?.tradingApproved));
+
+  const visibleCards = DASHBOARD_CARDS.filter(c => {
+    if (c.category === 'Dental Cases') return canAccessDental;
+    if (c.category === 'Us stocks trading') return canAccessTrading;
+    return true;
+  });
+
+  dashboardGrid.innerHTML = visibleCards.map(c => {
     const colorVar = CATEGORY_COLOR[c.category] || 'work';
     const icon = CATEGORY_ICON[c.category] || '•';
     const illustrationSvg = CATEGORY_ILLUSTRATION_SVG[c.category] || '';
@@ -893,10 +904,38 @@ async function loadCardBadges() {
 }
 
 function openPage(category) {
+  const isAdmin = currentUser && currentUser.role === 'ADMIN';
+  const persona = (currentUser && currentUser.persona) ? currentUser.persona.toUpperCase() : 'DOCTOR';
+
+  if (category === 'Dental Cases') {
+    const canAccess = isAdmin || (persona === 'DOCTOR' && Boolean(currentUser?.dentalApproved));
+    if (!canAccess) {
+      if (persona === 'DOCTOR') {
+        showToast('🔒 Dental Cases archive is pending Administrator approval.');
+      } else {
+        showToast('🔒 Dental Cases archive is restricted to verified Dentist accounts.');
+      }
+      return;
+    }
+    openDentalCasesPage();
+    return;
+  }
+
+  if (category === 'Us stocks trading') {
+    const canAccess = isAdmin || (persona === 'TRADER' && Boolean(currentUser?.tradingApproved));
+    if (!canAccess) {
+      if (persona === 'TRADER') {
+        showToast('🔒 US Stocks Trading is pending Administrator approval.');
+      } else {
+        showToast('🔒 US Stocks Trading is restricted to verified Trader accounts.');
+      }
+      return;
+    }
+  }
+
   if (category === 'Analytics & Progress') { openAnalyticsPage(); return; }
   if (category === 'Finance') { openFinancePage(); return; }
   if (category === 'Gold & Assets') { openAssetsPage(); return; }
-  if (category === 'Dental Cases') { openDentalCasesPage(); return; }
   if (category === 'Roadmaps & Master Plan') { openRoadmapPage(); return; }
   if (TASK_CATEGORY_PAGES.includes(category)) { openCategoryPage(category); return; }
   showToast(`${category} page coming soon.`);
@@ -7939,13 +7978,39 @@ function updateUserUi() {
   const sidebarAdminBtn = document.getElementById('sidebarAdminBtn');
   const profileGoToAdminBtn = document.getElementById('profileGoToAdminBtn');
 
+function renderAvatarHtml(avatar, defaultIcon = '👤', extraClass = '') {
+  if (!avatar) return `<span class="avatar-emoji ${extraClass}">${defaultIcon}</span>`;
+  const a = String(avatar).trim();
+  if (a.startsWith('http://') || a.startsWith('https://') || a.startsWith('data:image/') || a.startsWith('/')) {
+    return `<img src="${escapeHtml(a)}" alt="Avatar" class="avatar-img-circle ${extraClass}" onerror="this.onerror=null;this.parentElement.innerHTML='${defaultIcon}'" />`;
+  }
+  return `<span class="avatar-emoji ${extraClass}">${escapeHtml(a)}</span>`;
+}
+window.renderAvatarHtml = renderAvatarHtml;
+
+function updateUserUi() {
+  const userEmailLabel = document.getElementById('userEmailLabel');
+  const dockUserAvatar = document.getElementById('dockUserAvatar');
+  const btnAuthProfile = document.getElementById('btnAuthProfile');
+  const btnAuthLogout = document.getElementById('btnAuthLogout');
+  const authCalloutBanner = document.getElementById('authCalloutBanner');
+  const btnDockAdminQuick = document.getElementById('btnDockAdminQuick');
+  const ddUserName = document.getElementById('ddUserName');
+  const ddUserEmail = document.getElementById('ddUserEmail');
+  const ddUserRoleTag = document.getElementById('ddUserRoleTag');
+  const ddAvatarWrap = document.getElementById('ddAvatarWrap');
+  const ddAdminItem = document.getElementById('ddAdminItem');
+  const sidebarAdminBtn = document.getElementById('sidebarAdminBtn');
+  const profileGoToAdminBtn = document.getElementById('profileGoToAdminBtn');
+
   if (currentUser && authToken) {
     const displayName = currentUser.name || currentUser.email.split('@')[0];
+    const defaultAvatar = currentUser.role === 'ADMIN' ? '👑' : '👤';
     if (userEmailLabel) {
       userEmailLabel.textContent = displayName;
     }
     if (dockUserAvatar) {
-      dockUserAvatar.textContent = (currentUser.avatar && currentUser.avatar.length <= 4) ? currentUser.avatar : (currentUser.role === 'ADMIN' ? '👑' : '👤');
+      dockUserAvatar.innerHTML = renderAvatarHtml(currentUser.avatar, defaultAvatar);
     }
     if (btnAuthLogout) btnAuthLogout.style.display = 'flex';
     if (authCalloutBanner) authCalloutBanner.style.display = 'none';
@@ -7962,7 +8027,7 @@ function updateUserUi() {
       ddUserRoleTag.className = currentUser.role === 'ADMIN' ? 'user-role-tag role-admin' : 'user-role-tag';
     }
     if (ddAvatarWrap) {
-      ddAvatarWrap.textContent = (currentUser.avatar && currentUser.avatar.length <= 4) ? currentUser.avatar : (currentUser.role === 'ADMIN' ? '👑' : '👤');
+      ddAvatarWrap.innerHTML = renderAvatarHtml(currentUser.avatar, defaultAvatar);
     }
 
     // Admin Controls
@@ -7977,7 +8042,7 @@ function updateUserUi() {
     }
   } else {
     if (userEmailLabel) userEmailLabel.textContent = 'Sign In';
-    if (dockUserAvatar) dockUserAvatar.textContent = '👤';
+    if (dockUserAvatar) dockUserAvatar.innerHTML = '👤';
     if (btnAuthLogout) btnAuthLogout.style.display = 'none';
     if (authCalloutBanner) authCalloutBanner.style.display = 'flex';
     if (btnDockAdminQuick) btnDockAdminQuick.style.display = 'none';
@@ -8693,14 +8758,20 @@ function renderDynamicCategoryDropdowns() {
   const segments = currentUser?.departmentSegments || PERSONA_PRESETS.DOCTOR.departmentSegments;
   if (!segments) return;
 
+  const isAdmin = currentUser && currentUser.role === 'ADMIN';
+  const persona = (currentUser && currentUser.persona) ? currentUser.persona.toUpperCase() : 'DOCTOR';
+  const canAccessDental = isAdmin || (persona === 'DOCTOR' && Boolean(currentUser?.dentalApproved));
+  const canAccessTrading = isAdmin || (persona === 'TRADER' && Boolean(currentUser?.tradingApproved));
+
   // Dynamic Work & Study options for task category select
   const taskCategorySelect = document.getElementById('taskCategorySelect');
   if (taskCategorySelect) {
     const defaultCategories = [
+      ...(canAccessDental ? [{ val: 'Dental Cases', label: '🦷 Dental Cases' }] : []),
       { val: 'Work', label: '💼 Work / Clinical' },
       { val: 'Studies', label: '📚 Studies & Research' },
       { val: 'Workouts', label: '🏋️ Workouts & Health' },
-      { val: 'Us stocks trading', label: '📈 Stocks / Trading' },
+      ...(canAccessTrading ? [{ val: 'Us stocks trading', label: '📈 Stocks / Trading' }] : []),
       { val: 'Religion', label: '🕌 Religion & Mindfulness' },
       { val: 'Finance', label: '💰 Finance & Wealth' },
       { val: 'Routine', label: '🧴 Daily Routine' },
@@ -8778,7 +8849,7 @@ async function loadProfileData() {
     const profileLastLogin = document.getElementById('profileLastLogin');
 
     if (profileAvatarDisplay) {
-      profileAvatarDisplay.textContent = (user.avatar && user.avatar.length <= 4) ? user.avatar : '👤';
+      profileAvatarDisplay.innerHTML = renderAvatarHtml(user.avatar, '👤');
     }
     if (profileNameDisplay) profileNameDisplay.textContent = user.name || user.email.split('@')[0];
     if (profileEmailDisplay) profileEmailDisplay.textContent = user.email;
@@ -9282,13 +9353,39 @@ async function handleSavePersonaSegments(e) {
     }
   }
 }
-function setAvatarPreset(emoji) {
+function setAvatarPreset(avatar) {
   const profileInputAvatar = document.getElementById('profileInputAvatar');
   const profileAvatarDisplay = document.getElementById('profileAvatarDisplay');
-  if (profileInputAvatar) profileInputAvatar.value = emoji;
-  if (profileAvatarDisplay) profileAvatarDisplay.textContent = emoji;
+  if (profileInputAvatar && profileInputAvatar.value !== avatar) profileInputAvatar.value = avatar || '';
+  if (profileAvatarDisplay) profileAvatarDisplay.innerHTML = renderAvatarHtml(avatar, '👤');
 }
 window.setAvatarPreset = setAvatarPreset;
+
+window.uploadProfileAvatarFile = function(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const dataUrl = reader.result;
+      setAvatarPreset(dataUrl);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64: dataUrl, filename: file.name, type: 'avatar' })
+      });
+      const data = await res.json();
+      if (data.url) {
+        setAvatarPreset(data.url);
+      }
+      showToast('Avatar image selected. Click "Save Profile Changes" to persist.');
+    } catch {
+      setAvatarPreset(reader.result);
+      showToast('Avatar image selected. Click "Save Profile Changes" to persist.');
+    }
+  };
+  reader.readAsDataURL(file);
+};
 
 async function handleSaveProfileDetails(e) {
   e.preventDefault();
@@ -9469,10 +9566,10 @@ async function loadAdminData() {
         urgentList.innerHTML = pendingUsers.map(u => `
           <div class="urgent-user-row">
             <div class="urgent-user-info">
-              <span class="urgent-user-avatar">${(u.avatar && u.avatar.length <= 4) ? u.avatar : '👤'}</span>
+              <span class="urgent-user-avatar">${renderAvatarHtml(u.avatar, '👤')}</span>
               <div class="urgent-user-meta">
                 <strong>${escapeHtml(u.name || u.email)}</strong>
-                <span>${escapeHtml(u.email)} &bull; ${u.specialty ? escapeHtml(u.specialty) + ' &bull; ' : ''}Joined ${fmtDateFull(u.createdAt ? u.createdAt.split('T')[0] : '')}</span>
+                <span>${escapeHtml(u.email)} &bull; ${u.specialty ? escapeHtml(u.specialty) + ' &bull; ' : ''}Persona: ${escapeHtml(u.persona || 'DOCTOR')} &bull; Joined ${fmtDateFull(u.createdAt ? u.createdAt.split('T')[0] : '')}</span>
               </div>
             </div>
             <div class="urgent-user-actions">
@@ -9518,16 +9615,34 @@ async function loadAdminData() {
           const isCurrentUser = currentUser && currentUser.id === u.id;
           const statusClass = u.status === 'APPROVED' ? 'status-pill-badge' : u.status === 'PENDING' ? 'status-pill-badge badge-pending' : 'status-pill-badge badge-rejected';
           const roleClass = u.role === 'ADMIN' ? 'role-pill-badge role-admin' : 'role-pill-badge';
-          const activityCount = (u._count?.tasks || 0) + (u._count?.dentalCases || 0) + (u._count?.routines || 0) + (u._count?.roadmapMilestones || 0);
 
           return `
             <tr>
               <td>
                 <div class="table-user-cell">
-                  <div class="table-user-avatar">${(u.avatar && u.avatar.length <= 4) ? u.avatar : '👤'}</div>
+                  <div class="table-user-avatar">${renderAvatarHtml(u.avatar, '👤')}</div>
                   <div class="table-user-details">
                     <strong>${escapeHtml(u.name || u.email)} ${isCurrentUser ? '<span style="color:#38bdf8; font-size:11px;">(You)</span>' : ''}</strong>
                     <span>${escapeHtml(u.email)} ${u.specialty ? '&bull; ' + escapeHtml(u.specialty) : ''}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <span style="font-size:12px; font-weight:700; color:#38bdf8;">${escapeHtml(u.persona || 'DOCTOR')}</span>
+                  <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                    <button type="button" class="btn-table-action" 
+                            style="font-size:11px; padding:3px 8px; border-radius:6px; background:${u.dentalApproved ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)'}; color:${u.dentalApproved ? '#34d399' : '#94a3b8'}; border-color:${u.dentalApproved ? 'rgba(16,185,129,0.35)' : 'rgba(255,255,255,0.12)'}; cursor:pointer;"
+                            onclick="handleTogglePermission('${u.id}', 'dental', ${!u.dentalApproved})"
+                            title="Click to ${u.dentalApproved ? 'Revoke' : 'Approve'} Dental Cases access">
+                      🦷 Dental: ${u.dentalApproved ? '✅ Approved' : '🔒 Locked'}
+                    </button>
+                    <button type="button" class="btn-table-action" 
+                            style="font-size:11px; padding:3px 8px; border-radius:6px; background:${u.tradingApproved ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)'}; color:${u.tradingApproved ? '#34d399' : '#94a3b8'}; border-color:${u.tradingApproved ? 'rgba(16,185,129,0.35)' : 'rgba(255,255,255,0.12)'}; cursor:pointer;"
+                            onclick="handleTogglePermission('${u.id}', 'trading', ${!u.tradingApproved})"
+                            title="Click to ${u.tradingApproved ? 'Revoke' : 'Approve'} US Stocks Trading access">
+                      📈 Trading: ${u.tradingApproved ? '✅ Approved' : '🔒 Locked'}
+                    </button>
                   </div>
                 </div>
               </td>
@@ -9539,9 +9654,6 @@ async function loadAdminData() {
               </td>
               <td>
                 <span style="font-size:12px; color:var(--ink-soft);">${u.createdAt ? new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
-              </td>
-              <td>
-                <span style="font-size:12px; font-weight:600; color:#fff;">${activityCount} items</span>
               </td>
               <td style="text-align: right;">
                 <div style="display: inline-flex; gap: 6px; justify-content: flex-end;">
@@ -9581,6 +9693,25 @@ async function loadAdminData() {
   }
 }
 window.loadAdminData = loadAdminData;
+
+async function handleTogglePermission(userId, module, newStatus) {
+  try {
+    const payload = module === 'dental' ? { dentalApproved: newStatus } : { tradingApproved: newStatus };
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update module permission');
+    showToast(`✨ ${module === 'dental' ? 'Dental Cases' : 'US Stocks Trading'} access ${newStatus ? 'APPROVED' : 'LOCKED'} for user.`);
+    await loadAdminData();
+  } catch (err) {
+    console.error('Permission toggle error:', err);
+    showToast(err.message || 'Could not update permission.');
+  }
+}
+window.handleTogglePermission = handleTogglePermission;
 
 function setAdminFilter(filter) {
   adminFilterState = filter;
