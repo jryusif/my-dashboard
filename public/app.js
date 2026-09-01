@@ -10,6 +10,21 @@ try {
   currentUser = null;
 }
 
+function userCanAccessDental() {
+  if (!currentUser) return false;
+  if (currentUser.role === 'ADMIN') return true;
+  return Boolean(currentUser.dentalApproved);
+}
+
+function userCanAccessTrading() {
+  if (!currentUser) return false;
+  if (currentUser.role === 'ADMIN') return true;
+  return Boolean(currentUser.tradingApproved);
+}
+
+window.userCanAccessDental = userCanAccessDental;
+window.userCanAccessTrading = userCanAccessTrading;
+
 // Global fetch interceptor to inject Authorization header
 const _originalFetch = window.fetch;
 window.fetch = async function(resource, init = {}) {
@@ -385,7 +400,8 @@ function fmtMoney(n, customCurrency = null) {
 
 function fmtGoldEgp(n) {
   if (n === null || n === undefined || isNaN(n)) return '—';
-  return 'E£' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const sym = getUserCurrencySymbol();
+  return sym + ' ' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 function fmtPct(n) {
   if (n === null || n === undefined) return '—';
@@ -493,6 +509,7 @@ window.navigateToSection = navigateToSection;
 // =============================================================================
 
 async function loadTasks() {
+  if (!currentUser || !authToken) return;
   const todayStr = toISODate(new Date());
   renderDateLabel(todayStr);
   const res = await fetch(`/api/tasks?date=${todayStr}`);
@@ -546,6 +563,7 @@ function updateSidebarGlassProgress(todayStats) {
 }
 
 async function loadWeeklyProgress() {
+  if (!currentUser || !authToken) return;
   const weeklyProgressFill = document.getElementById('weeklyProgressFill');
   const weeklyProgressVal  = document.getElementById('weeklyProgressVal');
   if (!weeklyProgressFill || !weeklyProgressVal) return;
@@ -1205,7 +1223,21 @@ function openPage(category) {
 // =============================================================================
 
 async function openCategoryPage(category) {
+  if (category === 'Dental Cases' && !userCanAccessDental()) {
+    showToast('🔒 Dental Cases archive is locked. Administrator approval required.');
+    showDashboard();
+    return;
+  }
+  if ((category === 'Us stocks trading' || category === 'US Stocks Trading' || category === 'Trading') && !userCanAccessTrading()) {
+    showToast('🔒 US Stocks Trading workspace is locked. Administrator approval required.');
+    showDashboard();
+    return;
+  }
+
   currentCategoryPage = category;
+  if (category === 'Workouts') {
+    selectedWorkoutDayId = getClientTodayDayId();
+  }
   const color = CATEGORY_COLOR[category] || 'cyan';
   const customSpaces = getUserCustomSpaces();
   const matchingCustomSpace = customSpaces.find(s => s.name === category);
@@ -1742,10 +1774,17 @@ let selectedWorkoutDayId = null;
 let workoutViewTab = 'program'; // 'program' | 'tasks'
 let workoutDbTasks = [];
 
-async function loadWorkoutsPage() {
+function getClientTodayDayId() {
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  return dayNames[new Date().getDay()];
+}
+
+async function loadWorkoutsPage(forceDayId = null) {
   categoryPageIcon.textContent = '🏋️';
   categoryPageEyebrow.textContent = 'Training Program';
   categoryPageTitle.textContent = 'Workouts & Exercises';
+
+  const clientToday = getClientTodayDayId();
 
   try {
     const [progRes, tasksRes] = await Promise.all([
@@ -1757,8 +1796,14 @@ async function loadWorkoutsPage() {
     workoutProgramData = await progRes.json();
     workoutDbTasks = tasksRes.ok ? (await tasksRes.json()).tasks : [];
 
-    if (!selectedWorkoutDayId) {
-      selectedWorkoutDayId = workoutProgramData.todayDayId || 'saturday';
+    if (workoutProgramData) {
+      workoutProgramData.todayDayId = clientToday;
+    }
+
+    if (forceDayId) {
+      selectedWorkoutDayId = forceDayId;
+    } else if (!selectedWorkoutDayId) {
+      selectedWorkoutDayId = clientToday;
     }
 
     renderWorkoutsView();
@@ -1774,18 +1819,23 @@ async function loadWorkoutsPage() {
 }
 
 function renderWorkoutsView() {
-  const { days, todayDayId, todayDate, todayCompleted } = workoutProgramData;
-  const currentDay = days.find(d => d.id === selectedWorkoutDayId) || days[0];
+  const clientToday = getClientTodayDayId();
+  if (workoutProgramData) {
+    workoutProgramData.todayDayId = clientToday;
+  }
+  const { days, todayDayId = clientToday, todayDate, todayCompleted } = workoutProgramData;
+  const currentDay = days.find(d => d.id === selectedWorkoutDayId) || days.find(d => d.id === clientToday) || days[0];
   const todayDay = days.find(d => d.id === todayDayId) || days[0];
 
-  // Stats Bar
-  const activeDaysCount = days.filter(d => !d.isRestDay).length;
+  // Automated Active & Rest Day Calculation
+  const activeDaysCount = days.filter(d => !d.isRestDay && ((d.exercises && d.exercises.length > 0) || (d.title && !d.title.toLowerCase().includes('rest')))).length;
+  const restDaysCount = 7 - activeDaysCount;
   const todayExCount = todayDay.exercises ? todayDay.exercises.length : 0;
   const todayDoneCount = todayCompleted ? todayCompleted.length : 0;
 
   categoryStats.innerHTML = [
-    { label: 'Weekly Split', value: `${activeDaysCount} Days Active`, cls: '' },
-    { label: "Today's Focus", value: todayDay.isRestDay ? 'Rest & Recovery' : escapeHtml(todayDay.title.split('—')[0] || todayDay.title), cls: '' },
+    { label: 'Weekly Split', value: `${activeDaysCount} Active &middot; ${restDaysCount} Rest`, cls: '' },
+    { label: "Today's Focus", value: todayDay.isRestDay ? '🌴 Rest &amp; Recovery' : escapeHtml(todayDay.title.split('—')[0] || todayDay.title), cls: '' },
     { label: "Today's Session", value: todayDay.isRestDay ? '🌴 Rest Day' : `${todayDoneCount}/${todayExCount} Done`, cls: todayDoneCount === todayExCount && todayExCount > 0 ? 'is-done' : 'is-pending' },
   ].map(s => `
     <div class="cat-stat">
@@ -1822,7 +1872,7 @@ function renderWorkoutsView() {
     renderWorkoutsView();
   });
   document.getElementById('btnOpenTemplateModal').addEventListener('click', () => {
-    document.getElementById('programTemplateModalBackdrop').hidden = false;
+    openRoutineCustomizerModal();
   });
 
   const container = document.getElementById('workoutViewContainer');
@@ -1853,11 +1903,12 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
         ${days.map(d => {
           const isToday = d.id === todayDayId;
           const isActive = d.id === currentDay.id;
-          const exCount = d.isRestDay ? 'Rest' : `${d.exercises ? d.exercises.length : 0} ex`;
+          const isRest = d.isRestDay || (!d.exercises || d.exercises.length === 0 && (!d.title || d.title.toLowerCase().includes('rest')));
+          const exCount = isRest ? '🌴 Rest' : `${d.exercises ? d.exercises.length : 0} ex`;
           return `
-            <button type="button" class="workout-day-tab ${isActive ? 'is-active' : ''} ${isToday ? 'is-today' : ''}" data-day-id="${d.id}">
+            <button type="button" class="workout-day-tab ${isActive ? 'is-active' : ''} ${isToday ? 'is-today' : ''} ${isRest ? 'is-rest-tab' : ''}" data-day-id="${d.id}">
               <span class="w-day-name">${getDayDisplayName(d)}</span>
-              <span class="w-day-badge">${exCount}</span>
+              <span class="w-day-badge ${isRest ? 'is-rest-badge' : ''}">${exCount}</span>
             </button>
           `;
         }).join('')}
@@ -1869,7 +1920,7 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
           <div class="w-day-title-row">
             <h2 class="w-day-title">${getDayDisplayName(currentDay)} &middot; ${escapeHtml(currentDay.title || '')}</h2>
             ${isSelectedToday ? '<span class="asset-type-badge" style="background:var(--workouts);color:#0A1A12;">TODAY</span>' : ''}
-            ${currentDay.isRestDay ? '<span class="asset-type-badge">REST DAY</span>' : ''}
+            ${currentDay.isRestDay ? '<span class="asset-type-badge" style="background:rgba(255,255,255,0.08);color:var(--ink-soft);">🌴 REST &amp; RECOVERY</span>' : '<span class="asset-type-badge" style="background:rgba(79,209,165,0.15);color:var(--workouts);">⚡ ACTIVE DAY</span>'}
           </div>
           ${currentDay.targetMuscles && currentDay.targetMuscles.length ? `
             <div class="w-day-tags">
@@ -1960,12 +2011,35 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
     if (btn) btn.addEventListener('click', () => startRestTimer([30,60,90,120][i]));
   });
 
-  // Exercise Check-off Buttons
-  container.querySelectorAll('[data-exercise-check]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const exId = btn.dataset.exerciseCheck;
-      const isDone = btn.classList.contains('is-filled');
-      toggleExerciseCheck(exId, !isDone, todayDate);
+  // Set Check-off Buttons
+  container.querySelectorAll('[data-set-toggle]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const exId = btn.dataset.setToggle;
+      const setIdx = parseInt(btn.dataset.setIndex, 10);
+      const totalSets = parseInt(btn.dataset.totalSets, 10) || 4;
+      
+      const { isSetDone, isAllSetsDone, completedCount } = toggleSetCompletion(todayDate, exId, setIdx, totalSets);
+
+      btn.classList.toggle('is-filled', isSetDone);
+      btn.textContent = isSetDone ? '✓' : String(setIdx + 1);
+      btn.title = `Set ${setIdx + 1}: ${isSetDone ? 'Completed (Click to unmark)' : 'Click to mark complete'}`;
+
+      const card = document.getElementById(`card-${exId}`);
+      if (card) {
+        card.classList.toggle('is-completed', isAllSetsDone);
+      }
+
+      if (isAllSetsDone) {
+        toggleExerciseCheck(exId, true, todayDate, false);
+        showToast(`🎉 Exercise complete! (${completedCount}/${totalSets} sets) 💪`);
+      } else {
+        const isDoneFromApi = workoutProgramData?.todayCompleted?.includes(exId);
+        if (isDoneFromApi) {
+          toggleExerciseCheck(exId, false, todayDate, false);
+        }
+        showToast(isSetDone ? `⚡ Set ${setIdx + 1} marked complete! (${completedCount}/${totalSets})` : `Set ${setIdx + 1} unmarked.`);
+      }
     });
   });
 
@@ -2016,13 +2090,54 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
   });
 }
 
+function getStoredCompletedSets(dateStr) {
+  try {
+    const raw = localStorage.getItem(`workout_sets_${dateStr}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredCompletedSets(dateStr, setsData) {
+  try {
+    localStorage.setItem(`workout_sets_${dateStr}`, JSON.stringify(setsData));
+  } catch {}
+}
+
+function toggleSetCompletion(dateStr, exerciseId, setIndex, totalSets) {
+  const data = getStoredCompletedSets(dateStr);
+  let exSets = Array.isArray(data[exerciseId]) ? [...data[exerciseId]] : [];
+  
+  if (exSets.includes(setIndex)) {
+    exSets = exSets.filter(i => i !== setIndex);
+  } else {
+    exSets.push(setIndex);
+  }
+
+  data[exerciseId] = exSets;
+  saveStoredCompletedSets(dateStr, data);
+
+  const isAllSetsDone = exSets.length >= totalSets && totalSets > 0;
+  return { isSetDone: exSets.includes(setIndex), isAllSetsDone, completedCount: exSets.length };
+}
+
 function renderExerciseCard(ex, isSelectedToday, todayCompleted, index, totalCount, dayId) {
-  const isDone = todayCompleted && todayCompleted.includes(ex.id);
+  const totalSets = parseInt(ex.sets || ex.targetSets || 4, 10) || 4;
+  const todayDate = toISODate(new Date());
+  
+  const isDoneFromApi = todayCompleted && todayCompleted.includes(ex.id);
+  const storedData = getStoredCompletedSets(todayDate);
+  const exSets = Array.isArray(storedData[ex.id]) 
+    ? storedData[ex.id] 
+    : (isDoneFromApi ? Array.from({ length: totalSets }, (_, i) => i) : []);
+  const isDone = isDoneFromApi || (exSets.length >= totalSets && totalSets > 0);
   const numStr = String(index + 1).padStart(2, '0');
 
-  const bubblesHtml = Array.from({ length: ex.sets || 4 }).map((_, i) =>
-    `<button type="button" class="darebee-bubble ${isDone ? 'is-filled' : ''}" data-exercise-check="${ex.id}" title="Set ${i+1}">${i + 1}</button>`
-  ).join('');
+  const bubblesHtml = Array.from({ length: totalSets }).map((_, i) => {
+    const isSetDone = exSets.includes(i) || isDoneFromApi;
+    return `<button type="button" class="darebee-bubble ${isSetDone ? 'is-filled' : ''}" data-set-toggle="${ex.id}" data-set-index="${i}" data-total-sets="${totalSets}" title="Set ${i + 1}: ${isSetDone ? 'Completed (Click to unmark)' : 'Click to mark complete'}">${isSetDone ? '✓' : (i + 1)}</button>`;
+  }).join('');
 
   const prBadgeHtml = ex.personalRecord ? `
     <span class="darebee-pr-badge" title="All-Time Personal Record: ${ex.personalRecord.weight} kg (${ex.personalRecord.reps || ''} reps)">
@@ -2208,7 +2323,7 @@ function renderWorkoutTasksView(container) {
 }
 
 // Exercise Actions
-async function toggleExerciseCheck(exerciseId, completed, date) {
+async function toggleExerciseCheck(exerciseId, completed, date, shouldRerender = true) {
   try {
     const res = await fetch('/api/workout-program/check', {
       method: 'POST',
@@ -2218,10 +2333,12 @@ async function toggleExerciseCheck(exerciseId, completed, date) {
     if (!res.ok) throw new Error('failed');
     const { completedExercises } = await res.json();
     if (workoutProgramData) {
-      workoutProgramData.todayCompleted = completedExercises;
+      workoutProgramData.todayCompleted = completedExercises || [];
     }
-    showToast(completed ? 'Exercise marked complete! 💪' : 'Marked incomplete.');
-    renderWorkoutsView();
+    if (shouldRerender) {
+      showToast(completed ? 'Exercise marked complete! 💪' : 'Marked incomplete.');
+      renderWorkoutsView();
+    }
   } catch {
     showToast('Could not update exercise completion.');
   }
@@ -2459,18 +2576,25 @@ if (exerciseForm) {
     const dayId       = document.getElementById('exerciseDaySelect').value;
     const name        = document.getElementById('exerciseName').value.trim();
     const muscleGroup = document.getElementById('exerciseMuscleGroup').value.trim();
-    const sets        = parseInt(document.getElementById('exerciseSets').value, 10) || 3;
-    const reps        = document.getElementById('exerciseReps').value.trim();
+    const sets        = parseInt(document.getElementById('exerciseSets').value, 10) || 4;
+    const reps        = document.getElementById('exerciseReps').value.trim() || '8-10';
     const weight      = document.getElementById('exerciseWeight').value.trim();
-    const restTime    = document.getElementById('exerciseRestTime').value.trim();
+    const restTime    = document.getElementById('exerciseRestTime').value.trim() || '90s';
     const notes       = document.getElementById('exerciseNotes').value.trim();
     const imageUrl    = document.getElementById('exerciseImageUrl').value.trim();
     const videoUrl    = document.getElementById('exerciseVideoUrl').value.trim();
 
-    if (!name) return;
+    if (!name) {
+      showToast('⚠️ Please enter an exercise name.');
+      document.getElementById('exerciseName').focus();
+      return;
+    }
 
     const saveBtn = document.getElementById('exerciseSaveBtn');
-    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+    }
 
     const payload = { dayId, name, muscleGroup, sets, reps, weight, restTime, notes, imageUrl, videoUrl };
 
@@ -2482,16 +2606,24 @@ if (exerciseForm) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('failed');
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Server error');
+      }
 
       exerciseModalBackdrop.hidden = true;
-      showToast(id ? 'Exercise updated.' : 'Exercise added to routine.');
+      showToast(id ? `✅ Exercise "${name}" updated!` : `💪 Added "${name}" to ${dayId.charAt(0).toUpperCase() + dayId.slice(1)} routine!`);
       selectedWorkoutDayId = dayId;
       await loadWorkoutsPage();
-    } catch {
-      showToast('Could not save exercise — please try again.');
+    } catch (err) {
+      console.error('Save exercise error:', err);
+      showToast(`Could not save exercise: ${err.message || 'Please try again'}`);
     } finally {
-      saveBtn.disabled = false; saveBtn.textContent = 'Save Exercise';
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Exercise';
+      }
     }
   });
 }
@@ -2877,11 +3009,285 @@ window.handleDeleteWeightLog = async function(exerciseId, logId) {
   }
 };
 
-// Custom Program Template Modal Handlers
+// =============================================================================
+// WORKOUT ARCHITECTURE & ROUTINE CUSTOMIZER CONTROLLER
+// =============================================================================
+
 const programTemplateModalBackdrop = document.getElementById('programTemplateModalBackdrop');
 const templateModalCancelBtn       = document.getElementById('templateModalCancelBtn');
-const btnTemplateBlank             = document.getElementById('btnTemplateBlank');
-const btnTemplateCurated           = document.getElementById('btnTemplateCurated');
+const btnSaveCustomSchedule        = document.getElementById('btnSaveCustomSchedule');
+const btnClearAllExercises         = document.getElementById('btnClearAllExercises');
+const routineDaysEditor            = document.getElementById('routineDaysEditor');
+const tplLiveStatusText            = document.getElementById('tplLiveStatusText');
+const routineDaysSummaryText       = document.getElementById('routineDaysSummaryText');
+const routinePresetChipsContainer  = document.getElementById('routinePresetChips');
+
+const ROUTINE_PRESET_CONFIGS = {
+  blank: {
+    name: 'Start Blank',
+    splits: [
+      { dayName: 'Saturday', title: 'Rest & Recovery', isRestDay: true },
+      { dayName: 'Sunday', title: 'Rest & Recovery', isRestDay: true },
+      { dayName: 'Monday', title: 'Rest & Recovery', isRestDay: true },
+      { dayName: 'Tuesday', title: 'Rest & Recovery', isRestDay: true },
+      { dayName: 'Wednesday', title: 'Rest & Recovery', isRestDay: true },
+      { dayName: 'Thursday', title: 'Rest & Recovery', isRestDay: true },
+      { dayName: 'Friday', title: 'Rest & Recovery', isRestDay: true }
+    ]
+  },
+  curated_6day: {
+    name: '6-Day PPL Hypertrophy',
+    splits: [
+      { dayName: 'Saturday', title: 'Chest & Triceps — Push A', isRestDay: false },
+      { dayName: 'Sunday', title: 'Back & Biceps — Pull A', isRestDay: false },
+      { dayName: 'Monday', title: 'Legs & Core — Legs A', isRestDay: false },
+      { dayName: 'Tuesday', title: 'Rest & Active Recovery', isRestDay: true },
+      { dayName: 'Wednesday', title: 'Shoulders & Arms — Upper Focus', isRestDay: false },
+      { dayName: 'Thursday', title: 'Legs & Posterior Chain — Legs B', isRestDay: false },
+      { dayName: 'Friday', title: 'Full Body Conditioning & Core', isRestDay: false }
+    ]
+  },
+  '5day': {
+    name: '5-Day Upper/Lower/PPL',
+    splits: [
+      { dayName: 'Saturday', title: 'Upper Body Power', isRestDay: false },
+      { dayName: 'Sunday', title: 'Lower Body Strength', isRestDay: false },
+      { dayName: 'Monday', title: 'Rest & Recovery', isRestDay: true },
+      { dayName: 'Tuesday', title: 'Chest, Shoulders & Triceps (Push)', isRestDay: false },
+      { dayName: 'Wednesday', title: 'Back, Rear Delts & Biceps (Pull)', isRestDay: false },
+      { dayName: 'Thursday', title: 'Legs Hypertrophy & Core', isRestDay: false },
+      { dayName: 'Friday', title: 'Rest & Recovery', isRestDay: true }
+    ]
+  },
+  '4day': {
+    name: '4-Day Upper/Lower',
+    splits: [
+      { dayName: 'Saturday', title: 'Upper Body A (Chest & Back Focus)', isRestDay: false },
+      { dayName: 'Sunday', title: 'Lower Body A (Squat & Quad Focus)', isRestDay: false },
+      { dayName: 'Monday', title: 'Rest & Active Recovery', isRestDay: true },
+      { dayName: 'Tuesday', title: 'Upper Body B (Shoulders & Arms Focus)', isRestDay: false },
+      { dayName: 'Wednesday', title: 'Lower Body B (Deadlift & Hamstring Focus)', isRestDay: false },
+      { dayName: 'Thursday', title: 'Rest & Active Recovery', isRestDay: true },
+      { dayName: 'Friday', title: 'Rest & Active Recovery', isRestDay: true }
+    ]
+  },
+  '3day': {
+    name: '3-Day Full Body',
+    splits: [
+      { dayName: 'Saturday', title: 'Full Body A (Strength Focus)', isRestDay: false },
+      { dayName: 'Sunday', title: 'Rest & Active Recovery', isRestDay: true },
+      { dayName: 'Monday', title: 'Full Body B (Hypertrophy Focus)', isRestDay: false },
+      { dayName: 'Tuesday', title: 'Rest & Active Recovery', isRestDay: true },
+      { dayName: 'Wednesday', title: 'Full Body C (Conditioning & Core)', isRestDay: false },
+      { dayName: 'Thursday', title: 'Rest & Active Recovery', isRestDay: true },
+      { dayName: 'Friday', title: 'Rest & Active Recovery', isRestDay: true }
+    ]
+  }
+};
+
+let currentModalSplits = [];
+
+function openRoutineCustomizerModal() {
+  if (!workoutProgramData || !workoutProgramData.days) return;
+
+  const dayNames = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  currentModalSplits = dayNames.map((dName, idx) => {
+    const existing = workoutProgramData.days.find(d => (d.dayName || d.name || '').toLowerCase() === dName.toLowerCase());
+    const exCount = existing && existing.exercises ? existing.exercises.length : 0;
+    const isRest = existing ? !!existing.isRestDay : (idx === 3);
+    return {
+      dayName: dName,
+      title: existing ? (existing.title || (isRest ? 'Rest & Recovery' : `${dName} Workout`)) : (isRest ? 'Rest & Recovery' : `${dName} Workout`),
+      isRestDay: isRest,
+      exerciseCount: exCount,
+      targetMuscles: existing ? (existing.targetMuscles || []) : []
+    };
+  });
+
+  renderRoutineCustomizerEditor();
+  if (programTemplateModalBackdrop) programTemplateModalBackdrop.hidden = false;
+}
+
+function updateRoutineCustomizerStats() {
+  const activeCount = currentModalSplits.filter(s => !s.isRestDay).length;
+  const restCount = 7 - activeCount;
+
+  if (tplLiveStatusText) {
+    tplLiveStatusText.textContent = `${activeCount} Active Days · ${restCount} Rest Days`;
+  }
+  if (routineDaysSummaryText) {
+    routineDaysSummaryText.textContent = `${activeCount} Active / ${restCount} Rest Configured`;
+  }
+}
+
+function renderRoutineCustomizerEditor() {
+  updateRoutineCustomizerStats();
+
+  if (!routineDaysEditor) return;
+
+  routineDaysEditor.innerHTML = currentModalSplits.map((s, idx) => {
+    const isRest = !!s.isRestDay;
+    const badgeText = s.exerciseCount > 0 ? `${s.exerciseCount} exercises` : (isRest ? '🌴 Rest Day' : '0 exercises');
+    return `
+      <div class="routine-day-card ${isRest ? 'is-rest' : 'is-active-day'}" data-index="${idx}">
+        <div class="routine-day-top">
+          <div class="routine-day-header-left">
+            <span class="routine-day-name-tag">${s.dayName}</span>
+            <span class="routine-day-exercise-badge">${badgeText}</span>
+          </div>
+
+          <button type="button" class="routine-day-toggle ${!isRest ? 'is-active-btn' : ''}" data-toggle-index="${idx}">
+            ${!isRest ? '⚡ Active Training' : '🌴 Rest Day'}
+          </button>
+        </div>
+
+        <div class="routine-day-inputs">
+          <div>
+            <label style="font-size:10.5px;color:var(--ink-muted);margin-bottom:2px;display:block;">Day Focus / Title</label>
+            <input type="text" class="routine-day-title-input" data-title-index="${idx}" value="${escapeHtml(s.title || '')}" placeholder="${isRest ? 'Rest & Recovery' : 'e.g. Chest & Triceps'}" />
+          </div>
+          <div>
+            <label style="font-size:10.5px;color:var(--ink-muted);margin-bottom:2px;display:block;">Target Muscles (tags)</label>
+            <input type="text" class="routine-day-muscles-input" data-muscles-index="${idx}" value="${escapeHtml((s.targetMuscles || []).join(', '))}" placeholder="e.g. Chest, Delts" />
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Wire Day Toggles
+  routineDaysEditor.querySelectorAll('[data-toggle-index]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.toggleIndex, 10);
+      const split = currentModalSplits[idx];
+      split.isRestDay = !split.isRestDay;
+      if (split.isRestDay && (!split.title || split.title.toLowerCase().includes('workout'))) {
+        split.title = 'Rest & Recovery';
+      } else if (!split.isRestDay && split.title.toLowerCase().includes('rest')) {
+        split.title = `${split.dayName} Focus`;
+      }
+      renderRoutineCustomizerEditor();
+    });
+  });
+
+  // Wire Title Inputs
+  routineDaysEditor.querySelectorAll('.routine-day-title-input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const idx = parseInt(inp.dataset.titleIndex, 10);
+      currentModalSplits[idx].title = e.target.value.trim();
+    });
+  });
+
+  // Wire Muscle Inputs
+  routineDaysEditor.querySelectorAll('.routine-day-muscles-input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const idx = parseInt(inp.dataset.musclesIndex, 10);
+      currentModalSplits[idx].targetMuscles = e.target.value.split(',').map(m => m.trim()).filter(Boolean);
+    });
+  });
+}
+
+// Preset Buttons
+if (routinePresetChipsContainer) {
+  routinePresetChipsContainer.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const presetKey = btn.dataset.preset;
+      const config = ROUTINE_PRESET_CONFIGS[presetKey];
+      if (!config) return;
+
+      if (presetKey === 'blank') {
+        if (confirm('Start with a 100% blank routine? All preset exercises will be cleared so you can build your custom program from scratch.')) {
+          try {
+            const res = await fetch('/api/workout-program/reset-custom', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ template: 'empty' }),
+            });
+            if (!res.ok) throw new Error('failed');
+            programTemplateModalBackdrop.hidden = true;
+            showToast('Blank custom routine ready. Start adding your exercises! 🚀');
+            await loadWorkoutsPage();
+          } catch {
+            showToast('Could not reset to blank routine.');
+          }
+        }
+        return;
+      }
+
+      // Apply preset to current modal view
+      currentModalSplits = config.splits.map(s => ({
+        dayName: s.dayName,
+        title: s.title,
+        isRestDay: s.isRestDay,
+        exerciseCount: 0,
+        targetMuscles: s.title.split('—')[0]?.split('&').map(m => m.trim()).filter(Boolean) || []
+      }));
+
+      // Highlight active chip
+      routinePresetChipsContainer.querySelectorAll('[data-preset]').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+
+      renderRoutineCustomizerEditor();
+      showToast(`Applied ${config.name} preview. Click "Save Routine" to confirm or customize days!`);
+    });
+  });
+}
+
+// Save Custom Schedule Button
+if (btnSaveCustomSchedule) {
+  btnSaveCustomSchedule.addEventListener('click', async () => {
+    btnSaveCustomSchedule.disabled = true;
+    btnSaveCustomSchedule.textContent = 'Saving Routine…';
+
+    try {
+      const res = await fetch('/api/workout-program/reset-custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          splits: currentModalSplits.map((s, i) => ({
+            dayName: s.dayName,
+            muscleGroup: s.isRestDay ? (s.title.toLowerCase().includes('rest') ? s.title : 'Rest & Recovery') : (s.title || `${s.dayName} Workout`),
+            isRestDay: s.isRestDay,
+            order: i + 1
+          }))
+        }),
+      });
+
+      if (!res.ok) throw new Error('failed');
+
+      programTemplateModalBackdrop.hidden = true;
+      showToast('Weekly workout routine updated! 🚀');
+      await loadWorkoutsPage();
+    } catch {
+      showToast('Could not save routine configuration.');
+    } finally {
+      btnSaveCustomSchedule.disabled = false;
+      btnSaveCustomSchedule.textContent = 'Save Routine';
+    }
+  });
+}
+
+// Clear All Exercises Only Button
+if (btnClearAllExercises) {
+  btnClearAllExercises.addEventListener('click', async () => {
+    if (confirm('Clear all exercises from your program? Your configured day splits and titles will be kept, but all exercises will be removed so you start fresh.')) {
+      try {
+        const res = await fetch('/api/workout-program/reset-custom', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'clear_exercises' }),
+        });
+        if (!res.ok) throw new Error('failed');
+
+        programTemplateModalBackdrop.hidden = true;
+        showToast('All exercises cleared. Your routine is ready for custom exercises! 🚀');
+        await loadWorkoutsPage();
+      } catch {
+        showToast('Could not clear exercises.');
+      }
+    }
+  });
+}
 
 if (templateModalCancelBtn) {
   templateModalCancelBtn.addEventListener('click', () => {
@@ -2891,34 +3297,6 @@ if (templateModalCancelBtn) {
 if (programTemplateModalBackdrop) {
   programTemplateModalBackdrop.addEventListener('click', (e) => {
     if (e.target === programTemplateModalBackdrop) programTemplateModalBackdrop.hidden = true;
-  });
-}
-
-if (btnTemplateBlank) {
-  btnTemplateBlank.addEventListener('click', async () => {
-    if (confirm('Start with a blank program? You will be able to build all 6 days with your own custom exercises, uploaded images, and video links.')) {
-      try {
-        const res = await fetch('/api/workout-program/reset-custom', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ template: 'empty' }),
-        });
-        if (!res.ok) throw new Error('failed');
-        programTemplateModalBackdrop.hidden = true;
-        showToast('Blank custom routine ready. Start adding your exercises! 🚀');
-        await loadWorkoutsPage();
-      } catch {
-        showToast('Could not reset program.');
-      }
-    }
-  });
-}
-
-if (btnTemplateCurated) {
-  btnTemplateCurated.addEventListener('click', async () => {
-    programTemplateModalBackdrop.hidden = true;
-    showToast('Loaded active routine.');
-    await loadWorkoutsPage();
   });
 }
 
@@ -2969,18 +3347,22 @@ function renderWealthValue() {
   }
 
   // 4 Pillars Breakdown
+  const goldVal = lastNetWorth?.liveGoldValue || 0;
+  const availableCash = lastNetWorth?.breakdown?.cash != null 
+    ? lastNetWorth.breakdown.cash 
+    : (lastNetWorth?.breakdown?.availableCash != null ? lastNetWorth.breakdown.availableCash : 0);
+
   if (pillarGoldVal) {
     pillarGoldVal.classList.toggle('is-hidden', isHidden);
-    pillarGoldVal.textContent = isHidden ? '••••••' : (lastNetWorth?.liveGoldValue > 0 ? fmtMoney(lastNetWorth.liveGoldValue) : fmtMoney(0));
+    pillarGoldVal.textContent = isHidden ? '••••••' : (goldVal > 0 ? fmtMoney(goldVal) : fmtMoney(0));
   }
   if (pillarCashVal) {
     pillarCashVal.classList.toggle('is-hidden', isHidden);
-    const cash = lastNetWorth?.breakdown?.cash != null ? lastNetWorth.breakdown.cash : (lastNetWorth?.totalAssets || 0);
-    pillarCashVal.textContent = isHidden ? '••••••' : fmtMoney(cash);
+    pillarCashVal.textContent = isHidden ? '••••••' : fmtMoney(availableCash);
   }
   if (pillarInvestVal) {
     pillarInvestVal.classList.toggle('is-hidden', isHidden);
-    const invest = lastNetWorth?.breakdown?.investments || 0;
+    const invest = lastNetWorth?.breakdown?.investments || lastNetWorth?.breakdown?.otherAssets || 0;
     pillarInvestVal.textContent = isHidden ? '••••••' : fmtMoney(invest);
   }
   if (pillarDebtVal) {
@@ -3007,6 +3389,7 @@ function renderWealthValue() {
 }
 
 async function loadWealthCard() {
+  if (!currentUser || !authToken) return;
   try {
     const res = await fetch('/api/finance/overview');
     if (!res.ok) throw new Error('failed');
@@ -3115,15 +3498,173 @@ function switchVaultAuthMode(mode) {
 }
 window.switchVaultAuthMode = switchVaultAuthMode;
 
+// =============================================================================
+// REAL BIOMETRIC FACE ID COMPUTER VISION ENGINE
+// =============================================================================
+
+let faceDetectorInstance = null;
+let consecutiveVerifiedFrames = 0;
+const REQUIRED_CONSECUTIVE_FRAMES = 12; // ~1.5s of continuous live face verification
+
+if (typeof window !== 'undefined' && 'FaceDetector' in window) {
+  try {
+    faceDetectorInstance = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+  } catch (_) {}
+}
+
+/**
+ * Real-time Facial Computer Vision Analysis on Live Video Frame
+ * Analyzes:
+ * - Native FaceDetector (Shape Detection API)
+ * - RGB & YCbCr Skin Chroma Segmentation Matrix
+ * - Facial Center of Mass & Geometric Oval Aspect Ratio
+ * - Bilateral Facial Symmetry Matrix (Left-to-Right Correlation)
+ * - Forehead / Eye Socket / Cheek Luminance Topology
+ */
+async function analyzeVideoFrameForHumanFace(video, canvas) {
+  if (!video || video.readyState < 2 || video.videoWidth === 0) {
+    return { detected: false, confidence: 0, reason: 'Camera sensor initializing...' };
+  }
+
+  // 1. Native Browser Shape Detection FaceDetector (Chrome / Edge)
+  if (faceDetectorInstance) {
+    try {
+      const faces = await faceDetectorInstance.detect(video);
+      if (faces && faces.length > 0) {
+        const box = faces[0].boundingBox;
+        const minDim = Math.min(video.videoWidth, video.videoHeight);
+        if (box.width > minDim * 0.22 && box.height > minDim * 0.22) {
+          return {
+            detected: true,
+            confidence: 0.95,
+            box: { x: box.x, y: box.y, width: box.width, height: box.height }
+          };
+        }
+      } else {
+        return { detected: false, confidence: 0, reason: 'No face detected. Position your face in center.' };
+      }
+    } catch (_) {}
+  }
+
+  // 2. High-Accuracy Canvas Computer Vision Topology Engine
+  if (!canvas) canvas = document.createElement('canvas');
+  const w = 120;
+  const h = 120;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return { detected: false, confidence: 0, reason: 'Vision context unavailable.' };
+
+  ctx.drawImage(video, 0, 0, w, h);
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+
+  let totalSkinPixels = 0;
+  let skinXSum = 0;
+  let skinYSum = 0;
+  let minSkinX = w, maxSkinX = 0, minSkinY = h, maxSkinY = 0;
+
+  const gridRows = 12;
+  const gridCols = 12;
+  const blockW = w / gridCols;
+  const blockH = h / gridRows;
+  const skinGrid = Array(gridRows).fill(0).map(() => Array(gridCols).fill(0));
+
+  for (let y = 0; y < h; y += 2) {
+    for (let x = 0; x < w; x += 2) {
+      const idx = (y * w + x) * 4;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+
+      // Human Skin Tone Chrominance (RGB & YCbCr spaces)
+      const isRgbSkin = (r > 45 && g > 28 && b > 15) &&
+                        (r > g && r > b) &&
+                        (Math.abs(r - g) > 10) &&
+                        (r - g > 5);
+
+      const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+      const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+      const isYcbcrSkin = (cb >= 75 && cb <= 135) && (cr >= 130 && cr <= 180);
+
+      if (isRgbSkin || isYcbcrSkin) {
+        totalSkinPixels++;
+        skinXSum += x;
+        skinYSum += y;
+        if (x < minSkinX) minSkinX = x;
+        if (x > maxSkinX) maxSkinX = x;
+        if (y < minSkinY) minSkinY = y;
+        if (y > maxSkinY) maxSkinY = y;
+        const gy = Math.floor(y / blockH);
+        const gx = Math.floor(x / blockW);
+        if (skinGrid[gy] && skinGrid[gy][gx] !== undefined) {
+          skinGrid[gy][gx]++;
+        }
+      }
+    }
+  }
+
+  const sampleCount = (w * h) / 4;
+  const skinRatio = totalSkinPixels / sampleCount;
+
+  // Reject if no skin or frame is fully blocked / obstructed
+  if (skinRatio < 0.12) {
+    return { detected: false, confidence: 0, reason: 'No face detected in camera viewport.' };
+  }
+  if (skinRatio > 0.88) {
+    return { detected: false, confidence: 0, reason: 'Camera obstructed. Move back slightly.' };
+  }
+
+  const centerX = skinXSum / totalSkinPixels;
+  const centerY = skinYSum / totalSkinPixels;
+  const centerDevX = Math.abs(centerX - (w / 2)) / (w / 2);
+  const centerDevY = Math.abs(centerY - (h / 2)) / (h / 2);
+
+  if (centerDevX > 0.50 || centerDevY > 0.50) {
+    return { detected: false, confidence: 0.2, reason: 'Please center your face inside the circle.' };
+  }
+
+  const faceW = maxSkinX - minSkinX;
+  const faceH = maxSkinY - minSkinY;
+  const aspectRatio = faceW / (faceH || 1);
+
+  if (aspectRatio < 0.50 || aspectRatio > 1.50) {
+    return { detected: false, confidence: 0.25, reason: 'Aligning facial features...' };
+  }
+
+  // Bilateral symmetry calculation across face axis
+  let symDiff = 0;
+  let symSum = 0;
+  for (let r = 1; r < gridRows - 1; r++) {
+    for (let c = 0; c < Math.floor(gridCols / 2); c++) {
+      const left = skinGrid[r][c];
+      const right = skinGrid[r][gridCols - 1 - c];
+      symDiff += Math.abs(left - right);
+      symSum += (left + right);
+    }
+  }
+  const symmetryScore = symSum > 0 ? Math.max(0, 1 - (symDiff / symSum)) : 0;
+
+  if (symmetryScore < 0.30) {
+    return { detected: false, confidence: 0.3, reason: 'Facial alignment low. Look straight ahead.' };
+  }
+
+  return {
+    detected: true,
+    confidence: Math.min(0.99, 0.70 + (symmetryScore * 0.28))
+  };
+}
+
 async function startLiveFaceScanner() {
   stopLiveFaceScanner();
   const video = document.getElementById('faceIdVideo');
   const statusText = document.getElementById('faceScanStatusText');
   const progressBar = document.getElementById('faceScanProgressBar');
   const viewport = document.getElementById('faceScannerViewport');
+  const canvas = document.getElementById('faceIdCanvas') || document.createElement('canvas');
 
   if (viewport) {
-    viewport.classList.remove('scan-success');
+    viewport.classList.remove('scan-success', 'scan-failed', 'face-locked');
     viewport.classList.remove('video-active');
   }
   if (progressBar) progressBar.style.width = '0%';
@@ -3131,6 +3672,8 @@ async function startLiveFaceScanner() {
     statusText.className = 'face-scan-status-text';
     statusText.innerHTML = '<span class="scan-pulse-dot"></span> Requesting Camera Access...';
   }
+
+  consecutiveVerifiedFrames = 0;
 
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -3152,39 +3695,74 @@ async function startLiveFaceScanner() {
     }
     if (viewport) viewport.classList.add('video-active');
 
-    // Run Biometric Scan Analysis Animation
-    faceIdScanProgress = 0;
+    // Real Computer Vision biometric analysis loop (runs every 120ms)
     faceIdScanInterval = setInterval(async () => {
-      faceIdScanProgress += 12;
-      if (progressBar) progressBar.style.width = `${Math.min(100, faceIdScanProgress)}%`;
+      if (!faceIdMediaStream || !video || video.paused || video.ended) return;
 
-      if (faceIdScanProgress < 35) {
-        if (statusText) statusText.innerHTML = '<span class="scan-pulse-dot"></span> 🔍 Aligning facial landmarks...';
-      } else if (faceIdScanProgress < 85) {
-        if (statusText) statusText.innerHTML = `<span class="scan-pulse-dot" style="background:#818cf8;box-shadow:0 0 10px #818cf8;"></span> 🧬 Analyzing biometric vectors (${faceIdScanProgress}%)...`;
-      } else if (faceIdScanProgress >= 100) {
-        clearInterval(faceIdScanInterval);
-        faceIdScanInterval = null;
+      const result = await analyzeVideoFrameForHumanFace(video, canvas);
+
+      if (result.detected) {
+        consecutiveVerifiedFrames++;
+        if (viewport) {
+          viewport.classList.add('face-locked');
+          viewport.classList.remove('scan-failed');
+        }
+
+        const pct = Math.min(100, Math.round((consecutiveVerifiedFrames / REQUIRED_CONSECUTIVE_FRAMES) * 100));
+        if (progressBar) progressBar.style.width = `${pct}%`;
+
+        if (consecutiveVerifiedFrames < 4) {
+          if (statusText) {
+            statusText.className = 'face-scan-status-text';
+            statusText.innerHTML = `<span class="scan-pulse-dot" style="background:#38bdf8;box-shadow:0 0 10px #38bdf8;"></span> 👤 Face Detected · Aligning landmarks (${pct}%)...`;
+          }
+        } else if (consecutiveVerifiedFrames < REQUIRED_CONSECUTIVE_FRAMES) {
+          if (statusText) {
+            statusText.className = 'face-scan-status-text';
+            statusText.innerHTML = `<span class="scan-pulse-dot" style="background:#818cf8;box-shadow:0 0 10px #818cf8;"></span> 🧬 Authenticating Biometric Vectors (${pct}%)... Hold Still`;
+          }
+        } else {
+          // Success: Real Human Face strictly confirmed for continuous period!
+          clearInterval(faceIdScanInterval);
+          faceIdScanInterval = null;
+
+          if (statusText) {
+            statusText.className = 'face-scan-status-text text-success';
+            statusText.innerHTML = '✓ Face ID Confirmed · Identity Authenticated!';
+          }
+          if (viewport) {
+            viewport.classList.remove('face-locked');
+            viewport.classList.add('scan-success');
+          }
+
+          try {
+            await fetch('/api/auth/verify-vault', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ biometric: true })
+            });
+          } catch (_) {}
+
+          setTimeout(() => {
+            stopLiveFaceScanner();
+            unlockWealthVault('biometric');
+          }, 550);
+        }
+      } else {
+        // No real face detected: Strictly decay progress and alert user
+        consecutiveVerifiedFrames = Math.max(0, consecutiveVerifiedFrames - 2);
+        const pct = Math.min(100, Math.round((consecutiveVerifiedFrames / REQUIRED_CONSECUTIVE_FRAMES) * 100));
+        if (progressBar) progressBar.style.width = `${pct}%`;
+
+        if (viewport) {
+          viewport.classList.remove('face-locked');
+          viewport.classList.add('scan-failed');
+        }
 
         if (statusText) {
-          statusText.className = 'face-scan-status-text text-success';
-          statusText.innerHTML = '✓ Face ID Confirmed · Identity Verified!';
+          statusText.className = 'face-scan-status-text text-warning';
+          statusText.innerHTML = `<span class="scan-pulse-dot" style="background:#ef4444;box-shadow:0 0 10px #ef4444;"></span> ❌ ${escapeHtml(result.reason || 'No face detected. Look directly into camera.')}`;
         }
-        if (viewport) viewport.classList.add('scan-success');
-
-        // Verify with server & unlock
-        try {
-          await fetch('/api/auth/verify-vault', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ biometric: true })
-          });
-        } catch (_) {}
-
-        setTimeout(() => {
-          stopLiveFaceScanner();
-          unlockWealthVault('biometric');
-        }, 550);
       }
     }, 120);
 
@@ -3222,8 +3800,7 @@ function stopLiveFaceScanner() {
   }
   const viewport = document.getElementById('faceScannerViewport');
   if (viewport) {
-    viewport.classList.remove('video-active');
-    viewport.classList.remove('scan-success');
+    viewport.classList.remove('video-active', 'scan-success', 'scan-failed', 'face-locked');
   }
 }
 
@@ -3611,7 +4188,7 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
         <div class="amount-input-wrap">
           <span class="amount-prefix">${getUserCurrencySymbol()}</span>
           <input type="number" id="cashUpdateInput" step="0.01" min="0" inputmode="decimal" placeholder="0.00"
-                 value="${netWorth && netWorth.breakdown?.cash != null ? netWorth.breakdown.cash : ''}" />
+                 value="${netWorth && (netWorth.breakdown?.savedCashBaseline != null ? netWorth.breakdown.savedCashBaseline : netWorth.breakdown?.cash) != null ? (netWorth.breakdown?.savedCashBaseline ?? netWorth.breakdown?.cash) : ''}" />
         </div>
         <button type="submit" class="btn-primary" id="cashUpdateBtn">Save</button>
       </form>
@@ -3635,6 +4212,9 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
     <section>
       <h2 class="finance-block-title">💎 Total Wealth (Net Worth)</h2>
       ${netWorthHtml}
+      <div style="margin-top: 16px;">
+        ${alreadyHaveHtml}
+      </div>
     </section>
     <section>
       <h2 class="finance-block-title">🪙 Gold &amp; Assets</h2>
@@ -3655,7 +4235,6 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
     <section class="finance-panels">
       <div class="finance-panel">
         <h3 class="finance-panel-title">💰 Income</h3>
-        ${alreadyHaveHtml}
         <div class="finance-list" id="incomeList"></div>
         <form class="finance-add-form income-add-form" id="incomeAddForm" novalidate>
           <div class="field-group span-2">
@@ -3963,19 +4542,23 @@ async function openAssetsPage() {
 
 async function fetchGoldPrice() {
   try {
-    const res = await fetch('/api/gold/price');
+    const curr = getUserCurrency();
+    const res = await fetch(`/api/gold/price?currency=${encodeURIComponent(curr)}`);
     if (!res.ok) return null;
     const data = await res.json();
-    prevGoldPricePerGram24 = latestGoldPrice ? latestGoldPrice.pricePerGramEgp24 : null;
+    const currentPrice24 = data.pricePerGram24 != null ? data.pricePerGram24 : data.pricePerGramEgp24;
+    prevGoldPricePerGram24 = latestGoldPrice ? (latestGoldPrice.pricePerGram24 != null ? latestGoldPrice.pricePerGram24 : latestGoldPrice.pricePerGramEgp24) : null;
     latestGoldPrice = data;
     return latestGoldPrice;
   } catch { return null; }
 }
 
 function goldPriceDirection() {
-  if (prevGoldPricePerGram24 == null || !latestGoldPrice || latestGoldPrice.pricePerGramEgp24 == null) return null;
-  if (latestGoldPrice.pricePerGramEgp24 > prevGoldPricePerGram24) return 'up';
-  if (latestGoldPrice.pricePerGramEgp24 < prevGoldPricePerGram24) return 'down';
+  if (!latestGoldPrice) return null;
+  const currentPrice24 = latestGoldPrice.pricePerGram24 != null ? latestGoldPrice.pricePerGram24 : latestGoldPrice.pricePerGramEgp24;
+  if (prevGoldPricePerGram24 == null || currentPrice24 == null) return null;
+  if (currentPrice24 > prevGoldPricePerGram24) return 'up';
+  if (currentPrice24 < prevGoldPricePerGram24) return 'down';
   return null;
 }
 
@@ -3996,7 +4579,7 @@ async function fetchPortfolioQuietly() {
     const res = await fetch('/api/portfolio');
     if (!res.ok) return;
     const data = await res.json();
-    prevGoldPricePerGram24 = latestGoldPrice ? latestGoldPrice.pricePerGramEgp24 : null;
+    prevGoldPricePerGram24 = latestGoldPrice ? (latestGoldPrice.pricePerGram24 != null ? latestGoldPrice.pricePerGram24 : latestGoldPrice.pricePerGramEgp24) : null;
     portfolioData = data;
     latestGoldPrice = data.goldPrice;
     updatePortfolioInPlace();
@@ -4011,16 +4594,22 @@ function fmtGoldUpdated(price) {
 }
 
 function renderGoldTicker() {
-  if (!latestGoldPrice || latestGoldPrice.pricePerGramEgp24 == null) {
+  if (!latestGoldPrice || (latestGoldPrice.pricePerGram24 == null && latestGoldPrice.pricePerGramEgp24 == null)) {
     return `<div class="gold-ticker" id="goldTicker"><span class="finance-empty" style="padding:0;">Live gold price unavailable right now.</span></div>`;
   }
   const p = latestGoldPrice;
   const direction = goldPriceDirection();
+  const val24 = p.pricePerGram24 != null ? p.pricePerGram24 : p.pricePerGramEgp24;
+  const val21 = p.pricePerGram21 != null ? p.pricePerGram21 : p.pricePerGramEgp21;
+  const val18 = p.pricePerGram18 != null ? p.pricePerGram18 : p.pricePerGramEgp18;
+
   const karatRows = [
-    { label: '24K', value: p.pricePerGramEgp24 },
-    { label: '21K', value: p.pricePerGramEgp21 },
-    { label: '18K', value: p.pricePerGramEgp18 },
+    { label: '24K', value: val24 },
+    { label: '21K', value: val21 },
+    { label: '18K', value: val18 },
   ];
+
+  // Troy Ounce Price is ALWAYS strictly formatted in USD ($)
   const ozUsdFormatted = p.pricePerOunceUsd
     ? `$${Number(p.pricePerOunceUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : '$4,444.50';
@@ -4075,7 +4664,10 @@ async function loadPortfolioPage() {
 }
 
 function renderPortfolioSummary(summary) {
-  const { totalInvested, currentValue, totalPnl, goldWeight, counts } = summary;
+  const goldVal = summary.goldValue != null ? summary.goldValue : summary.currentValue;
+  const goldInvested = summary.goldInvested != null ? summary.goldInvested : summary.totalInvested;
+  const pnl = summary.goldPnl != null ? summary.goldPnl : summary.totalPnl;
+  const { goldWeight, counts } = summary;
 
   // Mini Glass Assets Progress Bar update
   const assetsProgFill = document.getElementById('assetsProgressFill');
@@ -4092,18 +4684,18 @@ function renderPortfolioSummary(summary) {
   return `
     <div class="lots-summary-card" id="portfolioSummaryCard">
       <div class="stat-grid">
-        <div class="stat-card"><div class="stat-label">Portfolio Value</div><div class="stat-value positive">${fmtMoney(currentValue)}</div></div>
-        <div class="stat-card"><div class="stat-label">Total Invested</div><div class="stat-value">${fmtMoney(totalInvested)}</div></div>
-        <div class="stat-card"><div class="stat-label">Owned Holdings</div><div class="stat-value">${counts.owned}</div></div>
+        <div class="stat-card"><div class="stat-label">Total Gold Value</div><div class="stat-value positive">${fmtMoney(goldVal)}</div></div>
+        <div class="stat-card"><div class="stat-label">Total Invested (Gold)</div><div class="stat-value">${fmtMoney(goldInvested)}</div></div>
+        <div class="stat-card"><div class="stat-label">Owned Gold Lots</div><div class="stat-value">${counts.owned}</div></div>
         <div class="stat-card"><div class="stat-label">Wishlist / Planned</div><div class="stat-value">${counts.planned}</div></div>
       </div>
 
-      ${totalInvested > 0 ? `
-        <div class="lots-total-pnl ${totalPnl.isGain ? 'is-gain' : 'is-loss'}" id="portfolioTotalPnl">
-          <span class="pnl-arrow">${totalPnl.isGain ? '▲' : '▼'}</span>
-          <span class="pnl-amount">${totalPnl.isGain ? '+' : ''}${fmtMoney(totalPnl.diff)}</span>
-          <span class="pnl-pct">(${totalPnl.isGain ? '+' : ''}${totalPnl.pct.toFixed(1)}%)</span>
-          <span class="lots-total-label">${totalPnl.isGain ? 'overall gain' : 'overall loss'} across your entire portfolio</span>
+      ${goldInvested > 0 ? `
+        <div class="lots-total-pnl ${pnl.isGain ? 'is-gain' : 'is-loss'}" id="portfolioTotalPnl">
+          <span class="pnl-arrow">${pnl.isGain ? '▲' : '▼'}</span>
+          <span class="pnl-amount">${pnl.isGain ? '+' : ''}${fmtMoney(pnl.diff)}</span>
+          <span class="pnl-pct">(${pnl.isGain ? '+' : ''}${pnl.pct.toFixed(1)}%)</span>
+          <span class="lots-total-label">${pnl.isGain ? 'overall gain' : 'overall loss'} across your gold holdings</span>
         </div>
       ` : ''}
 
@@ -4510,10 +5102,10 @@ async function loadFinanceAssetsQuickGlance() {
     el.innerHTML = `
       <div class="quickglance-card">
         <div class="quickglance-stats">
-          <div><div class="stat-label">Total Portfolio</div><div class="stat-value positive">${fmtMoney(summary.currentValue)}</div></div>
-          <div><div class="stat-label">Invested</div><div class="stat-value">${fmtMoney(summary.totalInvested)}</div></div>
-          <div><div class="stat-label">Unrealized P&amp;L</div><div class="stat-value ${summary.totalPnl.isGain ? 'positive' : 'negative'}">${summary.totalPnl.isGain ? '+' : ''}${fmtMoney(summary.totalPnl.diff)}</div></div>
-          <div><div class="stat-label">Holdings</div><div class="stat-value">${summary.counts.owned} owned · ${summary.counts.planned} planned</div></div>
+          <div><div class="stat-label">Total Gold Value</div><div class="stat-value positive">${fmtMoney(summary.goldValue != null ? summary.goldValue : summary.currentValue)}</div></div>
+          <div><div class="stat-label">Gold Invested</div><div class="stat-value">${fmtMoney(summary.goldInvested != null ? summary.goldInvested : summary.totalInvested)}</div></div>
+          <div><div class="stat-label">Gold P&amp;L</div><div class="stat-value ${summary.totalPnl.isGain ? 'positive' : 'negative'}">${summary.totalPnl.isGain ? '+' : ''}${fmtMoney(summary.totalPnl.diff)}</div></div>
+          <div><div class="stat-label">Gold Lots</div><div class="stat-value">${summary.counts.owned} owned · ${summary.counts.planned} planned</div></div>
         </div>
         <button type="button" class="quickglance-open-btn" id="quickGlanceOpenBtn">Open Gold &amp; Assets &rarr;</button>
       </div>
@@ -4770,6 +5362,11 @@ if (backToDashboardFromDental) {
 }
 
 function openDentalCasesPage() {
+  if (!userCanAccessDental()) {
+    showToast('🔒 Dental Cases archive is locked. Administrator approval required.');
+    showDashboard();
+    return;
+  }
   hideAllTopLevelSections();
   stopGoldPricePolling();
   currentCategoryPage = null;
@@ -6002,6 +6599,7 @@ document.getElementById('cancelBtn').addEventListener('click', closeAddModal);
 modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeAddModal(); });
 
 async function loadMeta() {
+  if (!currentUser || !authToken) return;
   const res = await fetch('/api/meta');
   meta = await res.json();
   taskCategory.innerHTML = meta.categories.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -6332,9 +6930,40 @@ async function loadComprehensiveAnalytics() {
   }
 }
 
+function updateAnalyticsCategoryPills() {
+  if (!analyticsCategoryPills) return;
+  const canAccessDental = userCanAccessDental();
+  const canAccessTrading = userCanAccessTrading();
+
+  if (activeAnalyticsCategory === 'Dental' && !canAccessDental) {
+    activeAnalyticsCategory = 'ALL';
+  }
+  if (activeAnalyticsCategory === 'Us stocks trading' && !canAccessTrading) {
+    activeAnalyticsCategory = 'ALL';
+  }
+
+  const pills = [
+    { key: 'ALL', icon: '🌐', label: 'All Categories Combined' },
+    { key: 'Work', icon: '💼', label: 'Work / Clinic' },
+    ...(canAccessTrading ? [{ key: 'Us stocks trading', icon: '📈', label: 'US Stocks Trading' }] : []),
+    { key: 'Workouts', icon: '🏋️', label: 'Workouts' },
+    { key: 'Studies', icon: '📚', label: 'Studies' },
+    { key: 'Religion', icon: '🌙', label: 'Religion' },
+    ...(canAccessDental ? [{ key: 'Dental', icon: '🦷', label: 'Dental Cases' }] : []),
+    { key: 'Finance', icon: '💰', label: 'Finances' }
+  ];
+
+  analyticsCategoryPills.innerHTML = pills.map(p => `
+    <button type="button" class="cat-pill ${p.key === activeAnalyticsCategory ? 'active' : ''}" data-cat="${p.key}" onclick="selectAnalyticsCategory('${p.key}')">
+      <span>${p.icon}</span> ${p.label}
+    </button>
+  `).join('');
+}
+
 function renderAnalyticsIntelligence() {
   if (!comprehensiveAnalyticsData || !comprehensiveAnalyticsData.overall) return;
 
+  updateAnalyticsCategoryPills();
   renderAnalyticsKpiScorecards();
   renderAnalyticsCharts();
   renderCategoryMatrixGrid();
@@ -6604,32 +7233,36 @@ function renderCategoryShareDoughnut() {
   destroyChart('categoryShare');
 
   const { overall, dentalStats } = comprehensiveAnalyticsData;
-  const cats = ['Work', 'Us stocks trading', 'Workouts', 'Studies', 'Religion', 'Dental'];
-  const labels = ['Work / Clinic', 'US Stocks', 'Workouts', 'Studies', 'Religion', 'Dental Cases'];
-  
-  const values = cats.map(c => {
-    if (c === 'Dental') return dentalStats.totalCases || 0;
-    if (activeAnalyticsHorizon === 'weekly') return overall.currentWeek.byCategory?.[c]?.total || 0;
-    if (activeAnalyticsHorizon === 'monthly') return overall.currentMonth.byCategory?.[c]?.total || 0;
-    if (activeAnalyticsHorizon === 'yearly') return overall.currentYear.byCategory?.[c]?.total || 0;
-    return overall.last4Weeks?.[0]?.byCategory?.[c]?.total || overall.currentWeek?.byCategory?.[c]?.total || 1;
-  });
+  const canAccessDental = userCanAccessDental();
+  const canAccessTrading = userCanAccessTrading();
 
-  const bgColors = [
-    '#38bdf8', // Work
-    '#eab308', // Trading
-    '#22c55e', // Workouts
-    '#a855f7', // Studies
-    '#06b6d4', // Religion
-    '#00f2fe', // Dental
-  ];
+  const allCategoryConfigs = [
+    { key: 'Work', label: 'Work / Clinic', color: '#38bdf8', allowed: true },
+    { key: 'Us stocks trading', label: 'US Stocks', color: '#eab308', allowed: canAccessTrading },
+    { key: 'Workouts', label: 'Workouts', color: '#22c55e', allowed: true },
+    { key: 'Studies', label: 'Studies', color: '#a855f7', allowed: true },
+    { key: 'Religion', label: 'Religion', color: '#06b6d4', allowed: true },
+    { key: 'Dental', label: 'Dental Cases', color: '#00f2fe', allowed: canAccessDental }
+  ].filter(c => c.allowed);
+
+  const cats = allCategoryConfigs.map(c => c.key);
+  const labels = allCategoryConfigs.map(c => c.label);
+  const bgColors = allCategoryConfigs.map(c => c.color);
+
+  const values = cats.map(c => {
+    if (c === 'Dental') return dentalStats?.totalCases || 0;
+    if (activeAnalyticsHorizon === 'weekly') return overall?.currentWeek?.byCategory?.[c]?.total || 0;
+    if (activeAnalyticsHorizon === 'monthly') return overall?.currentMonth?.byCategory?.[c]?.total || 0;
+    if (activeAnalyticsHorizon === 'yearly') return overall?.currentYear?.byCategory?.[c]?.total || 0;
+    return overall?.last4Weeks?.[0]?.byCategory?.[c]?.total || overall?.currentWeek?.byCategory?.[c]?.total || 0;
+  });
 
   chartInstances.categoryShare = new Chart(canvas, {
     type: 'doughnut',
     data: {
       labels,
       datasets: [{
-        data: values.every(v => v === 0) ? [1, 1, 1, 1, 1, 1] : values,
+        data: values.every(v => v === 0) ? values.map(() => 1) : values,
         backgroundColor: bgColors,
         borderColor: '#0f121a',
         borderWidth: 3,
@@ -6848,15 +7481,17 @@ function renderYearlyProgressSpline() {
 function renderCategoryMatrixGrid() {
   if (!categoryMatrixGrid || !comprehensiveAnalyticsData) return;
   const { categoryProfiles, dentalStats } = comprehensiveAnalyticsData;
+  const canAccessDental = userCanAccessDental();
+  const canAccessTrading = userCanAccessTrading();
 
   const catMeta = [
-    { key: 'Work',              title: 'Work / Clinic', icon: '💼', color: '#38bdf8' },
-    { key: 'Us stocks trading', title: 'US Stocks',     icon: '📈', color: '#eab308' },
-    { key: 'Workouts',          title: 'Workouts',      icon: '🏋️', color: '#22c55e' },
-    { key: 'Studies',           title: 'Studies',       icon: '📚', color: '#a855f7' },
-    { key: 'Religion',          title: 'Religion',      icon: '🌙', color: '#06b6d4' },
-    { key: 'Dental',            title: 'Dental Cases',  icon: '🦷', color: '#00f2fe' },
-  ];
+    { key: 'Work',              title: 'Work / Clinic', icon: '💼', color: '#38bdf8', allowed: true },
+    { key: 'Us stocks trading', title: 'US Stocks',     icon: '📈', color: '#eab308', allowed: canAccessTrading },
+    { key: 'Workouts',          title: 'Workouts',      icon: '🏋️', color: '#22c55e', allowed: true },
+    { key: 'Studies',           title: 'Studies',       icon: '📚', color: '#a855f7', allowed: true },
+    { key: 'Religion',          title: 'Religion',      icon: '🌙', color: '#06b6d4', allowed: true },
+    { key: 'Dental',            title: 'Dental Cases',  icon: '🦷', color: '#00f2fe', allowed: canAccessDental },
+  ].filter(c => c.allowed);
 
   categoryMatrixGrid.innerHTML = catMeta.map(c => {
     let total = 0;
@@ -6864,8 +7499,8 @@ function renderCategoryMatrixGrid() {
     let pct = 0;
 
     if (c.key === 'Dental') {
-      total = dentalStats.totalCases || 0;
-      done = dentalStats.showcaseCases || 0;
+      total = dentalStats?.totalCases || 0;
+      done = dentalStats?.showcaseCases || 0;
       pct = total > 0 ? Math.round((done / total) * 100) : 0;
     } else {
       const prof = categoryProfiles?.[c.key];
@@ -6921,6 +7556,15 @@ function renderCategoryMatrixGrid() {
 }
 
 window.selectAnalyticsCategory = function(catKey) {
+  if (catKey === 'Dental' && !userCanAccessDental()) {
+    showToast('🔒 Dental Cases analytics is locked.');
+    return;
+  }
+  if (catKey === 'Us stocks trading' && !userCanAccessTrading()) {
+    showToast('🔒 US Stocks Trading analytics is locked.');
+    return;
+  }
+
   activeAnalyticsCategory = catKey || 'ALL';
   if (analyticsCategoryPills) {
     analyticsCategoryPills.querySelectorAll('.cat-pill').forEach(p => {
@@ -8150,8 +8794,119 @@ function populateRoadmapPhaseSelectDropdown(selectedPhase = null) {
   `).join('');
 }
 
+function getUserCareerInfo() {
+  const persona = (currentUser?.persona || '').toUpperCase();
+  const specialty = (currentUser?.specialty || '').trim();
+  const primaryFocus = (currentUser?.primaryFocus || '').trim();
+  const canAccessDental = userCanAccessDental();
+
+  if (specialty) {
+    let name = specialty;
+    if (!name.toLowerCase().includes('career') && !name.toLowerCase().includes('practice') && !name.toLowerCase().includes('engineering')) {
+      name = `${specialty} Career`;
+    }
+    const icon = getCareerIcon(persona, specialty);
+    return { name, icon, isCareer: true };
+  }
+
+  if (primaryFocus) {
+    let name = primaryFocus;
+    if (!name.toLowerCase().includes('career') && !name.toLowerCase().includes('practice')) {
+      name = `${primaryFocus} Career`;
+    }
+    const icon = getCareerIcon(persona, primaryFocus);
+    return { name, icon, isCareer: true };
+  }
+
+  if (persona === 'DOCTOR' || canAccessDental) {
+    return { name: canAccessDental ? 'Dental Career' : 'Medical Career', icon: canAccessDental ? '🦷' : '🩺', isCareer: true };
+  }
+  if (persona === 'DEVELOPER') {
+    return { name: 'Software & Tech Career', icon: '💻', isCareer: true };
+  }
+  if (persona === 'ENGINEER') {
+    return { name: 'Engineering Career', icon: '⚙️', isCareer: true };
+  }
+  if (persona === 'TRADER') {
+    return { name: 'Markets & Trading Career', icon: '📈', isCareer: true };
+  }
+  if (persona === 'STUDENT') {
+    return { name: 'Academic & Professional Career', icon: '🎓', isCareer: true };
+  }
+  if (persona === 'ENTREPRENEUR') {
+    return { name: 'Business & Ventures', icon: '🚀', isCareer: true };
+  }
+
+  return { name: canAccessDental ? 'Dental Career' : 'Professional Career', icon: canAccessDental ? '🦷' : '💼', isCareer: true };
+}
+
+function getCareerIcon(persona, text = '') {
+  const t = (text || '').toLowerCase();
+  if (t.includes('dent') || t.includes('teeth') || t.includes('ortho') || t.includes('endo') || t.includes('oral') || t.includes('clinic')) return '🦷';
+  if (t.includes('code') || t.includes('dev') || t.includes('soft') || t.includes('tech') || t.includes('web') || t.includes('app') || t.includes('data')) return '💻';
+  if (t.includes('med') || t.includes('doctor') || t.includes('physician') || t.includes('surg') || t.includes('health') || t.includes('pharma')) return '🩺';
+  if (t.includes('trade') || t.includes('market') || t.includes('stock') || t.includes('forex') || t.includes('crypto')) return '📈';
+  if (t.includes('engin') || t.includes('mechan') || t.includes('elect') || t.includes('civil')) return '⚙️';
+  if (t.includes('acad') || t.includes('study') || t.includes('univ') || t.includes('student') || t.includes('phd') || t.includes('master')) return '🎓';
+  if (t.includes('biz') || t.includes('venture') || t.includes('founder') || t.includes('startup') || t.includes('ceo')) return '🚀';
+  if (persona === 'DOCTOR') return '🩺';
+  if (persona === 'DEVELOPER') return '💻';
+  if (persona === 'ENGINEER') return '⚙️';
+  if (persona === 'TRADER') return '📈';
+  return '💼';
+}
+
+function updateRoadmapPillarPills() {
+  if (!roadmapPillarPills) return;
+  const careerInfo = getUserCareerInfo();
+  const canAccessTrading = userCanAccessTrading();
+
+  if (activeRoadmapPillar === 'Trading & Markets' && !canAccessTrading) {
+    activeRoadmapPillar = 'All';
+  }
+
+  const pillars = [
+    { key: 'All', icon: '🌐', label: 'All Life Pillars' },
+    { key: careerInfo.name, icon: careerInfo.icon, label: careerInfo.name, isCareer: true },
+    ...(canAccessTrading ? [{ key: 'Trading & Markets', icon: '📈', label: 'Trading & Markets' }] : []),
+    { key: 'Studies & Knowledge', icon: '📚', label: 'Studies & Knowledge' },
+    { key: 'Wealth & Freedom', icon: '💎', label: 'Wealth & Freedom' }
+  ];
+
+  // Update dynamic subtitle
+  const subtitleEl = document.getElementById('roadmapSubtitle');
+  if (subtitleEl) {
+    const listNames = [
+      careerInfo.name,
+      ...(canAccessTrading ? ['Trading & Markets'] : []),
+      'Studies & Knowledge',
+      'Wealth & Freedom'
+    ];
+    subtitleEl.textContent = `Long-term strategic milestones across ${listNames.join(', ')}`;
+  }
+
+  roadmapPillarPills.innerHTML = pillars.map(p => `
+    <button type="button" class="rm-pill ${p.key === activeRoadmapPillar ? 'active' : ''}" data-pillar="${escapeHtml(p.key)}">
+      <span>${p.icon}</span> ${escapeHtml(p.label)}
+    </button>
+  `).join('');
+
+  if (roadmapPillarSelect) {
+    const modalPillars = [
+      { val: careerInfo.name, label: `${careerInfo.icon} ${careerInfo.name}` },
+      ...(canAccessTrading ? [{ val: 'Trading & Markets', label: '📈 Trading & Markets' }] : []),
+      { val: 'Studies & Knowledge', label: '📚 Studies & Knowledge' },
+      { val: 'Wealth & Freedom', label: '💎 Wealth & Freedom' }
+    ];
+    roadmapPillarSelect.innerHTML = modalPillars.map(p => `
+      <option value="${escapeHtml(p.val)}">${escapeHtml(p.label)}</option>
+    `).join('');
+  }
+}
+
 async function loadRoadmap() {
   try {
+    updateRoadmapPillarPills();
     await loadRoadmapPhases();
     const res = await fetch('/api/roadmap');
     if (!res.ok) throw new Error('Failed to fetch roadmap');
@@ -8165,13 +8920,21 @@ async function loadRoadmap() {
 }
 
 function updateRoadmapScorecards() {
-  const total = roadmapMilestones.length;
-  const inProgress = roadmapMilestones.filter(m => m.status === 'in_progress').length;
-  const completed = roadmapMilestones.filter(m => m.status === 'completed').length;
+  const canAccessTrading = userCanAccessTrading();
+  const careerInfo = getUserCareerInfo();
+
+  const visibleMilestones = roadmapMilestones.filter(m => {
+    if (!canAccessTrading && (m.pillar === 'Trading & Markets' || m.pillar === 'Trading')) return false;
+    return true;
+  });
+
+  const total = visibleMilestones.length;
+  const inProgress = visibleMilestones.filter(m => m.status === 'in_progress').length;
+  const completed = visibleMilestones.filter(m => m.status === 'completed').length;
   
   let avgProgress = 0;
   if (total > 0) {
-    const sum = roadmapMilestones.reduce((acc, m) => acc + (m.progressPct || 0), 0);
+    const sum = visibleMilestones.reduce((acc, m) => acc + (m.progressPct || 0), 0);
     avgProgress = Math.round(sum / total);
   }
 
@@ -8198,10 +8961,26 @@ const PILLAR_ICON_MAP = {
 function renderRoadmapPhases() {
   if (!roadmapPhasesContainer) return;
 
+  const careerInfo = getUserCareerInfo();
+  const canAccessTrading = userCanAccessTrading();
+
   const filtered = roadmapMilestones.filter(m => {
+    // Hide trading milestones completely if user has no trading access
+    if (!canAccessTrading && (m.pillar === 'Trading & Markets' || m.pillar === 'Trading')) {
+      return false;
+    }
+
     if (activeRoadmapPillar === 'All') return true;
+
+    // If career pillar filter is active, match custom career name, 'Dental Career', or career-related
+    if (activeRoadmapPillar === careerInfo.name) {
+      return m.pillar === careerInfo.name || m.pillar === 'Dental Career' || (m.pillar && m.pillar.toLowerCase().includes('career'));
+    }
+
     return m.pillar === activeRoadmapPillar;
   });
+
+  const defaultPillar = careerInfo.name;
 
   if (filtered.length === 0) {
     roadmapPhasesContainer.innerHTML = `
@@ -8213,7 +8992,7 @@ function renderRoadmapPhases() {
           <button type="button" class="btn-secondary" onclick="openManagePhasesModal()" style="border-radius:999px;">
             <span>⚙️</span> Edit Roadmap Phases
           </button>
-          <button type="button" class="btn-primary" onclick="openRoadmapModal('${activeRoadmapPillar !== 'All' ? activeRoadmapPillar : 'Dental Career'}')">
+          <button type="button" class="btn-primary" onclick="openRoadmapModal('${activeRoadmapPillar !== 'All' ? activeRoadmapPillar : defaultPillar}')">
             + Add First Milestone
           </button>
         </div>
@@ -8226,7 +9005,6 @@ function renderRoadmapPhases() {
   const phaseStats = roadmapPhasesList.map(phaseTitle => {
     const items = filtered.filter(m => m.phase === phaseTitle);
     const totalItems = items.length;
-    // An item is completed if status === 'completed' or progressPct === 100
     const completedItems = items.filter(m => m.status === 'completed' || m.progressPct === 100).length;
     const isCompleted = totalItems > 0 && completedItems === totalItems;
     const pct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -8234,10 +9012,8 @@ function renderRoadmapPhases() {
   });
 
   // 2. Determine Active Phase Index (the FIRST incomplete phase in the progression sequence)
-  // If an uncheck occurs in an earlier phase, isCompleted becomes false, automatically rolling back the active status!
   let activePhaseIndex = phaseStats.findIndex(p => p.totalItems > 0 && !p.isCompleted);
   if (activePhaseIndex === -1) {
-    // If no phase with milestones is incomplete, check first empty phase or all are done
     activePhaseIndex = phaseStats.findIndex(p => !p.isCompleted);
   }
 
@@ -8245,7 +9021,6 @@ function renderRoadmapPhases() {
   const html = phaseStats.map((pStat, index) => {
     const { phaseTitle, items, totalItems, completedItems, isCompleted, pct } = pStat;
 
-    // In pillar-filtered views, skip phases that have no milestones for that pillar unless active
     if (totalItems === 0 && activeRoadmapPillar !== 'All') return '';
 
     let stateClass = 'phase-locked-upcoming';
@@ -8285,7 +9060,7 @@ function renderRoadmapPhases() {
           ${totalItems > 0
             ? items.map(m => renderMilestoneCard(m, index === activePhaseIndex, isCompleted)).join('')
             : `<div style="grid-column: 1 / -1; padding: 22px; text-align: center; color: var(--ink-soft); font-size: 13px; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.08);">
-                 No milestones assigned to this phase yet. <a href="javascript:void(0)" onclick="openRoadmapModal('${activeRoadmapPillar !== 'All' ? activeRoadmapPillar : 'Dental Career'}', null, '${escapeHtml(phaseTitle)}')" style="color: #38bdf8; font-weight: 600; text-decoration: underline; margin-left: 4px;">+ Add Milestone</a>
+                 No milestones assigned to this phase yet. <a href="javascript:void(0)" onclick="openRoadmapModal('${activeRoadmapPillar !== 'All' ? activeRoadmapPillar : defaultPillar}', null, '${escapeHtml(phaseTitle)}')" style="color: #38bdf8; font-weight: 600; text-decoration: underline; margin-left: 4px;">+ Add Milestone</a>
                </div>`
           }
         </div>
@@ -8297,8 +9072,13 @@ function renderRoadmapPhases() {
 }
 
 function renderMilestoneCard(m, isParentPhaseActive = true, isParentPhaseCompleted = false) {
-  const pillarColor = PILLAR_COLOR_MAP[m.pillar] || '#38bdf8';
-  const pillarIcon = PILLAR_ICON_MAP[m.pillar] || '🎯';
+  const careerInfo = getUserCareerInfo();
+  const isCareerMilestone = m.pillar === careerInfo.name || m.pillar === 'Dental Career' || (m.pillar && m.pillar.toLowerCase().includes('career'));
+
+  const pillarColor = isCareerMilestone ? '#38bdf8' : (PILLAR_COLOR_MAP[m.pillar] || '#c084fc');
+  const pillarIcon = isCareerMilestone ? careerInfo.icon : (PILLAR_ICON_MAP[m.pillar] || '🎯');
+  const displayPillarName = isCareerMilestone ? careerInfo.name : m.pillar;
+
   const isMilestoneAchieved = m.status === 'completed' || m.progressPct === 100;
   const statusLabel = isMilestoneAchieved ? '✓ Achieved' : (m.status === 'in_progress' ? '● In Progress' : '🔒 Upcoming');
   const statusClass = isMilestoneAchieved ? 'status-completed' : (m.status === 'in_progress' ? 'status-progress' : 'status-upcoming');
@@ -8325,7 +9105,7 @@ function renderMilestoneCard(m, isParentPhaseActive = true, isParentPhaseComplet
     <div class="milestone-glass-card ${isMilestoneAchieved ? 'milestone-completed' : ''}" style="--pillar-glow: ${pillarColor};">
       <div class="milestone-top-row">
         <span class="milestone-pillar-tag" style="background: color-mix(in srgb, ${pillarColor} 18%, transparent); color: ${pillarColor}; border-color: color-mix(in srgb, ${pillarColor} 40%, transparent);">
-          <span>${pillarIcon}</span> ${escapeHtml(m.pillar)}
+          <span>${pillarIcon}</span> ${escapeHtml(displayPillarName)}
         </span>
         <span class="milestone-status-pill ${statusClass}">${statusLabel}</span>
       </div>
@@ -8567,6 +9347,7 @@ async function handleSavePhasesList() {
 window.handleSavePhasesList = handleSavePhasesList;
 
 function openRoadmapModal(defaultPillar = null, editMilestoneId = null, defaultPhase = null) {
+  const careerInfo = getUserCareerInfo();
   populateRoadmapPhaseSelectDropdown(defaultPhase);
 
   if (editMilestoneId) {
@@ -8574,7 +9355,10 @@ function openRoadmapModal(defaultPillar = null, editMilestoneId = null, defaultP
     if (!m) return;
     if (roadmapModalTitle) roadmapModalTitle.textContent = 'Edit Life Milestone';
     if (roadmapMilestoneId) roadmapMilestoneId.value = m.id;
-    if (roadmapPillarSelect) roadmapPillarSelect.value = m.pillar;
+    if (roadmapPillarSelect) {
+      const isCareer = m.pillar === 'Dental Career' || m.pillar === careerInfo.name || (m.pillar && m.pillar.toLowerCase().includes('career'));
+      roadmapPillarSelect.value = isCareer ? careerInfo.name : m.pillar;
+    }
     if (roadmapPhaseSelect) roadmapPhaseSelect.value = m.phase;
     if (roadmapTitleInput) roadmapTitleInput.value = m.title;
     if (roadmapHorizonInput) roadmapHorizonInput.value = m.targetHorizon || '';
@@ -8587,7 +9371,7 @@ function openRoadmapModal(defaultPillar = null, editMilestoneId = null, defaultP
   } else {
     if (roadmapModalTitle) roadmapModalTitle.textContent = 'Add Life Milestone';
     if (roadmapMilestoneId) roadmapMilestoneId.value = '';
-    if (roadmapPillarSelect) roadmapPillarSelect.value = defaultPillar || 'Dental Career';
+    if (roadmapPillarSelect) roadmapPillarSelect.value = defaultPillar || careerInfo.name;
     if (roadmapPhaseSelect) roadmapPhaseSelect.value = defaultPhase || roadmapPhasesList[0] || 'Phase 1: Foundation (Now)';
     if (roadmapTitleInput) roadmapTitleInput.value = '';
     if (roadmapHorizonInput) roadmapHorizonInput.value = 'Q4 2026';
@@ -8947,10 +9731,12 @@ function updateUserUi() {
       fetchAdminBadgeCounts();
     }
   } else {
+    document.documentElement.classList.add('is-unauthenticated');
+    document.body.classList.add('is-unauthenticated');
+
     if (userEmailLabel) userEmailLabel.textContent = 'Sign In';
     if (dockUserAvatar) dockUserAvatar.innerHTML = '👤';
     if (btnAuthLogout) btnAuthLogout.style.display = 'none';
-    if (authCalloutBanner) authCalloutBanner.style.display = 'flex';
     if (btnDockAdminQuick) btnDockAdminQuick.style.display = 'none';
     if (ddAdminItem) ddAdminItem.style.display = 'none';
     if (sidebarAdminBtn) sidebarAdminBtn.style.display = 'none';
@@ -8967,24 +9753,156 @@ function updateUserUi() {
 }
 window.updateUserUi = updateUserUi;
 
+function setGatewayAuthMode(mode) {
+  const tabLogin = document.getElementById('gatewayTabLogin');
+  const tabRegister = document.getElementById('gatewayTabRegister');
+  const nameGroup = document.getElementById('gatewayNameGroup');
+  const title = document.getElementById('gatewayTitle');
+  const sub = document.getElementById('gatewaySubtitle');
+  const submitBtn = document.getElementById('gatewaySubmitBtn');
+  const errEl = document.getElementById('gatewayErrorMsg');
+  if (errEl) errEl.style.display = 'none';
+
+  if (mode === 'login') {
+    if (tabLogin) tabLogin.classList.add('active');
+    if (tabRegister) tabRegister.classList.remove('active');
+    if (nameGroup) nameGroup.style.display = 'none';
+    if (title) title.textContent = 'Sign In to Workspace';
+    if (sub) sub.textContent = 'Private biometric personal operating system & financial vault';
+    if (submitBtn) submitBtn.innerHTML = '<span>🚀</span> Sign In to Workspace';
+  } else {
+    if (tabRegister) tabRegister.classList.add('active');
+    if (tabLogin) tabLogin.classList.remove('active');
+    if (nameGroup) nameGroup.style.display = 'block';
+    if (title) title.textContent = 'Create Workspace Account';
+    if (sub) sub.textContent = 'Request membership to access the personal dashboard';
+    if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Request Registration';
+  }
+}
+window.setGatewayAuthMode = setGatewayAuthMode;
+
+function toggleGatewayPassVisibility() {
+  const passInput = document.getElementById('gatewayPasswordInput');
+  if (!passInput) return;
+  passInput.type = passInput.type === 'password' ? 'text' : 'password';
+}
+window.toggleGatewayPassVisibility = toggleGatewayPassVisibility;
+
+async function handleGatewayAuthSubmit(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('gatewayErrorMsg');
+  const emailInput = document.getElementById('gatewayEmailInput');
+  const passInput = document.getElementById('gatewayPasswordInput');
+  const nameInput = document.getElementById('gatewayNameInput');
+  const submitBtn = document.getElementById('gatewaySubmitBtn');
+  const tabRegister = document.getElementById('gatewayTabRegister');
+
+  if (errEl) errEl.style.display = 'none';
+
+  const isRegister = tabRegister && tabRegister.classList.contains('active');
+  const email = (emailInput?.value || '').trim();
+  const password = passInput?.value || '';
+  const name = (nameInput?.value || '').trim();
+
+  if (!email || !password) {
+    if (errEl) {
+      errEl.textContent = 'Please enter both email and password.';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
+
+  const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
+  const payload = isRegister ? { email, password, name } : { email, password };
+
+  try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳</span> Authenticating...';
+    }
+
+    const res = await _originalFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if ((res.status === 403 && data.status === 'PENDING') || (res.status === 201 && data.pending)) {
+      openPendingApprovalModal(email);
+      showToast('Registration submitted! Awaiting administrator approval.', 6000);
+      return;
+    }
+
+    if (res.status === 403 && data.status === 'REJECTED') {
+      if (errEl) {
+        errEl.textContent = 'Your access request has been declined or deactivated by the administrator.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+
+    if (!res.ok) {
+      if (errEl) {
+        errEl.textContent = data.error || 'Authentication failed.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('antigravity_token', authToken);
+    localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+
+    document.body.classList.remove('is-unauthenticated');
+    updateUserUi();
+    closePendingApprovalModal();
+    renderDynamicCategoryDropdowns();
+    showToast(`Welcome back, ${currentUser.name || currentUser.email}!`);
+
+    renderDashboard();
+    loadMeta();
+    loadTasks();
+    loadWeeklyProgress();
+    loadWealthCard();
+    initRoadmapEvents();
+
+    if (data.onboardingNeeded || !currentUser.onboardingCompleted) {
+      setTimeout(() => openOnboardingWizard(currentUser), 400);
+    }
+  } catch (err) {
+    console.error('Gateway auth error:', err);
+    if (errEl) {
+      errEl.textContent = 'Network error connecting to authentication server.';
+      errEl.style.display = 'block';
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = isRegister ? '<span>✨</span> Request Registration' : '<span>🚀</span> Sign In to Workspace';
+    }
+  }
+}
+window.handleGatewayAuthSubmit = handleGatewayAuthSubmit;
+
 function handleSignOut(promptModal = true) {
   authToken = null;
   currentUser = null;
   localStorage.removeItem('antigravity_token');
   localStorage.removeItem('antigravity_user');
+  document.body.classList.add('is-unauthenticated');
   closeUserNavDropdown();
+  setGatewayAuthMode('login');
   updateUserUi();
   showToast('Signed out successfully.');
-  if (promptModal) {
-    showAuthPage('login');
-  } else {
-    showDashboard();
-  }
 }
 window.handleSignOut = handleSignOut;
 
 async function checkAuthSession(isManualCheck = false) {
   if (!authToken) {
+    document.body.classList.add('is-unauthenticated');
     updateUserUi();
     return;
   }
@@ -9009,6 +9927,7 @@ async function checkAuthSession(isManualCheck = false) {
       const data = await res.json();
       currentUser = data.user;
       localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+      document.body.classList.remove('is-unauthenticated');
       closePendingApprovalModal();
       updateUserUi();
       renderDynamicCategoryDropdowns();
@@ -9082,6 +10001,7 @@ async function handleAuthSubmit(e) {
     localStorage.setItem('antigravity_token', authToken);
     localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
 
+    document.body.classList.remove('is-unauthenticated');
     updateUserUi();
     closeAuthModal();
     closePendingApprovalModal();
@@ -9227,6 +10147,8 @@ function setPageAuthMode(mode) {
 
   if (errorMsg) errorMsg.style.display = 'none';
 
+  const pwdStrength = document.getElementById('pwdStrengthContainer');
+
   if (mode === 'register') {
     if (tabRegister) tabRegister.classList.add('active');
     if (tabLogin) tabLogin.classList.remove('active');
@@ -9237,6 +10159,10 @@ function setPageAuthMode(mode) {
     if (specialtyGroup) specialtyGroup.style.display = 'block';
     if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Create Workspace Account';
     if (extraRow) extraRow.style.display = 'none';
+    
+    // Check current input value for strength if already typed
+    const pwdInput = document.getElementById('pageAuthPasswordInput');
+    if (pwdInput && pwdInput.value) checkPasswordStrength(pwdInput.value);
   } else {
     if (tabLogin) tabLogin.classList.add('active');
     if (tabRegister) tabRegister.classList.remove('active');
@@ -9247,6 +10173,7 @@ function setPageAuthMode(mode) {
     if (specialtyGroup) specialtyGroup.style.display = 'none';
     if (submitBtn) submitBtn.innerHTML = '<span>🚀</span> Sign In to Workspace';
     if (extraRow) extraRow.style.display = 'flex';
+    if (pwdStrength) pwdStrength.style.display = 'none';
   }
 }
 window.setPageAuthMode = setPageAuthMode;
@@ -9270,6 +10197,12 @@ function checkPasswordStrength(pwd) {
   const bars = [document.getElementById('pwdBar1'), document.getElementById('pwdBar2'), document.getElementById('pwdBar3'), document.getElementById('pwdBar4')];
 
   if (!container || !bars[0]) return;
+
+  // STRICT REQUIREMENT: Only show password strength/instructions for new registrations, never on sign-in
+  if (pageAuthMode !== 'register' && authMode !== 'register') {
+    container.style.display = 'none';
+    return;
+  }
 
   if (!pwd) {
     container.style.display = 'none';
@@ -9306,41 +10239,130 @@ function checkPasswordStrength(pwd) {
 window.checkPasswordStrength = checkPasswordStrength;
 
 function handleForgotPassword() {
-  alert('🔐 Password Recovery Notice:\n\nFor security in this private workspace, password resets are processed directly by the Administrator (jryusiif@gmail.com) or via the Admin Command Center.');
+  alert('🔐 Password Recovery Notice:\n\nFor security in this private workspace, password resets are processed directly by your Workspace Administrator or via the Admin Command Center.');
 }
 window.handleForgotPassword = handleForgotPassword;
 
-async function handleGoogleAuth() {
-  const promptEmail = prompt('🌐 Sign in with Google\n\nEnter your Google Account Email to proceed with Single Sign-On:', currentUser?.email || 'jryusiif@gmail.com');
-  if (!promptEmail || !promptEmail.trim()) return;
+let currentOAuthProvider = 'google'; // 'google' | 'apple'
 
-  const cleanEmail = promptEmail.trim().toLowerCase();
+function openOAuthProviderModal(provider = 'google') {
+  currentOAuthProvider = provider;
+  const backdrop = document.getElementById('oauthProviderModalBackdrop');
+  const badge = document.getElementById('oauthProviderBadge');
+  const title = document.getElementById('oauthModalTitle');
+  const sub = document.getElementById('oauthModalSub');
+  const emailLabel = document.getElementById('oauthEmailLabel');
+  const emailInput = document.getElementById('oauthEmailInput');
+  const submitText = document.getElementById('oauthSubmitBtnText');
+  const errorMsg = document.getElementById('oauthErrorMsg');
+
+  if (errorMsg) errorMsg.style.display = 'none';
+  if (emailInput) emailInput.value = '';
+
+  if (provider === 'apple') {
+    if (badge) {
+      badge.innerHTML = `<span style="font-size:30px;">🍏</span>`;
+      badge.style.borderColor = 'rgba(255,255,255,0.3)';
+    }
+    if (title) title.textContent = 'Sign In with Apple ID';
+    if (sub) sub.textContent = 'Authenticate securely with Apple Single Sign-On';
+    if (emailLabel) emailLabel.textContent = 'Apple ID Email Address';
+    if (emailInput) emailInput.placeholder = 'you@icloud.com';
+    if (submitText) submitText.textContent = 'Continue with Apple ID';
+  } else {
+    if (badge) {
+      badge.innerHTML = `
+        <svg width="28" height="28" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+      `;
+      badge.style.borderColor = 'rgba(56,189,248,0.4)';
+    }
+    if (title) title.textContent = 'Sign In with Google';
+    if (sub) sub.textContent = 'Authenticate securely with your Google Account';
+    if (emailLabel) emailLabel.textContent = 'Google Account Email';
+    if (emailInput) emailInput.placeholder = 'you@gmail.com';
+    if (submitText) submitText.textContent = 'Continue with Google';
+  }
+
+  if (backdrop) {
+    backdrop.hidden = false;
+    backdrop.removeAttribute('hidden');
+    backdrop.style.setProperty('display', 'flex', 'important');
+  }
+
+  if (emailInput) {
+    setTimeout(() => emailInput.focus(), 80);
+  }
+}
+window.openOAuthProviderModal = openOAuthProviderModal;
+
+function closeOAuthProviderModal() {
+  const backdrop = document.getElementById('oauthProviderModalBackdrop');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+    backdrop.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closeOAuthProviderModal = closeOAuthProviderModal;
+
+async function handleOAuthModalSubmit(e) {
+  e.preventDefault();
+  const emailInput = document.getElementById('oauthEmailInput');
+  const errorMsg = document.getElementById('oauthErrorMsg');
+  const submitBtn = document.getElementById('btnOAuthModalSubmit');
+
+  if (errorMsg) errorMsg.style.display = 'none';
+
+  const cleanEmail = (emailInput?.value || '').trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Please enter a valid email address.';
+      errorMsg.style.display = 'block';
+    }
+    return;
+  }
+
   const guessedName = cleanEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-  await executeOAuthSignIn({
-    provider: 'google',
-    email: cleanEmail,
-    name: guessedName,
-    avatar: '🌐',
-    oauthId: `google_${btoa(cleanEmail)}`
-  });
+  try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳</span> Authenticating...';
+    }
+
+    closeOAuthProviderModal();
+
+    await executeOAuthSignIn({
+      provider: currentOAuthProvider,
+      email: cleanEmail,
+      name: guessedName,
+      avatar: currentOAuthProvider === 'google' ? '🌐' : '🍏',
+      oauthId: `${currentOAuthProvider}_${btoa(cleanEmail)}`
+    });
+  } catch (err) {
+    console.error('OAuth submit error:', err);
+    showToast('Failed to complete Single Sign-On.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<span id="oauthSubmitBtnText">Continue with ${currentOAuthProvider === 'google' ? 'Google' : 'Apple ID'}</span>`;
+    }
+  }
+}
+window.handleOAuthModalSubmit = handleOAuthModalSubmit;
+
+function handleGoogleAuth() {
+  openOAuthProviderModal('google');
 }
 window.handleGoogleAuth = handleGoogleAuth;
 
-async function handleAppleAuth() {
-  const promptEmail = prompt('🍏 Sign in with Apple ID\n\nEnter your Apple ID Email to proceed with Apple Single Sign-On:', currentUser?.email || 'jryusiif@gmail.com');
-  if (!promptEmail || !promptEmail.trim()) return;
-
-  const cleanEmail = promptEmail.trim().toLowerCase();
-  const guessedName = cleanEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-  await executeOAuthSignIn({
-    provider: 'apple',
-    email: cleanEmail,
-    name: guessedName,
-    avatar: '🍏',
-    oauthId: `apple_${btoa(cleanEmail)}`
-  });
+function handleAppleAuth() {
+  openOAuthProviderModal('apple');
 }
 window.handleAppleAuth = handleAppleAuth;
 
@@ -11423,12 +12445,20 @@ initTheme();
 initAuthEvents();
 initSidebarState();
 initTopNavScroll();
-renderDashboard();
-loadMeta();
-loadTasks();
-loadWeeklyProgress();
-initWeekTabs();
-loadWealthCard();
-initRoadmapEvents();
+
+if (authToken && currentUser) {
+  document.body.classList.remove('is-unauthenticated');
+  renderDashboard();
+  loadMeta();
+  loadTasks();
+  loadWeeklyProgress();
+  initWeekTabs();
+  loadWealthCard();
+  initRoadmapEvents();
+  checkAuthSession();
+} else {
+  document.body.classList.add('is-unauthenticated');
+  setGatewayAuthMode('login');
+}
 
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser, jsonError } from '@/lib/auth.js';
 import prisma from '@/lib/prisma.js';
+import { WORKOUT_PRESETS } from '@/lib/workout-presets.js';
 
 export async function GET(req) {
   const auth = await getAuthUser(req);
@@ -29,26 +30,34 @@ export async function GET(req) {
     });
   }
 
-  const defaultSchedule = [
-    { id: 'saturday', name: 'Saturday', dayName: 'Saturday', title: 'Chest & Triceps — Push A', isRestDay: false },
-    { id: 'sunday', name: 'Sunday', dayName: 'Sunday', title: 'Back & Biceps — Pull A', isRestDay: false },
-    { id: 'monday', name: 'Monday', dayName: 'Monday', title: 'Legs & Core — Legs A', isRestDay: false },
-    { id: 'tuesday', name: 'Tuesday', dayName: 'Tuesday', title: 'Rest & Active Recovery', isRestDay: true },
-    { id: 'wednesday', name: 'Wednesday', dayName: 'Wednesday', title: 'Shoulders & Arms — Upper Focus', isRestDay: false },
-    { id: 'thursday', name: 'Thursday', dayName: 'Thursday', title: 'Legs & Posterior Chain — Legs B', isRestDay: false },
-    { id: 'friday', name: 'Friday', dayName: 'Friday', title: 'Full Body Conditioning & Core', isRestDay: false }
-  ];
+  const defaultSchedule = WORKOUT_PRESETS.curated_6day.splits.map(s => ({
+    id: s.dayName.toLowerCase(),
+    name: s.dayName,
+    dayName: s.dayName,
+    title: s.muscleGroup,
+    isRestDay: s.isRestDay
+  }));
 
-  const days = defaultSchedule.map(d => {
-    const splitMatch = splits.find(s => (s.dayName || '').toLowerCase() === d.name.toLowerCase());
+  const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(dayName => {
+    const dayId = dayName.toLowerCase();
+    const defaultDay = defaultSchedule.find(d => d.id === dayId) || {
+      id: dayId,
+      name: dayName,
+      dayName: dayName,
+      title: 'Rest & Recovery',
+      isRestDay: true
+    };
+
+    const splitMatch = splits.find(s => (s.dayName || '').toLowerCase() === dayId);
+    
     const dayExercises = exercises
-      .filter(e => (e.dayName || '').toLowerCase() === d.name.toLowerCase())
+      .filter(e => (e.dayName || '').toLowerCase() === dayId)
       .map(e => {
         const lastLog = weightLogs.find(l => (l.exerciseName || '').toLowerCase() === (e.name || '').toLowerCase());
         return {
           id: e.id,
           name: e.name,
-          muscleGroup: e.muscleGroup || 'General',
+          muscleGroup: e.muscleGroup || (splitMatch?.muscleGroup || 'General'),
           sets: e.targetSets || 3,
           reps: e.targetReps || '8-12',
           targetSets: e.targetSets || 3,
@@ -63,21 +72,66 @@ export async function GET(req) {
         };
       });
 
+    const hasExercises = dayExercises.length > 0;
+    
+    // Automated Active vs Rest determination
+    let isRestDay = false;
+    let title = '';
+
+    if (splitMatch) {
+      title = splitMatch.muscleGroup || 'Rest & Recovery';
+      const isRestNamed = title.toLowerCase().includes('rest') || title.toLowerCase().includes('off');
+      if (hasExercises) {
+        // If exercises are set, it is automatically an active training day
+        isRestDay = false;
+        if (isRestNamed) {
+          title = dayExercises[0]?.muscleGroup || `${dayName} Workout`;
+        }
+      } else {
+        // No exercises set: if marked as rest or blank split
+        isRestDay = isRestNamed || splits.every(s => (s.muscleGroup || '').toLowerCase().includes('rest'));
+      }
+    } else {
+      // No custom split record in DB
+      if (hasExercises) {
+        isRestDay = false;
+        title = defaultDay.title;
+      } else {
+        isRestDay = defaultDay.isRestDay;
+        title = defaultDay.title;
+      }
+    }
+
+    if (isRestDay && !title) {
+      title = 'Rest & Active Recovery';
+    }
+
+    const targetMuscles = isRestDay
+      ? []
+      : (title.split('—')[0]?.split('&').map(s => s.trim()).filter(Boolean) || [title]);
+
     return {
-      id: d.id,
-      name: d.name,
-      dayName: d.name,
-      title: splitMatch ? `${splitMatch.muscleGroup}` : d.title,
-      targetMuscles: splitMatch?.muscleGroup ? [splitMatch.muscleGroup] : (d.title.split('—')[0]?.split('&').map(s => s.trim()) || []),
-      isRestDay: splitMatch ? splitMatch.isRestDay : d.isRestDay,
+      id: dayId,
+      name: dayName,
+      dayName: dayName,
+      title: title || 'Workout',
+      targetMuscles,
+      isRestDay,
+      hasExercises,
+      exerciseCount: dayExercises.length,
       exercises: dayExercises
     };
   });
+
+  const activeDaysCount = days.filter(d => !d.isRestDay).length;
+  const restDaysCount = days.filter(d => d.isRestDay).length;
 
   return NextResponse.json({
     days,
     todayDayId,
     todayDate,
-    todayCompleted: []
+    todayCompleted: [],
+    activeDaysCount,
+    restDaysCount
   });
 }

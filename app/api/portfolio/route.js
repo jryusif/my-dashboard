@@ -27,7 +27,9 @@ export async function GET(req) {
     });
   }
 
-  const liveGoldPrice = await getLiveGoldPrice();
+  const user = auth.authenticated ? auth.user : null;
+  const userCurrency = user?.currency || 'USD';
+  const liveGoldPrice = await getLiveGoldPrice(userCurrency);
 
   const holdings = [
     ...assets.map(a => {
@@ -51,7 +53,8 @@ export async function GET(req) {
     }),
     ...goldLots.map(g => {
       const karatRatio = (g.karat === '21k' ? 21/24 : (g.karat === '18k' ? 18/24 : 1));
-      const liveVal = g.grams * liveGoldPrice.pricePerGramEgp24 * karatRatio;
+      const gramRate = liveGoldPrice.pricePerGram24 || liveGoldPrice.pricePerGramEgp24;
+      const liveVal = g.grams * gramRate * karatRatio;
       const cost = g.pricePaid || 0;
       const diff = cost > 0 ? liveVal - cost : 0;
       const pct = cost > 0 ? (diff / cost) * 100 : 0;
@@ -71,42 +74,78 @@ export async function GET(req) {
     })
   ];
 
-  let totalInvested = 0;
-  let currentValue = 0;
-  let ownedCount = 0;
-  let plannedCount = 0;
+  let allAssetsInvested = 0;
+  let allAssetsCurrentValue = 0;
+  let allOwnedCount = 0;
+  let allPlannedCount = 0;
+
+  let goldInvested = 0;
+  let goldCurrentValue = 0;
+  let goldOwnedCount = 0;
+  let goldPlannedCount = 0;
+
   let totalGoldGrams = 0;
   const byKarat = { '24k': 0, '21k': 0, '18k': 0 };
 
   holdings.forEach(h => {
-    totalInvested += h.purchasePrice || 0;
-    currentValue += h.liveValue || 0;
-    if (h.status === 'Owned') ownedCount++;
-    else plannedCount++;
+    allAssetsInvested += h.purchasePrice || 0;
+    allAssetsCurrentValue += h.liveValue || 0;
+    if (h.status === 'Owned') allOwnedCount++;
+    else allPlannedCount++;
 
     if (h.assetType === 'Gold') {
+      goldInvested += h.purchasePrice || 0;
+      goldCurrentValue += h.liveValue || 0;
+      if (h.status === 'Owned') goldOwnedCount++;
+      else goldPlannedCount++;
+
       totalGoldGrams += h.quantity || 0;
       const k = (h.karat || '24k').toLowerCase();
       if (byKarat[k] !== undefined) byKarat[k] += h.quantity || 0;
     }
   });
 
-  const totalDiff = currentValue - totalInvested;
-  const totalPct = totalInvested > 0 ? (totalDiff / totalInvested) * 100 : 0;
+  const goldDiff = goldCurrentValue - goldInvested;
+  const goldPct = goldInvested > 0 ? (goldDiff / goldInvested) * 100 : 0;
+
+  const allDiff = allAssetsCurrentValue - allAssetsInvested;
+  const allPct = allAssetsInvested > 0 ? (allDiff / allAssetsInvested) * 100 : 0;
 
   return NextResponse.json({
     goldPrice: liveGoldPrice,
     summary: {
-      totalInvested,
-      currentValue,
-      totalPnl: { isGain: totalDiff >= 0, diff: Math.abs(Math.round(totalDiff)), pct: Math.abs(Math.round(totalPct * 10) / 10) },
+      // Primary Gold Page metrics: Total Gold live value and gold invested
+      currentValue: Math.round(goldCurrentValue),
+      totalInvested: Math.round(goldInvested),
+      totalPnl: {
+        isGain: goldDiff >= 0,
+        diff: Math.abs(Math.round(goldDiff)),
+        pct: Math.abs(Math.round(goldPct * 10) / 10)
+      },
+      counts: {
+        owned: goldOwnedCount,
+        planned: goldPlannedCount,
+        totalOwned: allOwnedCount,
+        totalPlanned: allPlannedCount
+      },
       goldWeight: {
         totalGrams: totalGoldGrams,
         byKarat
       },
-      counts: {
-        owned: ownedCount,
-        planned: plannedCount
+      // Explicit breakdowns
+      goldValue: Math.round(goldCurrentValue),
+      goldInvested: Math.round(goldInvested),
+      goldPnl: {
+        isGain: goldDiff >= 0,
+        diff: Math.abs(Math.round(goldDiff)),
+        pct: Math.abs(Math.round(goldPct * 10) / 10)
+      },
+      allAssetsValue: Math.round(allAssetsCurrentValue),
+      allAssetsInvested: Math.round(allAssetsInvested),
+      allAssetsPnl: {
+        isGain: allDiff >= 0,
+        diff: Math.abs(Math.round(allDiff)),
+        pct: Math.abs(Math.round(allPct * 10) / 10)
       }
     },
     holdings,

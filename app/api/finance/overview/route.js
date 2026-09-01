@@ -41,7 +41,9 @@ export async function GET(req) {
       });
     }
 
-    const liveGold = await getLiveGoldPrice();
+    const auth = await getAuthUser(req);
+    const userCurrency = auth?.authenticated ? auth.user?.currency : 'USD';
+    const liveGold = await getLiveGoldPrice(userCurrency);
 
     // Map month name (e.g. "September 2026") to date prefix ("2026-09")
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -72,19 +74,22 @@ export async function GET(req) {
     const cashAsset = assets.find(a => a.type === 'Cash');
     const baselineTx = transactions.find(t => t.category === 'Saved Cash Baseline');
     const savedCashBaseline = baselineTx ? baselineTx.amount : (cashAsset ? (cashAsset.purchasePrice || cashAsset.quantity || 0) : 0);
+    
+    // Real Available Cash / Liquid Money = Baseline Saved Cash + All Inflows - All Outflows
     const totalWalletCash = Math.max(0, savedCashBaseline + allRegularIncome - allExpenses);
 
-    // Real Gold Lots Valuation in EGP
-    const goldLotsTotalEgp = goldLots.reduce((sum, g) => {
+    // Real Gold Lots Valuation in User Currency
+    const gramRate = liveGold.pricePerGram24 || liveGold.pricePerGramEgp24;
+    const goldLotsTotalVal = goldLots.reduce((sum, g) => {
       const ratio = (g.karat === '21k' ? 21/24 : (g.karat === '18k' ? 18/24 : 1));
-      return sum + (g.grams * liveGold.pricePerGramEgp24 * ratio);
+      return sum + (g.grams * gramRate * ratio);
     }, 0);
 
     // Other Investment Assets Total
     const otherAssets = assets.filter(a => a.type !== 'Cash');
     const otherAssetsTotal = otherAssets.reduce((sum, a) => sum + (a.purchasePrice || (a.quantity * 100)), 0);
 
-    const totalAssets = otherAssetsTotal + goldLotsTotalEgp + totalWalletCash;
+    const totalAssets = otherAssetsTotal + goldLotsTotalVal + totalWalletCash;
     const totalLiabilities = 0;
     const netWorthVal = totalAssets - totalLiabilities;
 
@@ -141,17 +146,23 @@ export async function GET(req) {
 
     const netWorth = {
       totalAssets: Math.round(totalAssets),
-      totalLiabilities,
+      totalLiabilities: Math.round(totalLiabilities),
       netWorth: Math.round(netWorthVal),
-      liveGoldValue: Math.round(goldLotsTotalEgp),
+      liveGoldValue: Math.round(goldLotsTotalVal),
       goldLotsCount: goldLots.length,
       snapshot: 'Live Synchronized Financial Snapshot',
       date: new Date().toISOString().split('T')[0],
       breakdown: {
-        cash: savedCashBaseline,
-        walletTotal: totalWalletCash,
-        gold: Math.round(goldLotsTotalEgp),
-        otherAssets: otherAssetsTotal
+        cash: Math.round(totalWalletCash),
+        availableCash: Math.round(totalWalletCash),
+        walletTotal: Math.round(totalWalletCash),
+        savedCashBaseline: Math.round(savedCashBaseline),
+        gold: Math.round(goldLotsTotalVal),
+        goldLots: Math.round(goldLotsTotalVal),
+        investments: Math.round(otherAssetsTotal),
+        otherAssets: Math.round(otherAssetsTotal),
+        assets: Math.round(otherAssetsTotal),
+        liabilities: Math.round(totalLiabilities),
       }
     };
 

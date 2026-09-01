@@ -1351,6 +1351,16 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   box-shadow: 0 0 45px rgba(16, 185, 129, 0.5), inset 0 0 25px rgba(16, 185, 129, 0.2);
 }
 
+.face-scanner-viewport.face-locked {
+  border-color: #38bdf8;
+  box-shadow: 0 0 35px rgba(56, 189, 248, 0.4), inset 0 0 25px rgba(56, 189, 248, 0.2);
+}
+
+.face-scanner-viewport.scan-failed {
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.3), inset 0 0 25px rgba(239, 68, 68, 0.15);
+}
+
 .face-scanner-viewport video {
   width: 100%;
   height: 100%;
@@ -3951,8 +3961,8 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   white-space: nowrap;
 }
 .darebee-bubble {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 1.5px solid var(--border);
   background: var(--surface);
@@ -3960,22 +3970,26 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 800;
   color: var(--ink-soft);
-  transition: all 0.18s ease;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   flex-shrink: 0;
+  user-select: none;
 }
 .darebee-bubble:hover {
   border-color: var(--workouts);
   color: var(--workouts);
-  box-shadow: 0 0 10px rgba(79,209,165,0.3);
+  transform: scale(1.12);
+  box-shadow: 0 0 12px rgba(79,209,165,0.4);
 }
 .darebee-bubble.is-filled {
-  background: var(--workouts);
-  border-color: var(--workouts);
-  color: #0A1A12;
-  box-shadow: 0 0 12px rgba(79,209,165,0.5);
+  background: var(--workouts, #22c55e);
+  border-color: var(--workouts, #22c55e);
+  color: #06180f;
+  font-weight: 900;
+  box-shadow: 0 0 16px rgba(79,209,165,0.7);
+  transform: scale(1.08);
 }
 
 /* Card Footer / Actions */
@@ -4196,40 +4210,233 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   background: rgba(255,255,255,0.08);
 }
 
-/* â”€â”€ Template Choice Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-.template-choice-cards {
+/* ── Workout Architecture & Routine Customizer ──────────────────────────── */
+.routine-customizer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--workouts);
+  background: rgba(79, 209, 165, 0.1);
+  border: 1px solid rgba(79, 209, 165, 0.25);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.routine-live-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0A1A12;
+  background: linear-gradient(135deg, var(--workouts), #38bdf8);
+  border-radius: 999px;
+  padding: 4px 12px;
+  box-shadow: 0 2px 10px rgba(79, 209, 165, 0.25);
+}
+
+.routine-section-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+
+.routine-preset-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.routine-preset-chip {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin: 18px 0;
-}
-.template-choice-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 16px 18px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 10px 8px;
   background: var(--surface-quiet);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--ink);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
 }
-.template-choice-card:hover {
+
+.routine-preset-chip:hover {
   border-color: var(--workouts);
-  background: color-mix(in srgb, var(--workouts) 10%, var(--surface-quiet));
+  background: rgba(79, 209, 165, 0.08);
   transform: translateY(-2px);
 }
-.template-choice-card .choice-icon { font-size: 28px; }
-.template-choice-card .choice-title {
-  font-size: 15px;
+
+.routine-preset-chip.is-active {
+  border-color: var(--workouts);
+  background: rgba(79, 209, 165, 0.15);
+  box-shadow: 0 0 12px rgba(79, 209, 165, 0.2);
+}
+
+.routine-preset-chip .chip-icon {
+  font-size: 18px;
+}
+
+.routine-preset-chip .chip-title {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.routine-smart-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+}
+
+.routine-smart-banner .smart-banner-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.routine-smart-banner .smart-banner-text {
+  font-size: 11.5px;
+  color: #93c5fd;
+  line-height: 1.4;
+}
+
+.routine-days-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.routine-day-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.routine-day-card.is-rest {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.routine-day-card.is-active-day {
+  border-color: rgba(79, 209, 165, 0.3);
+  background: rgba(79, 209, 165, 0.03);
+}
+
+.routine-day-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.routine-day-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.routine-day-name-tag {
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: 4px;
+  min-width: 80px;
 }
-.template-choice-card .choice-desc {
-  font-size: 12.5px;
+
+.routine-day-exercise-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
   color: var(--ink-soft);
-  line-height: 1.4;
+}
+
+.routine-day-card.is-active-day .routine-day-exercise-badge {
+  background: rgba(79, 209, 165, 0.15);
+  color: var(--workouts);
+}
+
+.routine-day-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-quiet);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.routine-day-toggle:hover {
+  border-color: var(--workouts);
+  color: var(--ink);
+}
+
+.routine-day-toggle.is-active-btn {
+  background: rgba(79, 209, 165, 0.18);
+  border-color: var(--workouts);
+  color: var(--workouts);
+}
+
+.routine-day-inputs {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .routine-day-inputs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.routine-day-inputs input {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-quiet);
+  color: var(--ink);
+}
+
+.routine-day-inputs input:focus {
+  border-color: var(--workouts);
+  outline: none;
+}
+
+.w-day-badge.is-rest-badge {
+  color: #94a3b8;
+  opacity: 0.8;
+}
+
+.workout-day-tab.is-rest-tab:not(.is-active) {
+  opacity: 0.85;
 }
 
 /* =====================================================================
@@ -8697,6 +8904,196 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   font-weight: 700;
   border-radius: var(--radius-md);
   cursor: pointer;
+}
+
+/* =====================================================================
+   SOVEREIGN AUTH GATEWAY (FULL SCREEN PRIVACY SHIELD FOR NON-LOGGED IN)
+   ===================================================================== */
+html.is-unauthenticated,
+body.is-unauthenticated {
+  overflow: hidden !important;
+  background: #030712 !important;
+}
+
+html.is-unauthenticated .app-shell,
+html.is-unauthenticated body .app-shell,
+body.is-unauthenticated .app-shell,
+html.is-unauthenticated .floating-dock-wrap,
+body.is-unauthenticated .floating-dock-wrap,
+html.is-unauthenticated .sidebar,
+body.is-unauthenticated .sidebar,
+html.is-unauthenticated .main-top-navbar,
+body.is-unauthenticated .main-top-navbar,
+html.is-unauthenticated .main-content,
+body.is-unauthenticated .main-content,
+html.is-unauthenticated .toast-container,
+body.is-unauthenticated .toast-container,
+html.is-unauthenticated .modal-backdrop:not(#pendingApprovalModalBackdrop):not(#oauthProviderModalBackdrop),
+body.is-unauthenticated .modal-backdrop:not(#pendingApprovalModalBackdrop):not(#oauthProviderModalBackdrop) {
+  display: none !important;
+}
+
+.oauth-provider-modal {
+  background: rgba(15, 23, 42, 0.94) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 24px !important;
+  padding: 32px 26px !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.15) !important;
+  animation: modalScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.oauth-modal-brand-header {
+  text-align: center;
+}
+
+.oauth-provider-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  margin-bottom: 8px;
+}
+
+.oauth-verified-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  margin-bottom: 6px;
+}
+
+.auth-gateway-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999999;
+  background: radial-gradient(circle at 50% 15%, rgba(56, 189, 248, 0.16) 0%, rgba(15, 23, 42, 0.98) 50%, #030712 100%);
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+
+html.is-unauthenticated body .auth-gateway-screen,
+body.is-unauthenticated .auth-gateway-screen {
+  display: flex !important;
+}
+
+.auth-gateway-card {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 36px 30px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.12);
+  position: relative;
+  animation: modalScaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.auth-gateway-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.auth-gateway-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.3);
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+.auth-gateway-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  margin: 10px 0 6px;
+  letter-spacing: -0.02em;
+}
+
+.auth-gateway-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.gateway-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.gateway-input-icon {
+  position: absolute;
+  left: 14px;
+  font-size: 15px;
+  pointer-events: none;
+  color: var(--ink-soft);
+}
+
+.gateway-input-wrap input {
+  width: 100%;
+  background: rgba(3, 7, 18, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  padding: 12px 14px 12px 42px;
+  border-radius: 12px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.gateway-input-wrap input:focus {
+  outline: none;
+  border-color: #38bdf8;
+  background: rgba(3, 7, 18, 0.95);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+}
+
+.gateway-pass-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+
+.gateway-footer-note {
+  text-align: center;
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 /* =====================================================================

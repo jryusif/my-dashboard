@@ -2,31 +2,54 @@ import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth.js';
 import prisma from '@/lib/prisma.js';
 
-async function resolveUserId(req) {
+async function resolveUser(req) {
   const auth = getAuthUser(req);
-  if (auth && auth.authenticated && auth.userId) return auth.userId;
-  
+  if (auth && auth.authenticated && auth.userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: auth.userId },
+      select: { id: true, role: true, dentalApproved: true, tradingApproved: true }
+    });
+    return user;
+  }
   return null;
 }
 
 export async function GET(req) {
   try {
-    const userId = await resolveUserId(req);
+    const user = await resolveUser(req);
+    const userId = user?.id || null;
+    const isMasterAdmin = user && user.role === 'ADMIN';
+    const canAccessDental = isMasterAdmin || Boolean(user?.dentalApproved);
+    const canAccessTrading = isMasterAdmin || Boolean(user?.tradingApproved);
 
     let tasks = [];
     let dentalCases = [];
 
     if (userId) {
+      const where = { userId };
+      const notInCategories = [];
+      if (!canAccessTrading) notInCategories.push('Us stocks trading', 'Trading');
+      if (!canAccessDental) notInCategories.push('Dental Cases', 'Dental');
+      if (notInCategories.length > 0) {
+        where.category = { notIn: notInCategories };
+      }
+
       tasks = await prisma.task.findMany({
-        where: { userId },
+        where,
         orderBy: { date: 'asc' }
       });
-      dentalCases = await prisma.dentalCase.findMany({
-        where: { userId }
-      });
+
+      if (canAccessDental) {
+        dentalCases = await prisma.dentalCase.findMany({
+          where: { userId }
+        });
+      }
     }
 
-    const categories = ['Work', 'Studies', 'Workouts', 'Religion', 'Us stocks trading', 'Dental'];
+    const categories = ['Work', 'Studies', 'Workouts', 'Religion'];
+    if (canAccessTrading) categories.push('Us stocks trading');
+    if (canAccessDental) categories.push('Dental');
+
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonthIdx = now.getMonth();
@@ -105,6 +128,7 @@ export async function GET(req) {
 
     categories.forEach(cat => {
       if (cat === 'Dental') {
+        if (!canAccessDental) return;
         const dTotal = dentalCases.length;
         const dDone = dentalCases.filter(c => c.status === 'Completed' || c.showcaseForPatients).length;
         const dPct = dTotal > 0 ? Math.round((dDone / dTotal) * 100) : 0;
@@ -224,9 +248,11 @@ export async function GET(req) {
     ];
 
     const specialtyCounts = {};
-    dentalCases.forEach(c => {
-      specialtyCounts[c.specialty] = (specialtyCounts[c.specialty] || 0) + 1;
-    });
+    if (canAccessDental) {
+      dentalCases.forEach(c => {
+        specialtyCounts[c.specialty] = (specialtyCounts[c.specialty] || 0) + 1;
+      });
+    }
 
     return NextResponse.json({
       overall: {
@@ -267,15 +293,23 @@ export async function GET(req) {
         streakDays: doneTasks > 0 ? 1 : 0
       },
       categoryProfiles,
-      dentalStats: {
+      dentalStats: canAccessDental ? {
         totalCases: dentalCases.length,
         showcaseCases: dentalCases.filter(c => c.showcaseForPatients).length,
         specialtyCounts: Object.keys(specialtyCounts).length > 0 ? specialtyCounts : { 'Restorative & Aesthetics': dentalCases.length }
+      } : {
+        totalCases: 0,
+        showcaseCases: 0,
+        specialtyCounts: {}
       },
       weeklyTrend: {
         labels: dayLabels,
         completed: weekDays.map(d => d.done),
         total: weekDays.map(d => d.total)
+      },
+      permissions: {
+        canAccessDental,
+        canAccessTrading
       }
     });
   } catch (err) {

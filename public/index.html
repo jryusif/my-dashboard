@@ -11,8 +11,109 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="alternate icon" href="/favicon.ico" />
 <link rel="stylesheet" href="style.css?v=21.0" />
+<script>
+  (function() {
+    try {
+      var token = localStorage.getItem('antigravity_token');
+      var user = localStorage.getItem('antigravity_user');
+      if (token && user && user !== 'null') {
+        document.documentElement.classList.remove('is-unauthenticated');
+        document.documentElement.classList.add('is-authenticated');
+      } else {
+        document.documentElement.classList.add('is-unauthenticated');
+        document.documentElement.classList.remove('is-authenticated');
+      }
+    } catch(e) {
+      document.documentElement.classList.add('is-unauthenticated');
+    }
+  })();
+</script>
 </head>
-<body>
+<body class="is-unauthenticated">
+
+  <!-- ===================================================================
+       SOVEREIGN GATEWAY (DEDICATED PRIVACY SHIELD FOR NON-LOGGED IN USERS)
+       =================================================================== -->
+  <div class="auth-gateway-screen" id="authGatewayScreen">
+    <div class="auth-gateway-card">
+      <div class="auth-gateway-header">
+        <div class="auth-gateway-icon-badge">👑</div>
+        <div class="auth-brand-badge" style="margin-top: 10px;">⚡ Sovereign Workspace</div>
+        <h1 class="auth-gateway-title" id="gatewayTitle">Sign In to Workspace</h1>
+        <p class="auth-gateway-sub" id="gatewaySubtitle">Private biometric personal operating system &amp; financial vault</p>
+      </div>
+
+      <div class="auth-tabs" style="margin: 20px 0 16px;">
+        <button type="button" class="auth-tab active" id="gatewayTabLogin" onclick="setGatewayAuthMode('login')">
+          <span>🚀</span> Sign In
+        </button>
+        <button type="button" class="auth-tab" id="gatewayTabRegister" onclick="setGatewayAuthMode('register')">
+          <span>✨</span> Create Account
+        </button>
+      </div>
+
+      <!-- Social Single Sign-On (Google & Apple) -->
+      <div class="social-auth-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+        <button type="button" class="btn-social-oauth btn-google" onclick="handleGoogleAuth()" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
+          <svg viewBox="0 0 24 24" width="17" height="17">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span>Google</span>
+        </button>
+
+        <button type="button" class="btn-social-oauth btn-apple" onclick="handleAppleAuth()" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
+          <span style="font-size: 16px;">🍏</span>
+          <span>Apple ID</span>
+        </button>
+      </div>
+
+      <div class="auth-divider" style="display: flex; align-items: center; gap: 10px; margin: 0 0 16px; color: #64748b; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em;">
+        <span style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></span>
+        <span>or with credentials</span>
+        <span style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></span>
+      </div>
+
+      <form id="gatewayAuthForm" class="auth-form" onsubmit="handleGatewayAuthSubmit(event)">
+        <div class="form-group" id="gatewayNameGroup" style="display: none;">
+          <label for="gatewayNameInput">Your Name</label>
+          <div class="gateway-input-wrap">
+            <span class="gateway-input-icon">👤</span>
+            <input type="text" id="gatewayNameInput" placeholder="e.g. Dr. Alex" autocomplete="name" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="gatewayEmailInput">Email Address</label>
+          <div class="gateway-input-wrap">
+            <span class="gateway-input-icon">✉️</span>
+            <input type="email" id="gatewayEmailInput" required placeholder="you@example.com" autocomplete="email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="gatewayPasswordInput">Password</label>
+          <div class="gateway-input-wrap">
+            <span class="gateway-input-icon">🔒</span>
+            <input type="password" id="gatewayPasswordInput" required placeholder="••••••••••••" autocomplete="current-password" minlength="6" />
+            <button type="button" class="gateway-pass-toggle" onclick="toggleGatewayPassVisibility()" title="Toggle password visibility">👁️</button>
+          </div>
+        </div>
+
+        <div class="auth-error-msg" id="gatewayErrorMsg" style="display: none;"></div>
+
+        <button type="submit" class="btn-primary auth-submit-btn" id="gatewaySubmitBtn" style="margin-top: 8px; width: 100%; padding: 13px; font-size: 15px; border-radius: 12px;">
+          <span>🚀</span> Sign In to Workspace
+        </button>
+
+        <div class="gateway-footer-note">
+          <span>🔒 256-bit Encrypted PostgreSQL · Zero Public Telemetry</span>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div class="app-shell">
 
@@ -419,20 +520,6 @@
           <h1>My Dashboard</h1>
         </header>
 
-        <!-- Guest Auth Prompt Banner -->
-        <div class="auth-callout-banner" id="authCalloutBanner" style="display: none;">
-          <div class="auth-callout-left">
-            <span class="auth-callout-icon">🔐</span>
-            <div>
-              <strong>Sign In to Your Neon Database</strong>
-              <p>Sign in to access your workouts, dental cases, roadmaps, and synced tasks.</p>
-            </div>
-          </div>
-          <button type="button" class="btn-primary auth-callout-btn" id="btnBannerSignIn" onclick="openAuthModal('login')">
-            <span>🚀</span> Sign In / Register
-          </button>
-        </div>
-
         <!-- EXECUTIVE SOVEREIGN WEALTH & NET WORTH VAULT -->
         <div class="wealth-card is-locked" id="wealthCard">
           <!-- Top Row Header -->
@@ -478,18 +565,18 @@
               <div class="pillar-sub" id="pillarGoldSub">Live 24K Valuation</div>
             </div>
 
-            <!-- 2. Liquid Cash -->
+            <!-- 2. Available Cash (Bank & Wallet Reserves) -->
             <div class="wealth-pillar-card" onclick="openPage('Finance')" title="Manage Cash Reserves">
               <div class="pillar-top">
                 <span class="pillar-icon">💵</span>
-                <span class="pillar-label">Liquid Cash</span>
+                <span class="pillar-label">Available Cash</span>
               </div>
               <div class="pillar-value is-hidden" id="pillarCashVal">••••••</div>
               <div class="pillar-sub" id="pillarCashSub">Bank &amp; Wallet Reserves</div>
             </div>
 
             <!-- 3. Investments / Equities -->
-            <div class="wealth-pillar-card" onclick="openPage('US Stocks Trading')" title="US Markets & Equities">
+            <div class="wealth-pillar-card" onclick="openPage(userCanAccessTrading() ? 'US Stocks Trading' : 'Finance')" title="Investments &amp; Equities">
               <div class="pillar-top">
                 <span class="pillar-icon">📈</span>
                 <span class="pillar-label">Investments</span>
@@ -1002,7 +1089,7 @@
           <div class="roadmap-header-text">
             <p class="eyebrow">Strategic Master Vision</p>
             <h1>Life Roadmap &amp; Master Plan</h1>
-            <p class="subtitle">Long-term strategic milestones across Dental Career, Trading &amp; Markets, Studies &amp; Knowledge, and Wealth &amp; Freedom</p>
+            <p class="subtitle" id="roadmapSubtitle">Long-term strategic milestones across your professional journey, studies, and wealth creation</p>
           </div>
           <div class="roadmap-header-actions" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <button type="button" class="btn-secondary" id="btnOpenManagePhasesModal" onclick="openManagePhasesModal()" style="border-radius:999px; padding:7px 16px; font-size:12.5px;">
@@ -1046,24 +1133,8 @@
           </div>
         </div>
 
-        <!-- Pillar Filter Pills -->
-        <div class="roadmap-pillar-pills" id="roadmapPillarPills" role="tablist">
-          <button type="button" class="rm-pill active" data-pillar="All">
-            <span>🌐</span> All Life Pillars
-          </button>
-          <button type="button" class="rm-pill" data-pillar="Dental Career">
-            <span>🦷</span> Dental Career
-          </button>
-          <button type="button" class="rm-pill" data-pillar="Trading & Markets">
-            <span>📈</span> Trading &amp; Markets
-          </button>
-          <button type="button" class="rm-pill" data-pillar="Studies & Knowledge">
-            <span>📚</span> Studies &amp; Knowledge
-          </button>
-          <button type="button" class="rm-pill" data-pillar="Wealth & Freedom">
-            <span>💎</span> Wealth &amp; Freedom
-          </button>
-        </div>
+        <!-- Pillar Filter Pills (Dynamically populated based on user profession & access) -->
+        <div class="roadmap-pillar-pills" id="roadmapPillarPills" role="tablist"></div>
 
         <!-- Roadmap Timeline / Phases Container -->
         <div class="roadmap-phases-container" id="roadmapPhasesContainer" aria-live="polite">
@@ -1771,7 +1842,7 @@
        ADD / EDIT WORKOUT EXERCISE MODAL (With Direct File Upload & Media Preview)
        =================================================================== -->
   <div class="modal-backdrop" id="exerciseModalBackdrop" hidden>
-    <form class="modal workout-exercise-modal" id="exerciseForm" role="dialog" aria-modal="true" aria-labelledby="exerciseModalTitle">
+    <form class="modal workout-exercise-modal" id="exerciseForm" role="dialog" aria-modal="true" aria-labelledby="exerciseModalTitle" novalidate>
       <h2 id="exerciseModalTitle">Add Exercise</h2>
 
       <input type="hidden" id="exerciseId" />
@@ -1779,7 +1850,7 @@
       <div class="form-row-2">
         <div>
           <label for="exerciseDaySelect">Training Day</label>
-          <select id="exerciseDaySelect" required>
+          <select id="exerciseDaySelect">
             <option value="saturday">Saturday</option>
             <option value="sunday">Sunday</option>
             <option value="monday">Monday</option>
@@ -1791,7 +1862,7 @@
         </div>
         <div>
           <label for="exerciseMuscleGroup">Target Muscle</label>
-          <input type="text" id="exerciseMuscleGroup" list="muscleGroupList" placeholder="e.g. Chest, Lats, Quads" required />
+          <input type="text" id="exerciseMuscleGroup" list="muscleGroupList" placeholder="e.g. Chest, Lats, Quads" />
           <datalist id="muscleGroupList">
             <option value="Chest">
             <option value="Upper Chest">
@@ -1818,11 +1889,11 @@
       <div class="form-row-2">
         <div>
           <label for="exerciseSets">Sets</label>
-          <input type="number" id="exerciseSets" min="1" max="20" value="4" required />
+          <input type="number" id="exerciseSets" min="1" max="20" value="4" />
         </div>
         <div>
           <label for="exerciseReps">Reps</label>
-          <input type="text" id="exerciseReps" placeholder="e.g. 8-10 or 12" value="8-10" required />
+          <input type="text" id="exerciseReps" placeholder="e.g. 8-10 or 12" value="8-10" />
         </div>
       </div>
 
@@ -1857,10 +1928,10 @@
         </div>
       </div>
 
-      <input type="url" id="exerciseImageUrl" placeholder="Or paste image URL: https://..." style="margin-top:6px;" />
+      <input type="text" id="exerciseImageUrl" placeholder="Or paste image URL: https://..." style="margin-top:6px;" />
 
       <label for="exerciseVideoUrl" style="margin-top:10px;">Video Tutorial (YouTube / Video URL)</label>
-      <input type="url" id="exerciseVideoUrl" placeholder="https://youtube.com/watch?v=... or search link" />
+      <input type="text" id="exerciseVideoUrl" placeholder="https://youtube.com/watch?v=... or search link" />
 
       <div class="modal-actions">
         <button type="button" class="btn-secondary" id="exerciseCancelBtn">Cancel</button>
@@ -1922,33 +1993,76 @@
   </div>
 
   <!-- ===================================================================
-       CUSTOM PROGRAM TEMPLATE MODAL (Create Your Own from Scratch)
+       CUSTOM PROGRAM TEMPLATE & ROUTINE BUILDER MODAL
        =================================================================== -->
   <div class="modal-backdrop" id="programTemplateModalBackdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="templateModalTitle">
-      <h2 id="templateModalTitle">Customize Workout Program</h2>
-      <p class="subtitle">Choose how you want to configure your weekly training schedule.</p>
-
-      <div class="template-choice-cards">
-        <div class="template-choice-card" id="btnTemplateBlank">
-          <div class="choice-icon">✍️</div>
-          <div class="choice-info">
-            <div class="choice-title">Start Blank &amp; Build Custom Routine</div>
-            <div class="choice-desc">Clears preset exercises so you can add your exact exercises, loads, uploaded pictures, and video links from scratch.</div>
-          </div>
+    <div class="modal routine-customizer-modal" role="dialog" aria-modal="true" aria-labelledby="templateModalTitle" style="max-width:720px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
+        <div>
+          <div class="routine-customizer-badge">🏋️ WORKOUT ARCHITECTURE &amp; SPLIT ENGINE</div>
+          <h2 id="templateModalTitle" style="margin-top:4px;">Customize Workout Routine</h2>
         </div>
+        <div class="routine-live-status-pill" id="tplLiveStatusPill">
+          <span>⚡</span> <span id="tplLiveStatusText">Calculating split…</span>
+        </div>
+      </div>
+      <p class="subtitle" style="margin-bottom:16px;">
+        Choose your weekly training frequency or build from a blank slate. The dashboard <strong>automatically detects</strong> active training days where exercises are set, and marks empty days as <strong>🌴 Rest Days</strong>.
+      </p>
 
-        <div class="template-choice-card" id="btnTemplateCurated">
-          <div class="choice-icon">🔥</div>
-          <div class="choice-info">
-            <div class="choice-title">Reset to Curated 6-Day Hypertrophy Split</div>
-            <div class="choice-desc">Restores the standard 6-day Push/Pull/Legs program with complete exercise cues, sets/reps, and demos.</div>
-          </div>
+      <!-- Quick Preset Frequencies -->
+      <div class="routine-section-label">⚡ Quick Split Presets &amp; Frequency</div>
+      <div class="routine-preset-chips" id="routinePresetChips">
+        <button type="button" class="routine-preset-chip" data-preset="blank">
+          <span class="chip-icon">✍️</span>
+          <span class="chip-title">Start Blank (0-7 Days)</span>
+        </button>
+        <button type="button" class="routine-preset-chip" data-preset="curated_6day">
+          <span class="chip-icon">🔥</span>
+          <span class="chip-title">6-Day PPL Hypertrophy</span>
+        </button>
+        <button type="button" class="routine-preset-chip" data-preset="5day">
+          <span class="chip-icon">⚡</span>
+          <span class="chip-title">5-Day Upper/Lower/PPL</span>
+        </button>
+        <button type="button" class="routine-preset-chip" data-preset="4day">
+          <span class="chip-icon">💪</span>
+          <span class="chip-title">4-Day Upper/Lower</span>
+        </button>
+        <button type="button" class="routine-preset-chip" data-preset="3day">
+          <span class="chip-icon">🏋️</span>
+          <span class="chip-title">3-Day Full Body</span>
+        </button>
+      </div>
+
+      <!-- Smart Automation Callout -->
+      <div class="routine-smart-banner">
+        <span class="smart-banner-icon">🤖</span>
+        <div class="smart-banner-text">
+          <strong>Automated Active &amp; Rest Sync</strong>: As you add or remove exercises in any day, the system automatically activates or rests that day across your weekly dashboard.
         </div>
       </div>
 
-      <div class="modal-actions" style="margin-top:16px;">
-        <button type="button" class="btn-secondary" id="templateModalCancelBtn">Cancel</button>
+      <!-- Interactive 7-Day Schedule Grid -->
+      <div class="routine-section-label" style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;">
+        <span>🗓️ Weekly Schedule &amp; Day Focus</span>
+        <span style="font-size:11px;color:var(--ink-muted);font-weight:normal;" id="routineDaysSummaryText">7 Days Configured</span>
+      </div>
+
+      <div class="routine-days-editor" id="routineDaysEditor">
+        <!-- Injected dynamically by app.js -->
+      </div>
+
+      <!-- Danger / Fast Actions -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap;gap:10px;">
+        <button type="button" class="btn-secondary danger-action-btn" id="btnClearAllExercises" style="font-size:12px;padding:8px 14px;color:#ef4444;border-color:rgba(239,68,68,0.3);">
+          🗑️ Clear All Exercises Only
+        </button>
+        
+        <div class="modal-actions" style="margin:0;gap:8px;">
+          <button type="button" class="btn-secondary" id="templateModalCancelBtn">Cancel</button>
+          <button type="button" class="btn-primary" id="btnSaveCustomSchedule">Save Routine</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2922,6 +3036,54 @@
         <button type="submit" class="btn-primary auth-submit-btn" id="authSubmitBtn">
           <span>🚀</span> Sign In
         </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODERN OAUTH PROVIDER AUTHENTICATION MODAL (GOOGLE & APPLE SSO)
+       =================================================================== -->
+  <div class="modal-backdrop" id="oauthProviderModalBackdrop" hidden>
+    <div class="modal oauth-provider-modal" role="dialog" aria-modal="true" aria-labelledby="oauthModalTitle" style="max-width: 440px;">
+      <button type="button" class="modal-close-btn" onclick="closeOAuthProviderModal()" title="Close dialog">✕</button>
+
+      <div class="oauth-modal-brand-header">
+        <div class="oauth-provider-icon-badge" id="oauthProviderBadge">
+          <svg width="28" height="28" viewBox="0 0 24 24" id="oauthProviderSvg">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+        </div>
+        <div class="oauth-verified-pill" id="oauthSecurityPill">⚡ Secure Single Sign-On</div>
+        <h2 id="oauthModalTitle" style="font-size: 21px; color: #fff; margin: 8px 0 4px;">Sign In with Google</h2>
+        <p class="subtitle" id="oauthModalSub" style="font-size: 13px; margin: 0; color: var(--ink-soft);">Authenticate instantly using your verified Google Account</p>
+      </div>
+
+      <form id="oauthModalForm" onsubmit="handleOAuthModalSubmit(event)" style="display: flex; flex-direction: column; gap: 14px; margin-top: 18px;">
+        <div>
+          <label for="oauthEmailInput" id="oauthEmailLabel" style="font-size: 12px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 6px;">Google Account Email</label>
+          <div class="gateway-input-wrap">
+            <span class="gateway-input-icon">✉️</span>
+            <input type="email" id="oauthEmailInput" required placeholder="you@gmail.com" autocomplete="email" style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 12px 14px 12px 42px; border-radius: 12px; font-size: 14px; width: 100%;" />
+          </div>
+        </div>
+
+        <div id="oauthErrorMsg" style="color: #f87171; font-size: 12px; display: none; text-align: center; font-weight: 600;"></div>
+
+        <div style="display: flex; gap: 10px; margin-top: 4px;">
+          <button type="button" class="btn-secondary" onclick="closeOAuthProviderModal()" style="flex: 1; border-radius: 12px; font-weight: 600;">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" id="btnOAuthModalSubmit" style="flex: 1.6; border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);">
+            <span id="oauthSubmitBtnText">Continue with Google</span>
+          </button>
+        </div>
+
+        <div class="gateway-footer-note" style="margin-top: 10px; font-size: 11px;">
+          <span>🔒 256-bit OAuth Token Exchange · Zero Password Sharing</span>
+        </div>
       </form>
     </div>
   </div>
