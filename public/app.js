@@ -9576,11 +9576,7 @@ function renderWizardSegmentChips() {
 }
 
 function promptAddWizardTag(dept) {
-  const newTag = prompt(`Add custom tag for ${dept.toUpperCase()}:`);
-  if (!newTag || !newTag.trim()) return;
-  if (!wizardSegmentsState[dept]) wizardSegmentsState[dept] = [];
-  wizardSegmentsState[dept].push(newTag.trim());
-  renderWizardSegmentChips();
+  openAddSegmentTagModal(dept);
 }
 window.promptAddWizardTag = promptAddWizardTag;
 
@@ -9949,18 +9945,57 @@ function updateAllocationBucketPct(idx, val) {
 }
 window.updateAllocationBucketPct = updateAllocationBucketPct;
 
-function promptAddAllocationBucket() {
-  const name = prompt('➕ Enter Allocation Bucket Name (e.g. Real Estate, Family Buffer, Gold Savings, Education):');
-  if (!name || !name.trim()) return;
+function openAddAllocationBucketModal() {
+  const modal = document.getElementById('allocationBucketModalBackdrop');
+  const nameInp = document.getElementById('bucketFormName');
+  const pctInp = document.getElementById('bucketFormPct');
+  const rangeInp = document.getElementById('bucketFormPctRange');
 
-  const pctStr = prompt(`Enter Percentage for "${name.trim()}" (0-100%):`, '10');
-  const pct = Math.max(0, Math.min(100, parseFloat(pctStr) || 10));
+  if (nameInp) nameInp.value = '';
+  if (pctInp) pctInp.value = 15;
+  if (rangeInp) rangeInp.value = 15;
+
+  if (modal) modal.hidden = false;
+  if (nameInp) setTimeout(() => nameInp.focus(), 50);
+}
+window.openAddAllocationBucketModal = openAddAllocationBucketModal;
+window.promptAddAllocationBucket = openAddAllocationBucketModal;
+
+function closeAllocationBucketModal() {
+  const modal = document.getElementById('allocationBucketModalBackdrop');
+  if (modal) modal.hidden = true;
+}
+window.closeAllocationBucketModal = closeAllocationBucketModal;
+
+function setBucketPreset(name, pct) {
+  const nameInp = document.getElementById('bucketFormName');
+  const pctInp = document.getElementById('bucketFormPct');
+  const rangeInp = document.getElementById('bucketFormPctRange');
+  if (nameInp) nameInp.value = name;
+  if (pctInp) pctInp.value = pct;
+  if (rangeInp) rangeInp.value = pct;
+}
+window.setBucketPreset = setBucketPreset;
+
+function handleSaveAllocationBucket(e) {
+  e.preventDefault();
+  const nameInp = document.getElementById('bucketFormName');
+  const pctInp = document.getElementById('bucketFormPct');
+  const name = nameInp ? nameInp.value.trim() : '';
+  const pct = Math.max(0, Math.min(100, parseFloat(pctInp ? pctInp.value : 10) || 0));
+
+  if (!name) {
+    showToast('Please enter a bucket name.');
+    return;
+  }
 
   if (!profileAllocationsState) profileAllocationsState = [];
-  profileAllocationsState.push({ name: name.trim(), pct });
+  profileAllocationsState.push({ name, pct });
   renderProfileAllocations();
+  closeAllocationBucketModal();
+  showToast(`💰 Added allocation bucket "${name}" (${pct}%)`);
 }
-window.promptAddAllocationBucket = promptAddAllocationBucket;
+window.handleSaveAllocationBucket = handleSaveAllocationBucket;
 
 function removeAllocationBucket(idx) {
   if (profileAllocationsState && profileAllocationsState.length > 1) {
@@ -10499,29 +10534,241 @@ function renderProfileSegmentChips() {
   });
 }
 
-function promptAddSegmentTag(dept) {
-  const titles = {
-    work: 'Work / Clinical Specialty Segment',
-    studies: 'Study / Academic Learning Segment',
-    incomeSources: 'Source of Income (e.g. Clinic, Salary, Trading)',
-    expenseCategories: 'Expense Budget Category',
-    accounts: 'Bank / Cash Account Vault',
-    fitness: 'Fitness & Habit Pillar'
-  };
-  const label = titles[dept] || dept.toUpperCase();
-  const newTag = prompt(`➕ Add new ${label}:`);
-  if (!newTag || !newTag.trim()) return;
-  if (!profileSegmentsState) profileSegmentsState = {};
-  if (!profileSegmentsState[dept]) profileSegmentsState[dept] = [];
-  profileSegmentsState[dept].push(newTag.trim());
-  renderProfileSegmentChips();
+// =============================================================================
+// 🏷️ ADVANCED PRO DEPARTMENT SEGMENT & CATEGORY SUITE
+// =============================================================================
+
+const DEPARTMENT_TAG_METADATA = {
+  work: {
+    title: 'Work & Clinical Specialties',
+    badge: '💼 WORK ENGINE',
+    subtitle: 'Options for task classifications, surgery logs, and project deliverables.',
+    defaultIcon: '💼',
+    presets: [
+      '🩺 Clinical Restorations & Surgery',
+      '📋 Patient Consultations',
+      '🏢 Clinic Management & Ops',
+      '🔬 Research & Scientific Studies',
+      '💻 Full-Stack Feature Dev',
+      '🏗️ Site Audit & Calculations',
+      '📈 Market Analysis & Execution',
+      '🤝 Business Development'
+    ]
+  },
+  studies: {
+    title: 'Studies & Continuous Learning',
+    badge: '📚 ACADEMIC ENGINE',
+    subtitle: 'Options for mock exams, CME credits, courses, and certifications.',
+    defaultIcon: '📚',
+    presets: [
+      '🎓 Board Exams & Mock Tests',
+      '📖 Evidence-Based Literature',
+      '🔬 Clinical Fellowship Prep',
+      '🤖 AI, Prompt & ML Systems',
+      '📊 Systematic Prop Trading Models',
+      '🏛️ Professional Licensure (PE/FE)',
+      '🌐 Language & Communication'
+    ]
+  },
+  incomeSources: {
+    title: 'Sources of Income',
+    badge: '💵 CAPITAL INFLOWS',
+    subtitle: 'Income origin streams for automated financial tracking and cashflow metrics.',
+    defaultIcon: '💵',
+    presets: [
+      '🏥 Clinical Practice & Surgery',
+      '📈 US Equities & Futures Prop',
+      '🏢 Real Estate & Rental Yield',
+      '💻 Tech Contracting & Consulting',
+      '🥇 Physical Bullion Holdings',
+      '💼 Corporate Salary & Bonus',
+      '📦 Digital Products & SaaS'
+    ]
+  },
+  expenseCategories: {
+    title: 'Expense Budget Categories',
+    badge: '💳 EXPENSE OUTFLOWS',
+    subtitle: 'Classify your operational overhead, living costs, and investment deductions.',
+    defaultIcon: '💳',
+    presets: [
+      '🏥 Clinical Materials & Supplies',
+      '🏠 Housing, Rent & Utilities',
+      '🚗 Auto, Fuel & Maintenance',
+      '🛒 Food, Dining & Groceries',
+      '💻 Tech, Software & Cloud Infra',
+      '✈️ Travel, Hotels & Flights',
+      '🛡️ Insurance & Tax Reserves',
+      '💎 Lifestyle & Personal Assets'
+    ]
+  },
+  accounts: {
+    title: 'Bank Accounts & Asset Vaults',
+    badge: '🏦 WEALTH ASSET VAULTS',
+    subtitle: 'Accounts and vaults tracked across your global net worth calculations.',
+    defaultIcon: '🏦',
+    presets: [
+      '🏦 Commercial Operating Bank',
+      '🪙 Physical Gold & Bullion Vault',
+      '📈 Interactive Brokers (IBKR)',
+      '💵 High-Yield Cash Savings',
+      '🛡️ Off-Grid Emergency Reserve',
+      '💳 Platinum Business Card'
+    ]
+  },
+  fitness: {
+    title: 'Health, Routines & Fitness Pillars',
+    badge: '🏋️ HEALTH & VITALITY',
+    subtitle: 'Pillars for workouts, biometric tracking, and daily high-performance habits.',
+    defaultIcon: '🏋️',
+    presets: [
+      '🏋️ Heavy Hypertrophy & Powerlifting',
+      '🏃 Zone 2 Cardio & VO2 Max',
+      '🧘 Ergonomic Posture & Spinal Mobility',
+      '🥊 Combat Agility & HIIT',
+      '💧 Contrast Therapy & Cold Plunge',
+      '🥗 Nutrition & Supplementation',
+      '🧠 Deep Sleep & Recovery'
+    ]
+  }
+};
+
+let activeSegmentModalDept = 'work';
+
+function openAddSegmentTagModal(deptKey) {
+  activeSegmentModalDept = deptKey || 'work';
+  const meta = DEPARTMENT_TAG_METADATA[activeSegmentModalDept] || DEPARTMENT_TAG_METADATA.work;
+  const modal = document.getElementById('segmentTagModalBackdrop');
+  const badgeEl = document.getElementById('segmentModalDeptBadge');
+  const titleEl = document.getElementById('segmentModalTitle');
+  const subEl = document.getElementById('segmentModalSubtitle');
+  const iconInput = document.getElementById('segmentFormIcon');
+  const deptInput = document.getElementById('segmentFormDeptKey');
+  const tagInput = document.getElementById('segmentFormInput');
+  const presetsContainer = document.getElementById('segmentPresetPillsContainer');
+
+  if (badgeEl) badgeEl.textContent = meta.badge;
+  if (titleEl) titleEl.textContent = `Add Option to "${meta.title}"`;
+  if (subEl) subEl.textContent = meta.subtitle;
+  if (iconInput) iconInput.value = meta.defaultIcon;
+  if (deptInput) deptInput.value = activeSegmentModalDept;
+  if (tagInput) {
+    tagInput.value = '';
+    tagInput.placeholder = `e.g. ${meta.presets[0].replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u, '').trim()}...`;
+  }
+
+  // Render presets
+  if (presetsContainer) {
+    presetsContainer.innerHTML = meta.presets.map(p => `
+      <button type="button" class="avatar-pill" onclick="quickApplyPresetSegmentTag('${escapeHtml(p)}')">
+        ${escapeHtml(p)}
+      </button>
+    `).join('');
+  }
+
+  renderSegmentModalActiveChips();
+
+  if (modal) modal.hidden = false;
+  if (tagInput) setTimeout(() => tagInput.focus(), 50);
 }
-window.promptAddSegmentTag = promptAddSegmentTag;
+window.openAddSegmentTagModal = openAddSegmentTagModal;
+window.promptAddSegmentTag = openAddSegmentTagModal;
+
+function closeSegmentTagModal() {
+  const modal = document.getElementById('segmentTagModalBackdrop');
+  if (modal) modal.hidden = true;
+}
+window.closeSegmentTagModal = closeSegmentTagModal;
+
+function quickApplyPresetSegmentTag(presetName) {
+  if (!profileSegmentsState) profileSegmentsState = {};
+  if (!profileSegmentsState[activeSegmentModalDept]) profileSegmentsState[activeSegmentModalDept] = [];
+
+  if (profileSegmentsState[activeSegmentModalDept].includes(presetName)) {
+    showToast('This tag already exists in this category.');
+    return;
+  }
+
+  profileSegmentsState[activeSegmentModalDept].push(presetName);
+  renderProfileSegmentChips();
+  renderSegmentModalActiveChips();
+  renderDynamicCategoryDropdowns();
+  showToast(`✨ Added "${presetName}"`);
+}
+window.quickApplyPresetSegmentTag = quickApplyPresetSegmentTag;
+
+function handleSaveCustomSegmentTag(e) {
+  e.preventDefault();
+  const icon = document.getElementById('segmentFormIcon')?.value.trim() || '🏷️';
+  const tagInput = document.getElementById('segmentFormInput');
+  const rawTag = tagInput?.value.trim();
+
+  if (!rawTag) {
+    showToast('Please enter a tag name.');
+    return;
+  }
+
+  const cleanTag = rawTag.replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u, '').trim();
+  const finalTag = icon ? `${icon} ${cleanTag}` : cleanTag;
+
+  if (!profileSegmentsState) profileSegmentsState = {};
+  if (!profileSegmentsState[activeSegmentModalDept]) profileSegmentsState[activeSegmentModalDept] = [];
+
+  if (profileSegmentsState[activeSegmentModalDept].includes(finalTag)) {
+    showToast('This tag already exists in this category.');
+    return;
+  }
+
+  profileSegmentsState[activeSegmentModalDept].push(finalTag);
+  renderProfileSegmentChips();
+  renderSegmentModalActiveChips();
+  renderDynamicCategoryDropdowns();
+  showToast(`✨ Added "${finalTag}"`);
+
+  if (tagInput) {
+    tagInput.value = '';
+    tagInput.focus();
+  }
+}
+window.handleSaveCustomSegmentTag = handleSaveCustomSegmentTag;
+
+function removeSegmentTagFromModal(idx) {
+  if (profileSegmentsState && profileSegmentsState[activeSegmentModalDept]) {
+    profileSegmentsState[activeSegmentModalDept].splice(idx, 1);
+    renderProfileSegmentChips();
+    renderSegmentModalActiveChips();
+    renderDynamicCategoryDropdowns();
+  }
+}
+window.removeSegmentTagFromModal = removeSegmentTagFromModal;
+
+function renderSegmentModalActiveChips() {
+  const container = document.getElementById('segmentModalActiveChips');
+  const countEl = document.getElementById('segmentActiveTagsCount');
+  if (!container) return;
+
+  const tags = (profileSegmentsState && profileSegmentsState[activeSegmentModalDept]) || [];
+  if (countEl) countEl.textContent = `${tags.length} active tag${tags.length === 1 ? '' : 's'}`;
+
+  if (tags.length === 0) {
+    container.innerHTML = `<span style="font-size:12px; color:var(--ink-soft); font-style:italic;">No custom tags defined yet. Click any preset above or type one to add!</span>`;
+    return;
+  }
+
+  container.innerHTML = tags.map((tag, idx) => `
+    <span class="tag-chip">
+      <span>${escapeHtml(tag)}</span>
+      <button type="button" class="tag-chip-del" onclick="removeSegmentTagFromModal(${idx})" title="Remove this tag">&times;</button>
+    </span>
+  `).join('');
+}
 
 function removeProfileSegmentTag(dept, idx) {
   if (profileSegmentsState && profileSegmentsState[dept]) {
     profileSegmentsState[dept].splice(idx, 1);
     renderProfileSegmentChips();
+    if (dept === activeSegmentModalDept) {
+      renderSegmentModalActiveChips();
+    }
   }
 }
 window.removeProfileSegmentTag = removeProfileSegmentTag;
