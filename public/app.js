@@ -10663,7 +10663,7 @@ function openAddSegmentTagModal(deptKey) {
   // Render presets
   if (presetsContainer) {
     presetsContainer.innerHTML = meta.presets.map(p => `
-      <button type="button" class="avatar-pill" onclick="quickApplyPresetSegmentTag('${escapeHtml(p)}')">
+      <button type="button" class="modal-preset-pill" onclick="quickApplyPresetSegmentTag('${escapeHtml(p)}')">
         ${escapeHtml(p)}
       </button>
     `).join('');

@@ -9794,6 +9794,49 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   box-shadow: 0 8px 20px rgba(56, 189, 248, 0.35);
 }
 
+/* Modal Suggestion & Smart Preset Recommendation Pills */
+.modal-suggestion-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0 14px;
+}
+
+.modal-preset-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  width: auto;
+  height: auto;
+  max-width: 100%;
+}
+
+.modal-preset-pill:hover {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #38bdf8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(56, 189, 248, 0.28);
+}
+
+.modal-preset-pill:active {
+  transform: translateY(0) scale(0.97);
+}
+
 .profile-card-form textarea {
   min-height: 96px;
   resize: vertical;
