@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700;800&family=Oswald:wght@500;600;700&family=Pathway+Gothic+One&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="alternate icon" href="/favicon.ico" />
-<link rel="stylesheet" href="style.css?v=14.0" />
+<link rel="stylesheet" href="style.css?v=15.0" />
 </head>
 <body>
 
@@ -131,15 +131,6 @@
     </aside>
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar(true)"></div>
 
-    <!-- Dedicated Pro Sidebar Toggle (Floating on mobile/tablet & desktop collapsed) -->
-    <button type="button" class="btn-sidebar-toggle" id="btnSidebarToggle" title="Toggle Tasks &amp; Routines Sidebar (Ctrl+\)" aria-label="Toggle Tasks &amp; Routines Sidebar">
-      <div class="toggle-icon-wrap">
-        <span class="toggle-bar bar-1"></span>
-        <span class="toggle-bar bar-2"></span>
-        <span class="toggle-bar bar-3"></span>
-      </div>
-    </button>
-
     <!-- ===================================================================
          MAIN COLUMN
          =================================================================== -->
@@ -149,6 +140,15 @@
            MAIN TOP NAVIGATION & DYNAMIC 3D FLIP-CLOCK HEADER
            =================================================================== -->
       <header class="main-top-navbar" id="mainTopNavbar">
+
+        <!-- Dedicated Pro Sidebar Toggle (Aligned with Navbar Dock) -->
+        <button type="button" class="btn-sidebar-toggle" id="btnSidebarToggle" title="Toggle Tasks &amp; Routines Sidebar (Ctrl+\)" aria-label="Toggle Tasks &amp; Routines Sidebar">
+          <div class="toggle-icon-wrap">
+            <span class="toggle-bar bar-1"></span>
+            <span class="toggle-bar bar-2"></span>
+            <span class="toggle-bar bar-3"></span>
+          </div>
+        </button>
 
         <!-- MASTER LIVE STATION DOCK (When sidebar is hidden) -->
         <div class="header-flip-clock-wrap" id="headerFlipClockWrap">
@@ -3570,6 +3570,6 @@
 
   <!-- Chart.js Engine -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="app.js?v=14.0"></script>
+  <script src="app.js?v=15.0"></script>
 </body>
 </html>

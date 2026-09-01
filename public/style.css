@@ -230,9 +230,9 @@ body.sidebar-mobile-open .sidebar-backdrop {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 18px;
+  padding: 10px 18px;
   margin-bottom: 24px;
-  min-height: 54px;
+  min-height: 58px;
   box-sizing: border-box;
   background: rgba(6, 8, 13, 0.45);
   backdrop-filter: blur(20px) saturate(180%);
@@ -255,8 +255,8 @@ body.is-scrolled .main-top-navbar,
   -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
   border-bottom-color: rgba(56, 189, 248, 0.28) !important;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.12) !important;
-  padding-top: 10px !important;
-  padding-bottom: 10px !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
 }
 
 .btn-sidebar-toggle {
@@ -266,14 +266,17 @@ body.is-scrolled .main-top-navbar,
   min-width: 42px;
   min-height: 42px;
   padding: 0;
+  margin: 0;
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, rgba(20, 28, 48, 0.88) 0%, rgba(10, 14, 26, 0.92) 100%);
   border: 1px solid rgba(56, 189, 248, 0.32);
   color: #38bdf8;
   cursor: pointer;
-  display: none; /* Shown only when sidebar is collapsed on desktop, or as floating FAB on mobile */
+  display: none; /* Shown when sidebar is collapsed on desktop, or as floating FAB on mobile */
   align-items: center;
   justify-content: center;
+  align-self: center;
+  flex-shrink: 0;
   position: relative;
   overflow: hidden;
   backdrop-filter: blur(20px) saturate(190%);
@@ -360,10 +363,12 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
 .header-flip-clock-wrap {
   display: none; /* Activated when sidebar is collapsed */
   margin-left: auto;
+  align-self: center;
   perspective: 1000px;
 }
 body.sidebar-is-collapsed .header-flip-clock-wrap {
-  display: block;
+  display: flex;
+  align-items: center;
   animation: flipClockFlyIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 @keyframes flipClockFlyIn {
