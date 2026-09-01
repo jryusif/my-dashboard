@@ -8698,36 +8698,37 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
     position: fixed !important;
     bottom: 24px !important;
     left: 20px !important;
-    z-index: 990 !important;
+    top: auto !important;
+    z-index: 1200 !important;
     width: 52px !important;
     height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
     padding: 0 !important;
     border-radius: 50% !important;
-    background: rgba(14, 20, 36, 0.88) !important;
+    background: linear-gradient(135deg, rgba(20, 28, 52, 0.94) 0%, rgba(10, 14, 28, 0.98) 100%) !important;
     backdrop-filter: blur(25px) saturate(200%) !important;
     -webkit-backdrop-filter: blur(25px) saturate(200%) !important;
-    border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75), 0 0 25px rgba(56, 189, 248, 0.35) !important;
+    border: 1.5px solid rgba(56, 189, 248, 0.5) !important;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(56, 189, 248, 0.4) !important;
     color: #38bdf8 !important;
-    font-size: 22px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease !important;
   }
 
   .btn-sidebar-toggle:hover,
   .btn-sidebar-toggle:active {
     transform: scale(1.1) !important;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85), 0 0 32px rgba(56, 189, 248, 0.5) !important;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.6) !important;
   }
 
   .toggle-label-text {
-    display: none !important;
-  }
-
-  .top-nav-left {
     display: none !important;
   }
 
