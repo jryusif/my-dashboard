@@ -1628,14 +1628,21 @@ window.deleteWeeklyTemplateItem = async function(category, itemId) {
     const res = await fetch(`/api/weekly-templates/${encodeURIComponent(category)}/item/${encodeURIComponent(itemId)}`, {
       method: 'DELETE'
     });
-    if (!res.ok) throw new Error('Delete failed');
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || 'Delete failed');
+    }
     const data = await res.json();
-    loadedCategoryTemplates[category] = data.template;
-    renderCategoryTemplateHub(category, data.template);
+    if (data && data.template) {
+      loadedCategoryTemplates[category] = data.template;
+      renderCategoryTemplateHub(category, data.template);
+    } else {
+      await loadCategoryTemplate(category);
+    }
     showToast('Repeating task removed from template.');
   } catch (err) {
-    console.error(err);
-    showToast('Could not delete template item.');
+    console.error('Error deleting weekly template item:', err);
+    showToast(err.message || 'Could not delete template item.');
   }
 };
 
@@ -1645,13 +1652,16 @@ window.applyWeeklyTemplateToCurrentWeek = async function(category) {
     const res = await fetch(`/api/weekly-templates/${encodeURIComponent(category)}/apply-to-week`, {
       method: 'POST'
     });
-    if (!res.ok) throw new Error('Apply failed');
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || 'Apply failed');
+    }
     const data = await res.json();
     showToast(data.message || 'Weekly tasks generated successfully!');
     await Promise.all([loadTasks(), loadWeekDay(), loadCardBadges()]);
   } catch (err) {
-    console.error(err);
-    showToast('Could not generate weekly tasks.');
+    console.error('Error applying weekly template:', err);
+    showToast(err.message || 'Could not generate weekly tasks.');
   }
 };
 
@@ -1701,15 +1711,22 @@ if (weeklyTemplateForm) {
         });
       }
 
-      if (!res.ok) throw new Error('Failed to save template item');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Failed to save template item');
+      }
       const data = await res.json();
       weeklyTemplateModalBackdrop.hidden = true;
-      loadedCategoryTemplates[category] = data.template;
-      renderCategoryTemplateHub(category, data.template);
+      if (data && data.template) {
+        loadedCategoryTemplates[category] = data.template;
+        renderCategoryTemplateHub(category, data.template);
+      } else {
+        await loadCategoryTemplate(category);
+      }
       showToast('Weekly repeating schedule updated.');
     } catch (err) {
-      console.error(err);
-      showToast('Could not save repeating task.');
+      console.error('Error saving weekly template item:', err);
+      showToast(err.message || 'Could not save repeating task.');
     } finally {
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Repeating Item'; }
     }
