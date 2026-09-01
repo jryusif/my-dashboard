@@ -17,6 +17,14 @@ model User {
   password                String                  // Hashed with bcrypt
   name                    String?
   avatar                  String?
+  role                    String                  @default("USER") // 'ADMIN' | 'USER'
+  status                  String                  @default("PENDING") // 'PENDING' | 'APPROVED' | 'REJECTED'
+  bio                     String?                 @db.Text
+  specialty               String?
+  phone                   String?
+  approvedAt              DateTime?               @map("approved_at")
+  approvedBy              String?                 @map("approved_by")
+  lastLoginAt             DateTime?               @map("last_login_at")
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
 
@@ -37,6 +45,8 @@ model User {
   notificationPreference  NotificationPreference?
   notificationLogs        NotificationLog[]
 
+  @@index([role])
+  @@index([status])
   @@map("users")
 }
 

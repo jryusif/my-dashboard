@@ -91,6 +91,13 @@
           <button type="button" class="routine-btn analytics-quick-btn" id="sidebarAnalyticsBtn" style="grid-column: 1 / -1; background: rgba(56, 189, 248, 0.08); border-color: rgba(56, 189, 248, 0.3);">
             <span class="routine-btn-icon">📊</span> Progress &amp; Charts Hub
           </button>
+          <button type="button" class="routine-btn sidebar-profile-btn" id="sidebarProfileBtn" onclick="openProfileSection()" style="grid-column: 1 / -1; background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.3);">
+            <span class="routine-btn-icon">👤</span> My Profile &amp; Settings
+          </button>
+          <button type="button" class="routine-btn sidebar-admin-btn" id="sidebarAdminBtn" onclick="openAdminSection()" style="display: none; grid-column: 1 / -1; background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3);">
+            <span class="routine-btn-icon">👑</span> Admin Command Center
+            <span class="sidebar-admin-badge" id="sidebarAdminPendingBadge" style="display: none;">0</span>
+          </button>
         </div>
       </div>
 
@@ -172,13 +179,46 @@
 
             <div class="dock-divider"></div>
 
-            <!-- 4. User Account Capsule -->
+            <!-- 4. User Account Capsule & Dropdown -->
             <div class="dock-user-capsule" id="userAuthCapsule">
-              <button type="button" class="btn-dock-user" id="btnAuthProfile" onclick="openAuthModal('login')" title="Account / Profile">
-                <span class="user-avatar-icon">👤</span>
-                <span class="user-email-text" id="userEmailLabel">Sign In</span>
+              <!-- Admin Command Center Pill (Visible for Admins) -->
+              <button type="button" class="btn-dock-admin-pill" id="btnDockAdminQuick" style="display: none;" title="Admin Command Center" onclick="openAdminSection()">
+                <span class="admin-crown-icon">👑</span>
+                <span class="admin-pill-text">Admin Panel</span>
+                <span class="dock-admin-badge" id="dockAdminPendingBadge" style="display: none;">0</span>
               </button>
-              <button type="button" class="btn-dock-logout" id="btnAuthLogout" title="Sign Out" style="display: none;">
+
+              <button type="button" class="btn-dock-user" id="btnAuthProfile" onclick="handleUserCapsuleClick()" title="Account & Profile">
+                <span class="user-avatar-icon" id="dockUserAvatar">👤</span>
+                <span class="user-email-text" id="userEmailLabel">Sign In</span>
+                <span class="user-capsule-arrow">▾</span>
+              </button>
+              
+              <!-- Quick User Dropdown Menu -->
+              <div class="user-nav-dropdown" id="userNavDropdown" hidden>
+                <div class="dropdown-user-header">
+                  <div class="dd-avatar-wrap" id="ddAvatarWrap">👤</div>
+                  <div class="dd-user-meta">
+                    <strong id="ddUserName">User</strong>
+                    <span id="ddUserEmail">user@example.com</span>
+                    <span class="user-role-tag" id="ddUserRoleTag">USER</span>
+                  </div>
+                </div>
+                <div class="dropdown-divider"></div>
+                <button type="button" class="dropdown-item" onclick="openProfileSection()">
+                  <span>👤</span> My Profile &amp; Settings
+                </button>
+                <button type="button" class="dropdown-item admin-only-item" id="ddAdminItem" style="display: none;" onclick="openAdminSection()">
+                  <span>👑</span> Admin Control Center
+                  <span class="dd-pending-badge" id="ddPendingBadge" style="display: none;">0</span>
+                </button>
+                <div class="dropdown-divider"></div>
+                <button type="button" class="dropdown-item dd-logout-item" onclick="handleSignOut(true)">
+                  <span>🚪</span> Sign Out
+                </button>
+              </div>
+
+              <button type="button" class="btn-dock-logout" id="btnAuthLogout" onclick="handleSignOut(true)" title="Sign Out" style="display: none;">
                 <span>🚪</span>
               </button>
             </div>
@@ -751,6 +791,320 @@
         <!-- Roadmap Timeline / Phases Container -->
         <div class="roadmap-phases-container" id="roadmapPhasesContainer" aria-live="polite">
           <!-- Rendered dynamically by app.js -->
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           👤 USER PROFILE & ACCOUNT SETTINGS PAGE
+           =================================================================== -->
+      <section class="page-section profile-page-section" id="userProfileSection" hidden>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <button type="button" class="back-link" id="backToDashboardFromProfile" onclick="navigateToSection('dashboard')">&larr; Back to Dashboard</button>
+          <button type="button" class="btn-dock-admin-pill" id="profileGoToAdminBtn" style="display: none;" onclick="openAdminSection()">
+            <span>👑</span> Admin Command Center
+          </button>
+        </div>
+
+        <!-- Profile Hero Banner -->
+        <div class="profile-hero-card">
+          <div class="profile-hero-left">
+            <div class="profile-avatar-large-wrap" id="profileAvatarWrap">
+              <div class="profile-avatar-large" id="profileAvatarDisplay">👤</div>
+            </div>
+            <div class="profile-hero-info">
+              <div class="profile-hero-badge-row">
+                <span class="role-pill-badge" id="profileRoleBadge">USER</span>
+                <span class="status-pill-badge" id="profileStatusBadge">APPROVED</span>
+              </div>
+              <h1 id="profileNameDisplay">User Profile</h1>
+              <p class="profile-email" id="profileEmailDisplay">user@example.com</p>
+              <p class="profile-specialty-tag" id="profileSpecialtyDisplay">Personal Productivity Workspace</p>
+            </div>
+          </div>
+
+          <div class="profile-hero-meta">
+            <div class="profile-meta-item">
+              <span class="meta-label">Member Since</span>
+              <span class="meta-val" id="profileMemberSince">Loading...</span>
+            </div>
+            <div class="profile-meta-item">
+              <span class="meta-label">Last Sign In</span>
+              <span class="meta-val" id="profileLastLogin">Just now</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Navigation Tabs -->
+        <div class="profile-tabs" id="profileNavTabs">
+          <button type="button" class="profile-tab-btn active" data-tab="details" id="btnTabProfileDetails" onclick="switchProfileTab('details')">
+            <span>👤</span> Personal Info &amp; Bio
+          </button>
+          <button type="button" class="profile-tab-btn" data-tab="security" id="btnTabProfileSecurity" onclick="switchProfileTab('security')">
+            <span>🔐</span> Password &amp; Security
+          </button>
+          <button type="button" class="profile-tab-btn" data-tab="stats" id="btnTabProfileStats" onclick="switchProfileTab('stats')">
+            <span>📊</span> Workspace Stats
+          </button>
+        </div>
+
+        <!-- Tab 1: Personal Info & Bio Form -->
+        <div class="profile-tab-content active" id="profileTabDetails">
+          <form class="profile-card-form" id="profileDetailsForm">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label for="profileInputName">Full Name / Display Name</label>
+                <input type="text" id="profileInputName" placeholder="e.g. Dr. Mohamed Yousef" required />
+              </div>
+              <div class="form-group">
+                <label for="profileInputSpecialty">Professional Title / Specialty</label>
+                <input type="text" id="profileInputSpecialty" placeholder="e.g. Restorative &amp; Aesthetic Dentistry, Prop Trader" />
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label for="profileInputEmail">Email Address (Read-Only)</label>
+                <input type="email" id="profileInputEmail" disabled class="input-disabled" />
+              </div>
+              <div class="form-group">
+                <label for="profileInputPhone">Phone / Contact Number (Optional)</label>
+                <input type="text" id="profileInputPhone" placeholder="e.g. +20 100 123 4567" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="profileInputAvatar">Avatar Emoji or Image URL</label>
+              <div class="avatar-picker-row">
+                <input type="text" id="profileInputAvatar" placeholder="Paste image URL (https://...) or choose emoji below" />
+                <div class="avatar-preset-pills" id="avatarPresetPills">
+                  <button type="button" class="avatar-pill" onclick="setAvatarPreset('👨‍⚕️')">👨‍⚕️</button>
+                  <button type="button" class="avatar-pill" onclick="setAvatarPreset('🦷')">🦷</button>
+                  <button type="button" class="avatar-pill" onclick="setAvatarPreset('📈')">📈</button>
+                  <button type="button" class="avatar-pill" onclick="setAvatarPreset('🏋️')">🏋️</button>
+                  <button type="button" class="avatar-pill" onclick="setAvatarPreset('👑')">👑</button>
+                  <button type="button" class="avatar-pill" onclick="setAvatarPreset('⚡')">⚡</button>
+                  <button type="button" class="avatar-pill" onclick="setAvatarPreset('🎯')">🎯</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="profileInputBio">About Me / Personal Bio &amp; Goals</label>
+              <textarea id="profileInputBio" rows="3" placeholder="Write a short summary about your focus areas, career milestones, or daily mission..."></textarea>
+            </div>
+
+            <div class="profile-form-footer">
+              <button type="submit" class="btn-primary" id="btnSaveProfileDetails">
+                <span>💾</span> Save Profile Changes
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tab 2: Password & Security -->
+        <div class="profile-tab-content" id="profileTabSecurity" style="display: none;">
+          <form class="profile-card-form" id="profilePasswordForm">
+            <div class="security-info-box">
+              <span class="sec-icon">🛡️</span>
+              <div>
+                <strong>Keep Your Account Secure</strong>
+                <p>Use a strong password with at least 6 characters, combining letters and numbers.</p>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="pwdCurrent">Current Password *</label>
+              <input type="password" id="pwdCurrent" required placeholder="••••••••" autocomplete="current-password" />
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label for="pwdNew">New Password *</label>
+                <input type="password" id="pwdNew" required placeholder="At least 6 characters" minlength="6" autocomplete="new-password" />
+              </div>
+              <div class="form-group">
+                <label for="pwdConfirm">Confirm New Password *</label>
+                <input type="password" id="pwdConfirm" required placeholder="Repeat new password" minlength="6" autocomplete="new-password" />
+              </div>
+            </div>
+
+            <div class="profile-form-footer">
+              <button type="submit" class="btn-primary" id="btnChangePassword">
+                <span>🔒</span> Update Password
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tab 3: Workspace Statistics -->
+        <div class="profile-tab-content" id="profileTabStats" style="display: none;">
+          <div class="profile-stats-grid" id="profileStatsGrid">
+            <div class="profile-stat-card">
+              <div class="stat-card-icon">📋</div>
+              <div class="stat-card-val" id="profileStatTasks">0</div>
+              <div class="stat-card-label">Active &amp; Completed Tasks</div>
+            </div>
+            <div class="profile-stat-card">
+              <div class="stat-card-icon">🔄</div>
+              <div class="stat-card-val" id="profileStatRoutines">0</div>
+              <div class="stat-card-label">Daily Routines &amp; Habits</div>
+            </div>
+            <div class="profile-stat-card">
+              <div class="stat-card-icon">🦷</div>
+              <div class="stat-card-val" id="profileStatCases">0</div>
+              <div class="stat-card-label">Documented Dental Cases</div>
+            </div>
+            <div class="profile-stat-card">
+              <div class="stat-card-icon">🧭</div>
+              <div class="stat-card-val" id="profileStatMilestones">0</div>
+              <div class="stat-card-label">Life Vision Milestones</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           👑 ADMINISTRATOR CONTROL CENTER & USER ACCESS HUB
+           =================================================================== -->
+      <section class="page-section admin-section" id="adminSection" hidden>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <button type="button" class="back-link" id="backToDashboardFromAdmin" onclick="navigateToSection('dashboard')">&larr; Back to Dashboard</button>
+          <button type="button" class="btn-secondary" onclick="openProfileSection()" style="font-size: 12px; padding: 6px 14px; border-radius: 999px;">
+            <span>👤</span> My Profile &amp; Settings
+          </button>
+        </div>
+
+        <header class="page-header admin-page-header">
+          <span class="page-icon" style="--card-color: #f59e0b;">👑</span>
+          <div class="admin-header-text">
+            <p class="eyebrow">Master Control</p>
+            <h1>Admin Command Center</h1>
+            <p class="subtitle">Control user access, review signup requests, manage permissions &amp; Gmail alerts</p>
+          </div>
+          <div class="admin-header-actions">
+            <button type="button" class="btn-secondary" id="btnRefreshAdminData" onclick="loadAdminData()">
+              <span>🔄</span> Refresh
+            </button>
+          </div>
+        </header>
+
+        <!-- Admin Top KPI Scorecards -->
+        <div class="admin-kpi-grid">
+          <div class="admin-kpi-card" id="cardAdminTotalUsers">
+            <div class="kpi-icon">👥</div>
+            <div class="kpi-info">
+              <span class="kpi-label">Total Registered</span>
+              <span class="kpi-value" id="kpiTotalUsers">0</span>
+            </div>
+          </div>
+          <div class="admin-kpi-card kpi-pending-card" id="cardAdminPendingUsers">
+            <div class="kpi-icon">⏳</div>
+            <div class="kpi-info">
+              <span class="kpi-label">Pending Approval</span>
+              <span class="kpi-value text-amber" id="kpiPendingUsers">0</span>
+            </div>
+          </div>
+          <div class="admin-kpi-card" id="cardAdminApprovedUsers">
+            <div class="kpi-icon">⚡</div>
+            <div class="kpi-info">
+              <span class="kpi-label">Approved &amp; Active</span>
+              <span class="kpi-value text-emerald" id="kpiApprovedUsers">0</span>
+            </div>
+          </div>
+          <div class="admin-kpi-card" id="cardAdminAdmins">
+            <div class="kpi-icon">👑</div>
+            <div class="kpi-info">
+              <span class="kpi-label">Administrators</span>
+              <span class="kpi-value text-cyan" id="kpiAdminUsers">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- URGENT: Pending Approvals Queue Banner (Visible if pending > 0) -->
+        <div class="admin-urgent-queue" id="adminUrgentQueue" style="display: none;">
+          <div class="urgent-queue-header">
+            <div class="urgent-title-wrap">
+              <span class="urgent-pulse-dot"></span>
+              <h3>🚨 Signup Requests Awaiting Your Approval (<span id="urgentPendingCount">0</span>)</h3>
+            </div>
+            <p>The following users signed up and cannot access the website until you grant them permission:</p>
+          </div>
+          <div class="urgent-users-list" id="urgentUsersList">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Gmail Notification Status & Diagnostics Card -->
+        <div class="admin-glass-card email-diagnostics-card">
+          <div class="email-diag-left">
+            <div class="email-diag-icon" id="emailStatusIcon">📬</div>
+            <div>
+              <div class="email-status-row">
+                <strong>Gmail Notification Dispatcher:</strong>
+                <span class="email-status-badge" id="emailStatusBadge">Checking...</span>
+              </div>
+              <p class="email-status-desc" id="emailStatusDesc">
+                Sends instant emails to your Gmail inbox when someone requests to join.
+              </p>
+            </div>
+          </div>
+          <div class="email-diag-actions">
+            <button type="button" class="btn-secondary btn-sm" id="btnTestGmailSmtp" onclick="handleTestGmailSmtp()">
+              <span>✉️</span> Send Test Alert to Gmail
+            </button>
+          </div>
+        </div>
+
+        <!-- User Management Directory -->
+        <div class="admin-glass-card user-directory-card">
+          <div class="directory-header">
+            <div class="directory-title-wrap">
+              <h3>📋 User Access &amp; Membership Directory</h3>
+              <p class="subtitle">Manage roles, approval status, and workspace permissions</p>
+            </div>
+            
+            <div class="directory-controls">
+              <div class="admin-search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="adminUserSearchInput" placeholder="Search by name, email..." oninput="debounceAdminSearch()" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter Tabs -->
+          <div class="admin-filter-tabs" id="adminFilterTabs">
+            <button type="button" class="admin-filter-tab active" data-filter="ALL" onclick="setAdminFilter('ALL')">
+              All (<span id="cntFilterAll">0</span>)
+            </button>
+            <button type="button" class="admin-filter-tab filter-pending" data-filter="PENDING" onclick="setAdminFilter('PENDING')">
+              ⏳ Pending Approval (<span id="cntFilterPending">0</span>)
+            </button>
+            <button type="button" class="admin-filter-tab" data-filter="APPROVED" onclick="setAdminFilter('APPROVED')">
+              ⚡ Approved (<span id="cntFilterApproved">0</span>)
+            </button>
+            <button type="button" class="admin-filter-tab" data-filter="REJECTED" onclick="setAdminFilter('REJECTED')">
+              🚫 Rejected (<span id="cntFilterRejected">0</span>)
+            </button>
+          </div>
+
+          <!-- Users Table -->
+          <div class="admin-table-wrap">
+            <table class="admin-users-table">
+              <thead>
+                <tr>
+                  <th>User Details</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Joined Date</th>
+                  <th>Activity</th>
+                  <th style="text-align: right;">Access Controls</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTbody">
+                <!-- Dynamically rendered -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -1911,10 +2265,65 @@
     </div>
   </div>
 
+  <!-- ===================================================================
+       PENDING APPROVAL GATEKEEPER MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="pendingApprovalModalBackdrop" hidden>
+    <div class="modal pending-approval-modal" role="dialog" aria-modal="true" aria-labelledby="pendingModalTitle">
+      <div class="pending-modal-icon-wrap">
+        <span class="pending-modal-pulse-ring"></span>
+        <span class="pending-modal-icon">⏳</span>
+      </div>
+      <h2 id="pendingModalTitle">Account Awaiting Approval</h2>
+      <p class="pending-modal-sub">
+        Thank you for registering! For security and privacy, your account must be reviewed and approved by the <strong>Administrator</strong> before accessing the workspace.
+      </p>
+
+      <div class="pending-user-card">
+        <div class="pending-card-row">
+          <span class="p-label">Account Email:</span>
+          <strong class="p-val" id="pendingModalUserEmail">user@example.com</strong>
+        </div>
+        <div class="pending-card-row">
+          <span class="p-label">Access Status:</span>
+          <span class="status-pill-badge badge-pending">⏳ Pending Review</span>
+        </div>
+      </div>
+
+      <div class="pending-notice-box">
+        <span>📬</span>
+        <span>A notification has been dispatched to the Administrator via Gmail. Please check back shortly or click <strong>Check Status</strong>.</span>
+      </div>
+
+      <div class="pending-modal-actions">
+        <button type="button" class="btn-primary" id="btnCheckApprovalStatus" onclick="checkAuthSession(true)">
+          <span>🔄</span> Check Status Now
+        </button>
+        <button type="button" class="btn-secondary" id="btnPendingSignOut" onclick="handleSignOut(false); closePendingApprovalModal();">
+          <span>🚪</span> Sign Out
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       ADMIN ACTION CONFIRMATION MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="adminConfirmModalBackdrop" hidden>
+    <div class="modal admin-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="adminConfirmTitle">
+      <h2 id="adminConfirmTitle">Confirm Action</h2>
+      <p id="adminConfirmMessage">Are you sure you want to proceed?</p>
+      <div class="modal-actions" style="margin-top: 24px;">
+        <button type="button" class="btn-secondary" id="btnAdminConfirmCancel" onclick="closeAdminConfirmModal()">Cancel</button>
+        <button type="button" class="btn-primary" id="btnAdminConfirmExecute">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
 
   <!-- Chart.js Engine -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="app.js?v=8.0"></script>
+  <script src="app.js?v=11.0"></script>
 </body>
 </html>

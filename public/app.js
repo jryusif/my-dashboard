@@ -384,6 +384,10 @@ function hideAllTopLevelSections() {
   if (analyticsSec) analyticsSec.hidden = true;
   const roadmapSec = document.getElementById('roadmapSection');
   if (roadmapSec) roadmapSec.hidden = true;
+  const profileSec = document.getElementById('userProfileSection');
+  if (profileSec) profileSec.hidden = true;
+  const adminSec = document.getElementById('adminSection');
+  if (adminSec) adminSec.hidden = true;
 }
 
 function showDashboard() {
@@ -392,6 +396,46 @@ function showDashboard() {
   stopGoldPricePolling();
   currentCategoryPage = null;
 }
+
+function openProfileSection() {
+  closeUserNavDropdown();
+  hideAllTopLevelSections();
+  const profileSec = document.getElementById('userProfileSection');
+  if (profileSec) {
+    profileSec.hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    loadProfileData();
+  }
+}
+
+function openAdminSection() {
+  closeUserNavDropdown();
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    showToast('Administrator access required.');
+    return;
+  }
+  hideAllTopLevelSections();
+  const adminSec = document.getElementById('adminSection');
+  if (adminSec) {
+    adminSec.hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    loadAdminData();
+  }
+}
+
+function navigateToSection(sectionName) {
+  if (sectionName === 'dashboard') {
+    showDashboard();
+  } else if (sectionName === 'profile') {
+    openProfileSection();
+  } else if (sectionName === 'admin') {
+    openAdminSection();
+  }
+}
+
+window.openProfileSection = openProfileSection;
+window.openAdminSection = openAdminSection;
+window.navigateToSection = navigateToSection;
 
 // =============================================================================
 // TODAY'S TASKS (SIDEBAR)
@@ -7612,13 +7656,17 @@ async function deleteRoadmapMilestone(id) {
 }
 
 // =============================================================================
-// 🔐 USER AUTHENTICATION & PROFILE CONTROLLERS
+// 🔐 USER AUTHENTICATION, PROFILE & ADMIN MANAGEMENT CONTROLLERS
 // =============================================================================
 
 const userAuthCapsule = document.getElementById('userAuthCapsule');
 const btnAuthProfile = document.getElementById('btnAuthProfile');
 const btnAuthLogout = document.getElementById('btnAuthLogout');
 const userEmailLabel = document.getElementById('userEmailLabel');
+const dockUserAvatar = document.getElementById('dockUserAvatar');
+const userNavDropdown = document.getElementById('userNavDropdown');
+const btnDockAdminQuick = document.getElementById('btnDockAdminQuick');
+const dockAdminPendingBadge = document.getElementById('dockAdminPendingBadge');
 
 const authModalBackdrop = document.getElementById('authModalBackdrop');
 const btnCloseAuthModal = document.getElementById('btnCloseAuthModal');
@@ -7638,18 +7686,12 @@ const authErrorMsg = document.getElementById('authErrorMsg');
 const authSubmitBtn = document.getElementById('authSubmitBtn');
 
 let authMode = 'login'; // 'login' | 'register'
+let adminFilterState = 'ALL';
+let adminSearchQuery = '';
+let adminSearchTimer = null;
+let pendingAdminConfirmCallback = null;
 
 function initAuthEvents() {
-  if (btnAuthProfile) {
-    btnAuthProfile.addEventListener('click', () => {
-      if (!authToken) {
-        openAuthModal('login');
-      } else {
-        showToast(`Signed in as: ${currentUser?.email || 'User'}`);
-      }
-    });
-  }
-
   if (btnBannerSignIn) {
     btnBannerSignIn.addEventListener('click', () => openAuthModal('login'));
   }
@@ -7665,7 +7707,7 @@ function initAuthEvents() {
   }
 
   if (btnAuthLogout) {
-    btnAuthLogout.addEventListener('click', handleSignOut);
+    btnAuthLogout.addEventListener('click', () => handleSignOut(true));
   }
 
   if (authTabLogin) {
@@ -7680,9 +7722,47 @@ function initAuthEvents() {
     authForm.addEventListener('submit', handleAuthSubmit);
   }
 
+  // Close user dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (userNavDropdown && !userNavDropdown.hidden) {
+      if (!userAuthCapsule || !userAuthCapsule.contains(e.target)) {
+        closeUserNavDropdown();
+      }
+    }
+  });
+
+  initProfileFormEvents();
   updateUserUi();
   checkAuthSession();
 }
+
+function handleUserCapsuleClick() {
+  if (!authToken || !currentUser) {
+    openAuthModal('login');
+  } else {
+    // When logged in, open the Profile page directly
+    openProfileSection();
+  }
+}
+window.handleUserCapsuleClick = handleUserCapsuleClick;
+
+function toggleUserNavDropdown() {
+  if (!userNavDropdown) return;
+  const isHidden = userNavDropdown.hasAttribute('hidden') || userNavDropdown.style.display === 'none';
+  if (isHidden) {
+    userNavDropdown.removeAttribute('hidden');
+    userNavDropdown.style.display = 'block';
+  } else {
+    closeUserNavDropdown();
+  }
+}
+
+function closeUserNavDropdown() {
+  if (!userNavDropdown) return;
+  userNavDropdown.setAttribute('hidden', '');
+  userNavDropdown.style.display = 'none';
+}
+window.closeUserNavDropdown = closeUserNavDropdown;
 
 function setAuthMode(mode) {
   authMode = mode;
@@ -7701,15 +7781,15 @@ function setAuthMode(mode) {
     if (tabRegister) tabRegister.classList.remove('active');
     if (nameGroup) nameGroup.style.display = 'none';
     if (modalTitle) modalTitle.textContent = 'Welcome Back';
-    if (modalSub) modalSub.textContent = 'Sign in to access your Neon PostgreSQL workspace';
+    if (modalSub) modalSub.textContent = 'Sign in to access your PostgreSQL workspace';
     if (submitBtn) submitBtn.innerHTML = '<span>🚀</span> Sign In';
   } else {
     if (tabRegister) tabRegister.classList.add('active');
     if (tabLogin) tabLogin.classList.remove('active');
     if (nameGroup) nameGroup.style.display = 'flex';
-    if (modalTitle) modalTitle.textContent = 'Create Master Account';
-    if (modalSub) modalSub.textContent = 'Get your personal cloud PostgreSQL workspace';
-    if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Create Account';
+    if (modalTitle) modalTitle.textContent = 'Create Workspace Account';
+    if (modalSub) modalSub.textContent = 'Request membership to the Personal Dashboard';
+    if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Request Registration';
   }
 }
 
@@ -7738,9 +7818,30 @@ function closeAuthModal() {
   if (errorMsg) errorMsg.style.display = 'none';
 }
 
-// Expose globally so inline onclick always succeeds immediately
+function openPendingApprovalModal(email = '') {
+  const backdrop = document.getElementById('pendingApprovalModalBackdrop');
+  const userEmailLabel = document.getElementById('pendingModalUserEmail');
+  if (userEmailLabel && email) userEmailLabel.textContent = email;
+  if (backdrop) {
+    backdrop.hidden = false;
+    backdrop.removeAttribute('hidden');
+    backdrop.style.setProperty('display', 'flex', 'important');
+  }
+}
+
+function closePendingApprovalModal() {
+  const backdrop = document.getElementById('pendingApprovalModalBackdrop');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+    backdrop.style.setProperty('display', 'none', 'important');
+  }
+}
+
 window.openAuthModal = openAuthModal;
 window.closeAuthModal = closeAuthModal;
+window.openPendingApprovalModal = openPendingApprovalModal;
+window.closePendingApprovalModal = closePendingApprovalModal;
 window.setAuthMode = setAuthMode;
 
 async function handleAuthSubmit(e) {
@@ -7770,6 +7871,20 @@ async function handleAuthSubmit(e) {
     });
 
     const data = await res.json();
+
+    // Check for pending approval
+    if ((res.status === 403 && data.status === 'PENDING') || (res.status === 201 && data.pending)) {
+      closeAuthModal();
+      openPendingApprovalModal(email);
+      showToast('Registration submitted! Awaiting administrator approval.', 5000);
+      return;
+    }
+
+    if (res.status === 403 && data.status === 'REJECTED') {
+      showAuthError('Your access request has been declined or deactivated by the administrator.');
+      return;
+    }
+
     if (!res.ok) {
       showAuthError(data.error || 'Authentication failed.');
       return;
@@ -7783,20 +7898,25 @@ async function handleAuthSubmit(e) {
 
     updateUserUi();
     closeAuthModal();
-    showToast(`Welcome ${currentUser.name || currentUser.email}!`);
+    closePendingApprovalModal();
+    showToast(`Welcome back, ${currentUser.name || currentUser.email}!`);
 
-    // Reload all dashboard data for the authenticated tenant
+    // Reload all dashboard modules
     loadMeta();
     loadTasks();
     loadWeeklyProgress();
     loadWealthCard();
+
+    if (currentUser.role === 'ADMIN') {
+      fetchAdminBadgeCounts();
+    }
   } catch (err) {
     console.error('Auth submit error:', err);
     showAuthError('Network error connecting to server.');
   } finally {
     if (authSubmitBtn) {
       authSubmitBtn.disabled = false;
-      authSubmitBtn.innerHTML = authMode === 'register' ? '<span>✨</span> Create Account' : '<span>🚀</span> Sign In';
+      authSubmitBtn.innerHTML = authMode === 'register' ? '<span>✨</span> Request Registration' : '<span>🚀</span> Sign In';
     }
   }
 }
@@ -7813,26 +7933,73 @@ function handleSignOut(promptModal = true) {
   currentUser = null;
   localStorage.removeItem('antigravity_token');
   localStorage.removeItem('antigravity_user');
+  closeUserNavDropdown();
   updateUserUi();
   showToast('Signed out successfully.');
+  showDashboard();
   if (promptModal) openAuthModal('login');
 }
+window.handleSignOut = handleSignOut;
 
 function updateUserUi() {
+  const ddUserName = document.getElementById('ddUserName');
+  const ddUserEmail = document.getElementById('ddUserEmail');
+  const ddUserRoleTag = document.getElementById('ddUserRoleTag');
+  const ddAvatarWrap = document.getElementById('ddAvatarWrap');
+  const ddAdminItem = document.getElementById('ddAdminItem');
+  const sidebarAdminBtn = document.getElementById('sidebarAdminBtn');
+  const profileGoToAdminBtn = document.getElementById('profileGoToAdminBtn');
+
   if (currentUser && authToken) {
-    if (userEmailLabel) userEmailLabel.textContent = currentUser.name || currentUser.email.split('@')[0];
+    const displayName = currentUser.name || currentUser.email.split('@')[0];
+    if (userEmailLabel) userEmailLabel.textContent = displayName;
+    if (dockUserAvatar) {
+      dockUserAvatar.textContent = (currentUser.avatar && currentUser.avatar.length <= 4) ? currentUser.avatar : '👤';
+    }
     if (btnAuthLogout) btnAuthLogout.style.display = 'flex';
     if (authCalloutBanner) authCalloutBanner.style.display = 'none';
+
+    if (btnAuthProfile) {
+      btnAuthProfile.title = `${displayName} — Click to open My Profile & Settings`;
+    }
+
+    // Update Dropdown Details
+    if (ddUserName) ddUserName.textContent = displayName;
+    if (ddUserEmail) ddUserEmail.textContent = currentUser.email;
+    if (ddUserRoleTag) {
+      ddUserRoleTag.textContent = currentUser.role || 'USER';
+      ddUserRoleTag.className = currentUser.role === 'ADMIN' ? 'user-role-tag role-admin' : 'user-role-tag';
+    }
+    if (ddAvatarWrap) {
+      ddAvatarWrap.textContent = (currentUser.avatar && currentUser.avatar.length <= 4) ? currentUser.avatar : '👤';
+    }
+
+    // Admin Controls
+    const isAdmin = currentUser.role === 'ADMIN';
+    if (btnDockAdminQuick) btnDockAdminQuick.style.display = isAdmin ? 'inline-flex' : 'none';
+    if (ddAdminItem) ddAdminItem.style.display = isAdmin ? 'flex' : 'none';
+    if (sidebarAdminBtn) sidebarAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    if (profileGoToAdminBtn) profileGoToAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+    if (isAdmin) {
+      fetchAdminBadgeCounts();
+    }
   } else {
     if (userEmailLabel) userEmailLabel.textContent = 'Sign In';
+    if (dockUserAvatar) dockUserAvatar.textContent = '👤';
     if (btnAuthLogout) btnAuthLogout.style.display = 'none';
     if (authCalloutBanner) authCalloutBanner.style.display = 'flex';
+    if (btnDockAdminQuick) btnDockAdminQuick.style.display = 'none';
+    if (ddAdminItem) ddAdminItem.style.display = 'none';
+    if (sidebarAdminBtn) sidebarAdminBtn.style.display = 'none';
+    if (profileGoToAdminBtn) profileGoToAdminBtn.style.display = 'none';
+    if (btnAuthProfile) btnAuthProfile.title = 'Sign In / Account';
   }
 }
 
-async function checkAuthSession() {
+async function checkAuthSession(isManualCheck = false) {
   if (!authToken) {
-    openAuthModal('login');
+    updateUserUi();
     return;
   }
 
@@ -7840,18 +8007,615 @@ async function checkAuthSession() {
     const res = await _originalFetch('/api/auth/me', {
       headers: { 'Authorization': `Bearer ${authToken}` }
     });
+    
+    if (res.status === 403) {
+      const data = await res.json();
+      if (data.status === 'PENDING') {
+        openPendingApprovalModal(currentUser?.email || '');
+      } else {
+        handleSignOut(false);
+        showToast('Your account is not active.');
+      }
+      return;
+    }
+
     if (res.ok) {
       const data = await res.json();
       currentUser = data.user;
       localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+      closePendingApprovalModal();
       updateUserUi();
+      if (isManualCheck) {
+        showToast('🎉 Your account is approved and active!');
+        loadMeta();
+        loadTasks();
+        loadWeeklyProgress();
+        loadWealthCard();
+      }
     } else {
-      handleSignOut(true);
+      handleSignOut(false);
     }
   } catch (err) {
     console.warn('Session check warning:', err);
   }
 }
+
+// =============================================================================
+// 👤 USER PROFILE CONTROLLERS
+// =============================================================================
+
+function initProfileFormEvents() {
+  const profileDetailsForm = document.getElementById('profileDetailsForm');
+  const profilePasswordForm = document.getElementById('profilePasswordForm');
+
+  if (profileDetailsForm) {
+    profileDetailsForm.addEventListener('submit', handleSaveProfileDetails);
+  }
+
+  if (profilePasswordForm) {
+    profilePasswordForm.addEventListener('submit', handleChangePasswordSubmit);
+  }
+}
+
+async function loadProfileData() {
+  if (!authToken) return;
+
+  try {
+    const res = await fetch('/api/user/profile');
+    if (!res.ok) throw new Error('Failed to fetch profile');
+    const data = await res.json();
+    const user = data.user;
+    const stats = data.stats || {};
+
+    // Populate Hero banner
+    const profileAvatarDisplay = document.getElementById('profileAvatarDisplay');
+    const profileNameDisplay = document.getElementById('profileNameDisplay');
+    const profileEmailDisplay = document.getElementById('profileEmailDisplay');
+    const profileSpecialtyDisplay = document.getElementById('profileSpecialtyDisplay');
+    const profileRoleBadge = document.getElementById('profileRoleBadge');
+    const profileStatusBadge = document.getElementById('profileStatusBadge');
+    const profileMemberSince = document.getElementById('profileMemberSince');
+    const profileLastLogin = document.getElementById('profileLastLogin');
+
+    if (profileAvatarDisplay) {
+      profileAvatarDisplay.textContent = (user.avatar && user.avatar.length <= 4) ? user.avatar : '👤';
+    }
+    if (profileNameDisplay) profileNameDisplay.textContent = user.name || user.email.split('@')[0];
+    if (profileEmailDisplay) profileEmailDisplay.textContent = user.email;
+    if (profileSpecialtyDisplay) profileSpecialtyDisplay.textContent = user.specialty || 'Personal Productivity Workspace';
+
+    if (profileRoleBadge) {
+      profileRoleBadge.textContent = user.role;
+      profileRoleBadge.className = user.role === 'ADMIN' ? 'role-pill-badge role-admin' : 'role-pill-badge';
+    }
+    if (profileStatusBadge) {
+      profileStatusBadge.textContent = user.status;
+      profileStatusBadge.className = `status-pill-badge ${user.status === 'PENDING' ? 'badge-pending' : user.status === 'REJECTED' ? 'badge-rejected' : ''}`;
+    }
+    if (profileMemberSince) {
+      profileMemberSince.textContent = user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recent';
+    }
+    if (profileLastLogin) {
+      profileLastLogin.textContent = user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : 'Active now';
+    }
+
+    // Populate Form Inputs
+    const profileInputName = document.getElementById('profileInputName');
+    const profileInputSpecialty = document.getElementById('profileInputSpecialty');
+    const profileInputEmail = document.getElementById('profileInputEmail');
+    const profileInputPhone = document.getElementById('profileInputPhone');
+    const profileInputAvatar = document.getElementById('profileInputAvatar');
+    const profileInputBio = document.getElementById('profileInputBio');
+
+    if (profileInputName) profileInputName.value = user.name || '';
+    if (profileInputSpecialty) profileInputSpecialty.value = user.specialty || '';
+    if (profileInputEmail) profileInputEmail.value = user.email || '';
+    if (profileInputPhone) profileInputPhone.value = user.phone || '';
+    if (profileInputAvatar) profileInputAvatar.value = user.avatar || '';
+    if (profileInputBio) profileInputBio.value = user.bio || '';
+
+    // Populate Stats
+    const profileStatTasks = document.getElementById('profileStatTasks');
+    const profileStatRoutines = document.getElementById('profileStatRoutines');
+    const profileStatCases = document.getElementById('profileStatCases');
+    const profileStatMilestones = document.getElementById('profileStatMilestones');
+
+    if (profileStatTasks) profileStatTasks.textContent = `${stats.completedTasksCount || 0} / ${stats.tasksCount || 0}`;
+    if (profileStatRoutines) profileStatRoutines.textContent = stats.routinesCount || 0;
+    if (profileStatCases) profileStatCases.textContent = stats.dentalCasesCount || 0;
+    if (profileStatMilestones) profileStatMilestones.textContent = stats.milestonesCount || 0;
+  } catch (err) {
+    console.error('Error loading profile:', err);
+    showToast('Could not load profile details.');
+  }
+}
+
+function switchProfileTab(tabName) {
+  const tabs = ['details', 'security', 'stats'];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`btnTabProfile${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    const content = document.getElementById(`profileTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    if (btn) btn.classList.toggle('active', t === tabName);
+    if (content) {
+      if (t === tabName) {
+        content.removeAttribute('hidden');
+        content.style.display = 'block';
+      } else {
+        content.setAttribute('hidden', '');
+        content.style.display = 'none';
+      }
+    }
+  });
+}
+window.switchProfileTab = switchProfileTab;
+
+function setAvatarPreset(emoji) {
+  const profileInputAvatar = document.getElementById('profileInputAvatar');
+  const profileAvatarDisplay = document.getElementById('profileAvatarDisplay');
+  if (profileInputAvatar) profileInputAvatar.value = emoji;
+  if (profileAvatarDisplay) profileAvatarDisplay.textContent = emoji;
+}
+window.setAvatarPreset = setAvatarPreset;
+
+async function handleSaveProfileDetails(e) {
+  e.preventDefault();
+  const name = document.getElementById('profileInputName')?.value.trim();
+  const specialty = document.getElementById('profileInputSpecialty')?.value.trim();
+  const phone = document.getElementById('profileInputPhone')?.value.trim();
+  const avatar = document.getElementById('profileInputAvatar')?.value.trim();
+  const bio = document.getElementById('profileInputBio')?.value.trim();
+
+  const saveBtn = document.getElementById('btnSaveProfileDetails');
+
+  try {
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span>⏳</span> Saving...';
+    }
+
+    const res = await fetch('/api/user/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, specialty, phone, avatar, bio })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update profile');
+
+    currentUser = { ...currentUser, ...data.user };
+    localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+    updateUserUi();
+    loadProfileData();
+    showToast('✨ Profile updated successfully!');
+  } catch (err) {
+    console.error('Error saving profile:', err);
+    showToast(err.message || 'Failed to save profile changes.');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<span>💾</span> Save Profile Changes';
+    }
+  }
+}
+
+async function handleChangePasswordSubmit(e) {
+  e.preventDefault();
+  const currentPassword = document.getElementById('pwdCurrent')?.value;
+  const newPassword = document.getElementById('pwdNew')?.value;
+  const confirmPassword = document.getElementById('pwdConfirm')?.value;
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    showToast('Please fill in all password fields.');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    showToast('New passwords do not match.');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    showToast('New password must be at least 6 characters.');
+    return;
+  }
+
+  const changeBtn = document.getElementById('btnChangePassword');
+
+  try {
+    if (changeBtn) {
+      changeBtn.disabled = true;
+      changeBtn.innerHTML = '<span>⏳</span> Updating...';
+    }
+
+    const res = await fetch('/api/user/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to change password');
+
+    // Reset password fields
+    document.getElementById('pwdCurrent').value = '';
+    document.getElementById('pwdNew').value = '';
+    document.getElementById('pwdConfirm').value = '';
+
+    showToast('🔒 Password changed successfully!');
+  } catch (err) {
+    console.error('Error changing password:', err);
+    showToast(err.message || 'Failed to change password.');
+  } finally {
+    if (changeBtn) {
+      changeBtn.disabled = false;
+      changeBtn.innerHTML = '<span>🔒</span> Update Password';
+    }
+  }
+}
+
+// =============================================================================
+// 👑 ADMINISTRATOR COMMAND CENTER CONTROLLERS
+// =============================================================================
+
+async function fetchAdminBadgeCounts() {
+  if (!authToken || currentUser?.role !== 'ADMIN') return;
+  try {
+    const res = await fetch('/api/admin/users?status=ALL');
+    if (!res.ok) return;
+    const data = await res.json();
+    const pending = data.stats?.pendingUsers || 0;
+
+    const badges = [dockAdminPendingBadge, document.getElementById('ddPendingBadge'), document.getElementById('sidebarAdminPendingBadge')];
+    badges.forEach(b => {
+      if (b) {
+        b.textContent = pending;
+        b.style.display = pending > 0 ? 'inline-block' : 'none';
+      }
+    });
+  } catch (err) {
+    console.warn('Could not fetch admin pending badge count:', err);
+  }
+}
+
+async function loadAdminData() {
+  if (!authToken || currentUser?.role !== 'ADMIN') return;
+
+  const tbody = document.getElementById('adminUsersTbody');
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 28px; color: var(--ink-soft);">⏳ Loading user directory...</td></tr>`;
+  }
+
+  try {
+    const url = `/api/admin/users?status=${adminFilterState}&q=${encodeURIComponent(adminSearchQuery)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to load users');
+    const data = await res.json();
+
+    const users = data.users || [];
+    const stats = data.stats || {};
+
+    // Update KPI Scorecards
+    const kpiTotal = document.getElementById('kpiTotalUsers');
+    const kpiPending = document.getElementById('kpiPendingUsers');
+    const kpiApproved = document.getElementById('kpiApprovedUsers');
+    const kpiAdmin = document.getElementById('kpiAdminUsers');
+
+    if (kpiTotal) kpiTotal.textContent = stats.totalUsers || 0;
+    if (kpiPending) kpiPending.textContent = stats.pendingUsers || 0;
+    if (kpiApproved) kpiApproved.textContent = stats.approvedUsers || 0;
+    if (kpiAdmin) kpiAdmin.textContent = stats.adminUsers || 0;
+
+    // Update Filter Tab Counters
+    const cntAll = document.getElementById('cntFilterAll');
+    const cntPending = document.getElementById('cntFilterPending');
+    const cntApproved = document.getElementById('cntFilterApproved');
+    const cntRejected = document.getElementById('cntFilterRejected');
+
+    if (cntAll) cntAll.textContent = stats.totalUsers || 0;
+    if (cntPending) cntPending.textContent = stats.pendingUsers || 0;
+    if (cntApproved) cntApproved.textContent = stats.approvedUsers || 0;
+    if (cntRejected) cntRejected.textContent = (stats.totalUsers || 0) - (stats.pendingUsers || 0) - (stats.approvedUsers || 0);
+
+    // Update Badges
+    const pendingCount = stats.pendingUsers || 0;
+    const urgentQueue = document.getElementById('adminUrgentQueue');
+    const urgentCount = document.getElementById('urgentPendingCount');
+    const urgentList = document.getElementById('urgentUsersList');
+
+    if (dockAdminPendingBadge) {
+      dockAdminPendingBadge.textContent = pendingCount;
+      dockAdminPendingBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+    }
+
+    // Render Urgent Queue
+    const pendingUsers = users.filter(u => u.status === 'PENDING');
+    if (urgentQueue && urgentCount && urgentList) {
+      if (pendingUsers.length > 0) {
+        urgentQueue.style.display = 'block';
+        urgentCount.textContent = pendingUsers.length;
+        urgentList.innerHTML = pendingUsers.map(u => `
+          <div class="urgent-user-row">
+            <div class="urgent-user-info">
+              <span class="urgent-user-avatar">${(u.avatar && u.avatar.length <= 4) ? u.avatar : '👤'}</span>
+              <div class="urgent-user-meta">
+                <strong>${escapeHtml(u.name || u.email)}</strong>
+                <span>${escapeHtml(u.email)} &bull; ${u.specialty ? escapeHtml(u.specialty) + ' &bull; ' : ''}Joined ${fmtDateFull(u.createdAt ? u.createdAt.split('T')[0] : '')}</span>
+              </div>
+            </div>
+            <div class="urgent-user-actions">
+              <button type="button" class="btn-approve-instant" onclick="handleApproveUser('${u.id}')">
+                <span>✅</span> Approve Access
+              </button>
+              <button type="button" class="btn-decline-instant" onclick="handleRejectUser('${u.id}')">
+                <span>❌</span> Decline
+              </button>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        urgentQueue.style.display = 'none';
+      }
+    }
+
+    // Gmail Diagnostic Status
+    const emailStatusBadge = document.getElementById('emailStatusBadge');
+    const emailStatusDesc = document.getElementById('emailStatusDesc');
+    const emailStatusIcon = document.getElementById('emailStatusIcon');
+
+    if (emailStatusBadge && emailStatusDesc) {
+      if (stats.emailConfigured) {
+        emailStatusBadge.textContent = `Connected (${stats.adminEmail || 'Gmail'})`;
+        emailStatusBadge.className = 'email-status-badge status-connected';
+        emailStatusDesc.textContent = `Live alerts are sent to ${stats.adminEmail} upon every signup request.`;
+        if (emailStatusIcon) emailStatusIcon.textContent = '📬';
+      } else {
+        emailStatusBadge.textContent = 'Not Configured in .env';
+        emailStatusBadge.className = 'email-status-badge status-warning';
+        emailStatusDesc.textContent = 'Add GMAIL_USER & GMAIL_APP_PASSWORD to .env to receive instant Gmail notifications.';
+        if (emailStatusIcon) emailStatusIcon.textContent = '⚠️';
+      }
+    }
+
+    // Render Users Table
+    if (tbody) {
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 32px; color: var(--ink-soft);">No users matching filter criteria.</td></tr>`;
+      } else {
+        tbody.innerHTML = users.map(u => {
+          const isCurrentUser = currentUser && currentUser.id === u.id;
+          const statusClass = u.status === 'APPROVED' ? 'status-pill-badge' : u.status === 'PENDING' ? 'status-pill-badge badge-pending' : 'status-pill-badge badge-rejected';
+          const roleClass = u.role === 'ADMIN' ? 'role-pill-badge role-admin' : 'role-pill-badge';
+          const activityCount = (u._count?.tasks || 0) + (u._count?.dentalCases || 0) + (u._count?.routines || 0) + (u._count?.roadmapMilestones || 0);
+
+          return `
+            <tr>
+              <td>
+                <div class="table-user-cell">
+                  <div class="table-user-avatar">${(u.avatar && u.avatar.length <= 4) ? u.avatar : '👤'}</div>
+                  <div class="table-user-details">
+                    <strong>${escapeHtml(u.name || u.email)} ${isCurrentUser ? '<span style="color:#38bdf8; font-size:11px;">(You)</span>' : ''}</strong>
+                    <span>${escapeHtml(u.email)} ${u.specialty ? '&bull; ' + escapeHtml(u.specialty) : ''}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="${roleClass}">${u.role}</span>
+              </td>
+              <td>
+                <span class="${statusClass}">${u.status}</span>
+              </td>
+              <td>
+                <span style="font-size:12px; color:var(--ink-soft);">${u.createdAt ? new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+              </td>
+              <td>
+                <span style="font-size:12px; font-weight:600; color:#fff;">${activityCount} items</span>
+              </td>
+              <td style="text-align: right;">
+                <div style="display: inline-flex; gap: 6px; justify-content: flex-end;">
+                  ${u.status !== 'APPROVED' ? `
+                    <button type="button" class="btn-table-action" style="background:rgba(16,185,129,0.2); color:#4ade80; border-color:rgba(16,185,129,0.4);" onclick="handleApproveUser('${u.id}')" title="Grant Workspace Access">
+                      ✅ Approve
+                    </button>
+                  ` : `
+                    ${!isCurrentUser ? `
+                      <button type="button" class="btn-table-action" style="background:rgba(245,158,11,0.15); color:#fbbf24; border-color:rgba(245,158,11,0.3);" onclick="handleRejectUser('${u.id}')" title="Revoke / Suspend Access">
+                        🚫 Suspend
+                      </button>
+                    ` : ''}
+                  `}
+
+                  ${!isCurrentUser ? `
+                    <button type="button" class="btn-table-action" onclick="handleToggleAdmin('${u.id}', '${u.role}')" title="Toggle Admin Role">
+                      ${u.role === 'ADMIN' ? 'Demote to User' : '👑 Make Admin'}
+                    </button>
+                    <button type="button" class="btn-table-action btn-action-del" onclick="handleDeleteUser('${u.id}', '${escapeHtml(u.email)}')" title="Delete User">
+                      🗑️
+                    </button>
+                  ` : ''}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+  } catch (err) {
+    console.error('Error loading admin data:', err);
+    showToast('Failed to load user directory.');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 28px; color: #f87171;">⚠️ Could not fetch users: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+}
+window.loadAdminData = loadAdminData;
+
+function setAdminFilter(filter) {
+  adminFilterState = filter;
+  const tabs = document.querySelectorAll('.admin-filter-tab');
+  tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-filter') === filter));
+  loadAdminData();
+}
+window.setAdminFilter = setAdminFilter;
+
+function debounceAdminSearch() {
+  clearTimeout(adminSearchTimer);
+  adminSearchTimer = setTimeout(() => {
+    const input = document.getElementById('adminUserSearchInput');
+    adminSearchQuery = input ? input.value.trim() : '';
+    loadAdminData();
+  }, 250);
+}
+window.debounceAdminSearch = debounceAdminSearch;
+
+async function handleApproveUser(userId) {
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'APPROVED' })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to approve user');
+    showToast('🎉 User approved successfully!');
+    loadAdminData();
+  } catch (err) {
+    console.error('Approve error:', err);
+    showToast(err.message || 'Could not approve user.');
+  }
+}
+window.handleApproveUser = handleApproveUser;
+
+async function handleRejectUser(userId) {
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'REJECTED' })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update user');
+    showToast('User access deactivated.');
+    loadAdminData();
+  } catch (err) {
+    console.error('Reject error:', err);
+    showToast(err.message || 'Could not update user.');
+  }
+}
+window.handleRejectUser = handleRejectUser;
+
+async function handleToggleAdmin(userId, currentRole) {
+  const newRole = currentRole === 'ADMIN' ? 'USER' : 'ADMIN';
+  const confirmMsg = newRole === 'ADMIN' 
+    ? 'Promote this user to Administrator? They will have full access to manage all users and settings.'
+    : 'Demote this user to standard User?';
+
+  openAdminConfirmModal('Update User Role', confirmMsg, async () => {
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update role');
+      showToast(`User role updated to ${newRole}!`);
+      loadAdminData();
+    } catch (err) {
+      console.error('Role update error:', err);
+      showToast(err.message || 'Could not update role.');
+    }
+  });
+}
+window.handleToggleAdmin = handleToggleAdmin;
+
+async function handleDeleteUser(userId, userEmail) {
+  openAdminConfirmModal(
+    'Delete User Account',
+    `Are you sure you want to permanently delete ${userEmail} and all their associated workspace data? This cannot be undone.`,
+    async () => {
+      try {
+        const res = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to delete user');
+        showToast('User permanently deleted.');
+        loadAdminData();
+      } catch (err) {
+        console.error('Delete user error:', err);
+        showToast(err.message || 'Could not delete user.');
+      }
+    }
+  );
+}
+window.handleDeleteUser = handleDeleteUser;
+
+async function handleTestGmailSmtp() {
+  const testBtn = document.getElementById('btnTestGmailSmtp');
+  try {
+    if (testBtn) {
+      testBtn.disabled = true;
+      testBtn.innerHTML = '<span>⏳</span> Dispatching Test Email...';
+    }
+    const res = await fetch('/api/admin/test-email', { method: 'POST' });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(`⚠️ Gmail SMTP Test Failed:\n\n${data.error}\n\nCheck your .env file: make sure GMAIL_USER and a 16-character GMAIL_APP_PASSWORD are set.`);
+      return;
+    }
+
+    showToast(`✅ ${data.message}`, 5000);
+    alert(`✅ Success!\n\n${data.message}\n\nPlease check your inbox/spam folder.`);
+  } catch (err) {
+    console.error('Test SMTP error:', err);
+    showToast('Failed to test SMTP connection.');
+  } finally {
+    if (testBtn) {
+      testBtn.disabled = false;
+      testBtn.innerHTML = '<span>✉️</span> Send Test Alert to Gmail';
+    }
+  }
+}
+window.handleTestGmailSmtp = handleTestGmailSmtp;
+
+function openAdminConfirmModal(title, message, onConfirm) {
+  const backdrop = document.getElementById('adminConfirmModalBackdrop');
+  const titleEl = document.getElementById('adminConfirmTitle');
+  const msgEl = document.getElementById('adminConfirmMessage');
+  const execBtn = document.getElementById('btnAdminConfirmExecute');
+
+  if (titleEl) titleEl.textContent = title;
+  if (msgEl) msgEl.textContent = message;
+  pendingAdminConfirmCallback = onConfirm;
+
+  if (execBtn) {
+    execBtn.onclick = () => {
+      closeAdminConfirmModal();
+      if (typeof pendingAdminConfirmCallback === 'function') {
+        pendingAdminConfirmCallback();
+      }
+    };
+  }
+
+  if (backdrop) {
+    backdrop.hidden = false;
+    backdrop.removeAttribute('hidden');
+    backdrop.style.setProperty('display', 'flex', 'important');
+  }
+}
+window.openAdminConfirmModal = openAdminConfirmModal;
+
+function closeAdminConfirmModal() {
+  const backdrop = document.getElementById('adminConfirmModalBackdrop');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+    backdrop.style.setProperty('display', 'none', 'important');
+  }
+  pendingAdminConfirmCallback = null;
+}
+window.closeAdminConfirmModal = closeAdminConfirmModal;
 
 // =============================================================================
 // INIT
@@ -7865,3 +8629,4 @@ loadWeeklyProgress();
 initWeekTabs();
 loadWealthCard();
 initRoadmapEvents();
+
