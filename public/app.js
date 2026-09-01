@@ -9203,6 +9203,7 @@ function setPageAuthMode(mode) {
   const tabRegister = document.getElementById('btnPageTabRegister');
   const nameGroup = document.getElementById('pageAuthNameGroup');
   const personaGroup = document.getElementById('pageAuthPersonaGroup');
+  const specialtyGroup = document.getElementById('pageAuthSpecialtyGroup');
   const submitBtn = document.getElementById('btnPageAuthSubmit');
   const errorMsg = document.getElementById('pageAuthErrorMsg');
   const extraRow = document.getElementById('pageAuthExtraRow');
@@ -9216,6 +9217,7 @@ function setPageAuthMode(mode) {
     if (subtitleEl) subtitleEl.textContent = 'Join your private cloud productivity operating system';
     if (nameGroup) nameGroup.style.display = 'block';
     if (personaGroup) personaGroup.style.display = 'block';
+    if (specialtyGroup) specialtyGroup.style.display = 'block';
     if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Create Workspace Account';
     if (extraRow) extraRow.style.display = 'none';
   } else {
@@ -9225,6 +9227,7 @@ function setPageAuthMode(mode) {
     if (subtitleEl) subtitleEl.textContent = 'Sign in to your private productivity workspace';
     if (nameGroup) nameGroup.style.display = 'none';
     if (personaGroup) personaGroup.style.display = 'none';
+    if (specialtyGroup) specialtyGroup.style.display = 'none';
     if (submitBtn) submitBtn.innerHTML = '<span>🚀</span> Sign In to Workspace';
     if (extraRow) extraRow.style.display = 'flex';
   }
@@ -9402,6 +9405,7 @@ async function handlePageAuthSubmit(e) {
   const password = document.getElementById('pageAuthPasswordInput')?.value;
   const name = document.getElementById('pageAuthNameInput')?.value.trim();
   const persona = document.getElementById('pageAuthPersonaSelect')?.value || 'DOCTOR';
+  const specialty = document.getElementById('pageAuthSpecialtyInput')?.value.trim() || '';
   const submitBtn = document.getElementById('btnPageAuthSubmit');
 
   if (!email || !password) {
@@ -9414,7 +9418,7 @@ async function handlePageAuthSubmit(e) {
 
   const endpoint = pageAuthMode === 'register' ? '/api/auth/register' : '/api/auth/login';
   const payload = pageAuthMode === 'register' 
-    ? { email, password, name, persona } 
+    ? { email, password, name, persona, specialty } 
     : { email, password };
 
   try {

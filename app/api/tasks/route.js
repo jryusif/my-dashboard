@@ -10,8 +10,7 @@ async function resolveUserAndPerms(req) {
     });
     return user;
   }
-  const defaultUser = await prisma.user.findFirst({ where: { email: 'jryusiif@gmail.com' } });
-  return defaultUser ? { id: defaultUser.id, role: defaultUser.role, dentalApproved: defaultUser.dentalApproved, tradingApproved: defaultUser.tradingApproved } : null;
+  return null;
 }
 
 export async function GET(req) {

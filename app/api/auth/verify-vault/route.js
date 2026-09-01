@@ -7,7 +7,7 @@ async function resolveUser(req) {
   if (auth && auth.authenticated && auth.userId) {
     return await prisma.user.findUnique({ where: { id: auth.userId } });
   }
-  return await prisma.user.findFirst({ where: { email: 'jryusif@dashboard.com' } });
+  return null;
 }
 
 export async function POST(req) {

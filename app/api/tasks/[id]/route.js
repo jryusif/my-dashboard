@@ -4,8 +4,7 @@ import { getAuthUser, errorResponse, successResponse } from '@/lib/auth.js';
 async function resolveUserId(req) {
   const auth = getAuthUser(req);
   if (auth && auth.authenticated && auth.userId) return auth.userId;
-  const user = await prisma.user.findFirst({ where: { email: 'jryusif@dashboard.com' } });
-  return user ? user.id : null;
+  return null;
 }
 
 export async function PATCH(req, { params }) {

@@ -5,8 +5,8 @@ import prisma from '@/lib/prisma.js';
 async function resolveUserId(req) {
   const auth = getAuthUser(req);
   if (auth && auth.authenticated && auth.userId) return auth.userId;
-  const user = await prisma.user.findFirst({ where: { email: 'jryusif@dashboard.com' } });
-  return user ? user.id : null;
+  
+  return null;
 }
 
 const DEFAULT_CATEGORY_TEMPLATES = {
