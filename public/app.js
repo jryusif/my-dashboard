@@ -1465,6 +1465,13 @@ function renderWorkoutsView() {
   }
 }
 
+function getDayDisplayName(d) {
+  if (!d) return 'Day';
+  const val = d.dayName || d.name || d.id || '';
+  if (!val) return 'Day';
+  return val.charAt(0).toUpperCase() + val.slice(1);
+}
+
 function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, todayCompleted) {
   const { days } = workoutProgramData;
   const isSelectedToday = currentDay.id === todayDayId;
@@ -1480,7 +1487,7 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
           const exCount = d.isRestDay ? 'Rest' : `${d.exercises ? d.exercises.length : 0} ex`;
           return `
             <button type="button" class="workout-day-tab ${isActive ? 'is-active' : ''} ${isToday ? 'is-today' : ''}" data-day-id="${d.id}">
-              <span class="w-day-name">${d.dayName}</span>
+              <span class="w-day-name">${getDayDisplayName(d)}</span>
               <span class="w-day-badge">${exCount}</span>
             </button>
           `;
@@ -1491,7 +1498,7 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
       <div class="workout-day-header-card">
         <div>
           <div class="w-day-title-row">
-            <h2 class="w-day-title">${currentDay.dayName} &middot; ${escapeHtml(currentDay.title)}</h2>
+            <h2 class="w-day-title">${getDayDisplayName(currentDay)} &middot; ${escapeHtml(currentDay.title || '')}</h2>
             ${isSelectedToday ? '<span class="asset-type-badge" style="background:var(--workouts);color:#0A1A12;">TODAY</span>' : ''}
             ${currentDay.isRestDay ? '<span class="asset-type-badge">REST DAY</span>' : ''}
           </div>
@@ -1530,7 +1537,7 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
         ` : (dayExercises.length === 0 ? `
           <div class="empty-state" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px 20px;">
             <span class="glyph">🏋️</span>
-            <h2>No exercises for ${currentDay.dayName}</h2>
+            <h2>No exercises for ${getDayDisplayName(currentDay)}</h2>
             <p>Click <strong>+ Add Exercise</strong> above to build your workout.</p>
           </div>
         ` : dayExercises.map((ex, idx) => renderExerciseCard(ex, isSelectedToday, todayCompleted, idx, dayExercises.length, currentDay.id)).join(''))}
@@ -2135,7 +2142,7 @@ if (editDayModalBackdrop) {
 }
 
 function openEditDayModal(day) {
-  document.getElementById('editDayModalTitle').textContent = `Edit ${day.dayName} Workout`;
+  document.getElementById('editDayModalTitle').textContent = `Edit ${getDayDisplayName(day)} Workout`;
   document.getElementById('editDayId').value = day.id;
   document.getElementById('editDayTitle').value = day.title || '';
   document.getElementById('editDayMuscles').value = (day.targetMuscles || []).join(', ');

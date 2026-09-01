@@ -30,28 +30,34 @@ export async function GET(req) {
   }
 
   const defaultSchedule = [
-    { id: 'saturday', name: 'Saturday', title: 'Chest & Triceps — Push A', isRestDay: false },
-    { id: 'sunday', name: 'Sunday', title: 'Back & Biceps — Pull A', isRestDay: false },
-    { id: 'monday', name: 'Monday', title: 'Legs & Core — Legs A', isRestDay: false },
-    { id: 'tuesday', name: 'Tuesday', title: 'Rest & Active Recovery', isRestDay: true },
-    { id: 'wednesday', name: 'Wednesday', title: 'Shoulders & Arms — Upper Focus', isRestDay: false },
-    { id: 'thursday', name: 'Thursday', title: 'Legs & Posterior Chain — Legs B', isRestDay: false },
-    { id: 'friday', name: 'Friday', title: 'Full Body Conditioning & Core', isRestDay: false }
+    { id: 'saturday', name: 'Saturday', dayName: 'Saturday', title: 'Chest & Triceps — Push A', isRestDay: false },
+    { id: 'sunday', name: 'Sunday', dayName: 'Sunday', title: 'Back & Biceps — Pull A', isRestDay: false },
+    { id: 'monday', name: 'Monday', dayName: 'Monday', title: 'Legs & Core — Legs A', isRestDay: false },
+    { id: 'tuesday', name: 'Tuesday', dayName: 'Tuesday', title: 'Rest & Active Recovery', isRestDay: true },
+    { id: 'wednesday', name: 'Wednesday', dayName: 'Wednesday', title: 'Shoulders & Arms — Upper Focus', isRestDay: false },
+    { id: 'thursday', name: 'Thursday', dayName: 'Thursday', title: 'Legs & Posterior Chain — Legs B', isRestDay: false },
+    { id: 'friday', name: 'Friday', dayName: 'Friday', title: 'Full Body Conditioning & Core', isRestDay: false }
   ];
 
   const days = defaultSchedule.map(d => {
-    const splitMatch = splits.find(s => s.dayName.toLowerCase() === d.name.toLowerCase());
+    const splitMatch = splits.find(s => (s.dayName || '').toLowerCase() === d.name.toLowerCase());
     const dayExercises = exercises
-      .filter(e => e.dayName.toLowerCase() === d.name.toLowerCase())
+      .filter(e => (e.dayName || '').toLowerCase() === d.name.toLowerCase())
       .map(e => {
-        const lastLog = weightLogs.find(l => l.exerciseName.toLowerCase() === e.name.toLowerCase());
+        const lastLog = weightLogs.find(l => (l.exerciseName || '').toLowerCase() === (e.name || '').toLowerCase());
         return {
           id: e.id,
           name: e.name,
+          muscleGroup: e.muscleGroup || 'General',
           sets: e.targetSets || 3,
           reps: e.targetReps || '8-12',
           targetSets: e.targetSets || 3,
           targetReps: e.targetReps || '8-12',
+          weight: e.weight || (lastLog ? `${lastLog.weightKg} kg` : ''),
+          restTime: e.restTime || '90s',
+          notes: e.notes || '',
+          imageUrl: e.imageUrl || '',
+          videoUrl: e.videoUrl || '',
           lastWeight: lastLog ? `${lastLog.weightKg} kg` : '--',
           isCompleted: false
         };
@@ -60,8 +66,10 @@ export async function GET(req) {
     return {
       id: d.id,
       name: d.name,
+      dayName: d.name,
       title: splitMatch ? `${splitMatch.muscleGroup}` : d.title,
-      isRestDay: d.isRestDay,
+      targetMuscles: splitMatch?.muscleGroup ? [splitMatch.muscleGroup] : (d.title.split('—')[0]?.split('&').map(s => s.trim()) || []),
+      isRestDay: splitMatch ? splitMatch.isRestDay : d.isRestDay,
       exercises: dayExercises
     };
   });
