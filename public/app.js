@@ -452,13 +452,9 @@ function showDashboard() {
 
 function showAuthPage(mode = 'login') {
   closeUserNavDropdown();
-  hideAllTopLevelSections();
-  const authPageSec = document.getElementById('authPageSection');
-  if (authPageSec) {
-    authPageSec.hidden = false;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setPageAuthMode(mode);
-  }
+  document.documentElement.classList.add('is-unauthenticated');
+  document.body.classList.add('is-unauthenticated');
+  setGatewayAuthMode(mode);
 }
 
 function openProfileSection() {
@@ -9605,29 +9601,12 @@ function setAuthMode(mode) {
 window.setAuthMode = setAuthMode;
 
 function openAuthModal(mode = 'login') {
-  setAuthMode(mode);
-  const backdrop = document.getElementById('authModalBackdrop');
-  const emailInput = document.getElementById('authEmailInput');
-  if (backdrop) {
-    backdrop.hidden = false;
-    backdrop.removeAttribute('hidden');
-    backdrop.style.setProperty('display', 'flex', 'important');
-  }
-  if (emailInput) {
-    setTimeout(() => emailInput.focus(), 100);
-  }
+  showAuthPage(mode);
 }
 window.openAuthModal = openAuthModal;
 
 function closeAuthModal() {
-  const backdrop = document.getElementById('authModalBackdrop');
-  const errorMsg = document.getElementById('authErrorMsg');
-  if (backdrop) {
-    backdrop.hidden = true;
-    backdrop.setAttribute('hidden', '');
-    backdrop.style.setProperty('display', 'none', 'important');
-  }
-  if (errorMsg) errorMsg.style.display = 'none';
+  // Sovereign gateway is full-page privacy shield
 }
 window.closeAuthModal = closeAuthModal;
 
@@ -9753,30 +9732,48 @@ function updateUserUi() {
 }
 window.updateUserUi = updateUserUi;
 
+let gatewayAuthMode = 'login';
+
 function setGatewayAuthMode(mode) {
+  gatewayAuthMode = mode;
   const tabLogin = document.getElementById('gatewayTabLogin');
   const tabRegister = document.getElementById('gatewayTabRegister');
   const nameGroup = document.getElementById('gatewayNameGroup');
+  const personaGroup = document.getElementById('gatewayPersonaGroup');
+  const specialtyGroup = document.getElementById('gatewaySpecialtyGroup');
+  const extraRow = document.getElementById('gatewayExtraRow');
   const title = document.getElementById('gatewayTitle');
   const sub = document.getElementById('gatewaySubtitle');
   const submitBtn = document.getElementById('gatewaySubmitBtn');
   const errEl = document.getElementById('gatewayErrorMsg');
+  const pwdStrength = document.getElementById('pwdStrengthContainer');
+
   if (errEl) errEl.style.display = 'none';
 
   if (mode === 'login') {
     if (tabLogin) tabLogin.classList.add('active');
     if (tabRegister) tabRegister.classList.remove('active');
     if (nameGroup) nameGroup.style.display = 'none';
-    if (title) title.textContent = 'Sign In to Workspace';
-    if (sub) sub.textContent = 'Private biometric personal operating system & financial vault';
+    if (personaGroup) personaGroup.style.display = 'none';
+    if (specialtyGroup) specialtyGroup.style.display = 'none';
+    if (extraRow) extraRow.style.display = 'flex';
+    if (title) title.textContent = 'Welcome Back';
+    if (sub) sub.textContent = 'Sign in to your private productivity workspace';
     if (submitBtn) submitBtn.innerHTML = '<span>🚀</span> Sign In to Workspace';
+    if (pwdStrength) pwdStrength.style.display = 'none';
   } else {
     if (tabRegister) tabRegister.classList.add('active');
     if (tabLogin) tabLogin.classList.remove('active');
     if (nameGroup) nameGroup.style.display = 'block';
+    if (personaGroup) personaGroup.style.display = 'block';
+    if (specialtyGroup) specialtyGroup.style.display = 'block';
+    if (extraRow) extraRow.style.display = 'none';
     if (title) title.textContent = 'Create Workspace Account';
-    if (sub) sub.textContent = 'Request membership to access the personal dashboard';
-    if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Request Registration';
+    if (sub) sub.textContent = 'Join your private cloud productivity operating system';
+    if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Create Workspace Account';
+
+    const passInput = document.getElementById('gatewayPasswordInput');
+    if (passInput && passInput.value) checkPasswordStrength(passInput.value);
   }
 }
 window.setGatewayAuthMode = setGatewayAuthMode;
@@ -9794,15 +9791,18 @@ async function handleGatewayAuthSubmit(e) {
   const emailInput = document.getElementById('gatewayEmailInput');
   const passInput = document.getElementById('gatewayPasswordInput');
   const nameInput = document.getElementById('gatewayNameInput');
+  const personaSelect = document.getElementById('gatewayPersonaSelect');
+  const specialtyInput = document.getElementById('gatewaySpecialtyInput');
   const submitBtn = document.getElementById('gatewaySubmitBtn');
-  const tabRegister = document.getElementById('gatewayTabRegister');
 
   if (errEl) errEl.style.display = 'none';
 
-  const isRegister = tabRegister && tabRegister.classList.contains('active');
+  const isRegister = gatewayAuthMode === 'register';
   const email = (emailInput?.value || '').trim();
   const password = passInput?.value || '';
   const name = (nameInput?.value || '').trim();
+  const persona = personaSelect?.value || 'DOCTOR';
+  const specialty = (specialtyInput?.value || '').trim();
 
   if (!email || !password) {
     if (errEl) {
@@ -9813,7 +9813,7 @@ async function handleGatewayAuthSubmit(e) {
   }
 
   const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
-  const payload = isRegister ? { email, password, name } : { email, password };
+  const payload = isRegister ? { email, password, name, persona, specialty } : { email, password };
 
   try {
     if (submitBtn) {
@@ -9856,6 +9856,7 @@ async function handleGatewayAuthSubmit(e) {
     localStorage.setItem('antigravity_token', authToken);
     localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
 
+    document.documentElement.classList.remove('is-unauthenticated');
     document.body.classList.remove('is-unauthenticated');
     updateUserUi();
     closePendingApprovalModal();
@@ -9881,7 +9882,7 @@ async function handleGatewayAuthSubmit(e) {
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = isRegister ? '<span>✨</span> Request Registration' : '<span>🚀</span> Sign In to Workspace';
+      submitBtn.innerHTML = isRegister ? '<span>✨</span> Create Workspace Account' : '<span>🚀</span> Sign In to Workspace';
     }
   }
 }
@@ -10199,7 +10200,7 @@ function checkPasswordStrength(pwd) {
   if (!container || !bars[0]) return;
 
   // STRICT REQUIREMENT: Only show password strength/instructions for new registrations, never on sign-in
-  if (pageAuthMode !== 'register' && authMode !== 'register') {
+  if (gatewayAuthMode !== 'register' && pageAuthMode !== 'register' && authMode !== 'register') {
     container.style.display = 'none';
     return;
   }
