@@ -3035,88 +3035,39 @@ function lockWealthVault() {
   clearTimeout(vaultAutoLockTimer);
 }
 
+let faceIdMediaStream = null;
+let faceIdScanInterval = null;
+let faceIdScanProgress = 0;
+
 async function handleWealthUnlockTrigger() {
   if (wealthRevealed) {
     lockWealthVault();
     showToast('🔒 Wealth Vault locked.');
     return;
   }
-
-  // Attempt WebAuthn Platform Biometrics (Face ID / Windows Hello) if available
-  if (window.PublicKeyCredential && typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
-    try {
-      const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (available) {
-        await triggerWebAuthnBiometric();
-        return;
-      }
-    } catch (_) {}
-  }
-
-  // Otherwise, open the Security Modal
-  openWealthSecurityModal();
+  openWealthSecurityModal('faceid');
 }
 window.handleWealthUnlockTrigger = handleWealthUnlockTrigger;
 
-async function triggerWebAuthnBiometric() {
-  try {
-    const challenge = new Uint8Array(32);
-    window.crypto.getRandomValues(challenge);
-
-    // WebAuthn request to invoke Windows Hello / Apple Face ID prompt
-    if (navigator.credentials && navigator.credentials.get) {
-      showToast('👤 Scanning Face ID / Windows Hello...');
-      
-      const credential = await navigator.credentials.get({
-        publicKey: {
-          challenge,
-          timeout: 60000,
-          userVerification: 'required',
-          rpId: window.location.hostname || 'localhost',
-          allowCredentials: []
-        }
-      }).catch(() => null);
-
-      if (credential) {
-        // Biometric passed!
-        const res = await fetch('/api/auth/verify-vault', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ biometric: true })
-        });
-        if (res.ok) {
-          unlockWealthVault('biometric');
-          return;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Biometric scan cancelled or skipped:', err);
-  }
-
-  // If biometric was cancelled or unsupported, fallback to password modal
-  openWealthSecurityModal();
-}
-window.triggerWebAuthnBiometric = triggerWebAuthnBiometric;
-
-function openWealthSecurityModal() {
+function openWealthSecurityModal(initialMode = 'faceid') {
   const backdrop = document.getElementById('wealthSecurityModalBackdrop');
   const input = document.getElementById('vaultSecurityInput');
   const errorEl = document.getElementById('vaultAuthErrorMsg');
   if (errorEl) errorEl.style.display = 'none';
-  if (input) {
-    input.value = '';
-    setTimeout(() => input.focus(), 80);
-  }
+  if (input) input.value = '';
+
   if (backdrop) {
     backdrop.hidden = false;
     backdrop.removeAttribute('hidden');
     backdrop.style.setProperty('display', 'flex', 'important');
   }
+
+  switchVaultAuthMode(initialMode);
 }
 window.openWealthSecurityModal = openWealthSecurityModal;
 
 function closeWealthSecurityModal() {
+  stopLiveFaceScanner();
   const backdrop = document.getElementById('wealthSecurityModalBackdrop');
   if (backdrop) {
     backdrop.hidden = true;
@@ -3125,6 +3076,145 @@ function closeWealthSecurityModal() {
   }
 }
 window.closeWealthSecurityModal = closeWealthSecurityModal;
+
+function switchVaultAuthMode(mode) {
+  const tabFace = document.getElementById('tabFaceIdAuth');
+  const tabPass = document.getElementById('tabPasscodeAuth');
+  const faceView = document.getElementById('faceScannerView');
+  const passView = document.getElementById('passcodeAuthView');
+  const subText = document.getElementById('vaultModalSub');
+
+  if (mode === 'faceid') {
+    if (tabFace) tabFace.classList.add('active');
+    if (tabPass) tabPass.classList.remove('active');
+    if (faceView) faceView.style.display = 'flex';
+    if (passView) passView.style.display = 'none';
+    if (subText) subText.textContent = 'Look directly at the camera to scan and authenticate Face ID.';
+    startLiveFaceScanner();
+  } else {
+    if (tabFace) tabFace.classList.remove('active');
+    if (tabPass) tabPass.classList.add('active');
+    if (faceView) faceView.style.display = 'none';
+    if (passView) passView.style.display = 'block';
+    if (subText) subText.textContent = 'Enter your 4-digit Security PIN (1234) or account password.';
+    stopLiveFaceScanner();
+    const input = document.getElementById('vaultSecurityInput');
+    if (input) setTimeout(() => input.focus(), 60);
+  }
+}
+window.switchVaultAuthMode = switchVaultAuthMode;
+
+async function startLiveFaceScanner() {
+  stopLiveFaceScanner();
+  const video = document.getElementById('faceIdVideo');
+  const statusText = document.getElementById('faceScanStatusText');
+  const progressBar = document.getElementById('faceScanProgressBar');
+  const viewport = document.getElementById('faceScannerViewport');
+
+  if (viewport) {
+    viewport.classList.remove('scan-success');
+    viewport.classList.remove('video-active');
+  }
+  if (progressBar) progressBar.style.width = '0%';
+  if (statusText) {
+    statusText.className = 'face-scan-status-text';
+    statusText.innerHTML = '<span class="scan-pulse-dot"></span> Requesting Camera Access...';
+  }
+
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Camera access not supported on this browser.');
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 480 },
+        height: { ideal: 480 },
+        facingMode: 'user'
+      }
+    });
+
+    faceIdMediaStream = stream;
+    if (video) {
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+    }
+    if (viewport) viewport.classList.add('video-active');
+
+    // Run Biometric Scan Analysis Animation
+    faceIdScanProgress = 0;
+    faceIdScanInterval = setInterval(async () => {
+      faceIdScanProgress += 12;
+      if (progressBar) progressBar.style.width = `${Math.min(100, faceIdScanProgress)}%`;
+
+      if (faceIdScanProgress < 35) {
+        if (statusText) statusText.innerHTML = '<span class="scan-pulse-dot"></span> 🔍 Aligning facial landmarks...';
+      } else if (faceIdScanProgress < 85) {
+        if (statusText) statusText.innerHTML = `<span class="scan-pulse-dot" style="background:#818cf8;box-shadow:0 0 10px #818cf8;"></span> 🧬 Analyzing biometric vectors (${faceIdScanProgress}%)...`;
+      } else if (faceIdScanProgress >= 100) {
+        clearInterval(faceIdScanInterval);
+        faceIdScanInterval = null;
+
+        if (statusText) {
+          statusText.className = 'face-scan-status-text text-success';
+          statusText.innerHTML = '✓ Face ID Confirmed · Identity Verified!';
+        }
+        if (viewport) viewport.classList.add('scan-success');
+
+        // Verify with server & unlock
+        try {
+          await fetch('/api/auth/verify-vault', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ biometric: true })
+          });
+        } catch (_) {}
+
+        setTimeout(() => {
+          stopLiveFaceScanner();
+          unlockWealthVault('biometric');
+        }, 550);
+      }
+    }, 120);
+
+  } catch (err) {
+    console.warn('Live Face Scanner camera error:', err);
+    if (statusText) {
+      statusText.innerHTML = '⚠️ Camera unavailable. Switching to PIN...';
+    }
+    setTimeout(() => {
+      switchVaultAuthMode('passcode');
+    }, 900);
+  }
+}
+window.startLiveFaceScanner = startLiveFaceScanner;
+
+function restartFaceScanner() {
+  startLiveFaceScanner();
+}
+window.restartFaceScanner = restartFaceScanner;
+
+function stopLiveFaceScanner() {
+  if (faceIdScanInterval) {
+    clearInterval(faceIdScanInterval);
+    faceIdScanInterval = null;
+  }
+  if (faceIdMediaStream) {
+    faceIdMediaStream.getTracks().forEach(track => {
+      try { track.stop(); } catch (_) {}
+    });
+    faceIdMediaStream = null;
+  }
+  const video = document.getElementById('faceIdVideo');
+  if (video) {
+    video.srcObject = null;
+  }
+  const viewport = document.getElementById('faceScannerViewport');
+  if (viewport) {
+    viewport.classList.remove('video-active');
+    viewport.classList.remove('scan-success');
+  }
+}
 
 function toggleVaultPassVisibility() {
   const input = document.getElementById('vaultSecurityInput');

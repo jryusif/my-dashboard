@@ -2734,62 +2734,101 @@
   </div>
 
   <!-- ===================================================================
-       🛡️ WEALTH VAULT BIOMETRIC & PASSCODE SECURITY MODAL
+       🛡️ WEALTH VAULT BIOMETRIC FACE ID & PASSCODE SECURITY MODAL
        =================================================================== -->
   <div class="modal-backdrop" id="wealthSecurityModalBackdrop" hidden>
-    <div class="modal wealth-security-modal" role="dialog" aria-modal="true" aria-labelledby="vaultModalTitle" style="max-width: 440px;">
+    <div class="modal wealth-security-modal" role="dialog" aria-modal="true" aria-labelledby="vaultModalTitle" style="max-width: 460px;">
       <button type="button" class="modal-close-btn" onclick="closeWealthSecurityModal()" title="Close modal">✕</button>
       
       <div class="modal-header" style="text-align: center;">
-        <div class="vault-modal-badge">
-          <span class="vault-pulse-ring"></span>
-          <span class="vault-modal-icon">👤</span>
-        </div>
-        <h2 id="vaultModalTitle" style="font-size: 22px; margin-top: 12px; color: #fff;">Authenticate Wealth Vault</h2>
-        <p class="subtitle" style="font-size: 13px; margin: 6px auto 0; max-width: 320px;">Verify your identity via Face ID / Windows Hello or enter your Security Password / PIN to reveal financial assets.</p>
+        <div class="space-modal-badge" style="margin-bottom: 8px;">🛡️ BIOMETRIC SECURITY SHIELD</div>
+        <h2 id="vaultModalTitle" style="font-size: 22px; color: #fff;">Authenticate Face ID Vault</h2>
+        <p class="subtitle" id="vaultModalSub" style="font-size: 13px; margin: 4px auto 0; max-width: 340px;">Look directly at the camera or enter your Security Passcode to reveal financial assets.</p>
       </div>
 
-      <div class="vault-modal-body" style="display: flex; flex-direction: column; gap: 16px; margin: 20px 0 10px;">
-        <!-- Face ID / Touch ID Button -->
-        <button type="button" class="btn-biometric-auth" id="btnTriggerBiometricScan" onclick="triggerWebAuthnBiometric()">
-          <span class="biometric-icon-scan">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-              <path d="M9 9h.01M15 9h.01M9 13a3 3 0 0 0 6 0"/>
-            </svg>
-          </span>
-          <div style="text-align: left;">
-            <strong style="display: block; font-size: 14px; color: #fff;">Scan Face ID / Touch ID</strong>
-            <span style="font-size: 11.5px; color: #94a3b8;">Windows Hello / Apple Device Biometrics</span>
-          </div>
+      <!-- Mode Switcher Tabs -->
+      <div class="vault-auth-tabs">
+        <button type="button" class="vault-tab active" id="tabFaceIdAuth" onclick="switchVaultAuthMode('faceid')">
+          <span>👤</span> Face ID Scanner
         </button>
+        <button type="button" class="vault-tab" id="tabPasscodeAuth" onclick="switchVaultAuthMode('passcode')">
+          <span>🔢</span> Passcode / PIN
+        </button>
+      </div>
 
-        <div class="vault-modal-divider">
-          <span>OR ENTER PASSWORD / PIN</span>
+      <!-- 1. LIVE CAMERA FACE ID SCANNER VIEW -->
+      <div class="face-scanner-view" id="faceScannerView">
+        <div class="face-scanner-viewport" id="faceScannerViewport">
+          <!-- Video feed -->
+          <video id="faceIdVideo" autoplay playsinline muted></video>
+          <canvas id="faceIdCanvas" hidden></canvas>
+          
+          <!-- Holographic Biometric Overlay -->
+          <div class="face-scanner-overlay">
+            <div class="scanner-bracket top-left"></div>
+            <div class="scanner-bracket top-right"></div>
+            <div class="scanner-bracket bottom-left"></div>
+            <div class="scanner-bracket bottom-right"></div>
+            <div class="scanner-laser-line" id="scannerLaserLine"></div>
+            <div class="scanner-face-silhouette" id="scannerSilhouette">
+              <svg width="100" height="120" viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="1.3">
+                <path d="M12 2C7.58 2 4 5.58 4 10c0 3.87 2.76 7.1 6.44 7.85L10 21h4l-.44-3.15C17.24 17.1 20 13.87 20 10c0-4.42-3.58-8-8-8z" opacity="0.45"/>
+                <circle cx="9" cy="9" r="1.2" fill="currentColor"/>
+                <circle cx="15" cy="9" r="1.2" fill="currentColor"/>
+                <path d="M9.5 13.5c1.5 1 3.5 1 5 0" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
         </div>
 
+        <!-- Real-time Scanner Status & Progress Bar -->
+        <div class="face-scan-status-wrap">
+          <div class="face-scan-status-text" id="faceScanStatusText">
+            <span class="scan-pulse-dot"></span> Initializing Camera Sensor...
+          </div>
+          <div class="face-scan-progress-bar-wrap">
+            <div class="face-scan-progress-bar" id="faceScanProgressBar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="face-scan-controls">
+          <button type="button" class="btn-secondary" onclick="restartFaceScanner()" style="font-size: 12.5px;">
+            <span>🔄</span> Re-scan
+          </button>
+          <button type="button" class="btn-secondary" onclick="switchVaultAuthMode('passcode')" style="font-size: 12.5px;">
+            <span>🔢</span> Use PIN instead
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. PASSCODE / PIN VIEW -->
+      <div class="passcode-auth-view" id="passcodeAuthView" style="display: none;">
         <form id="vaultSecurityForm" onsubmit="handleVerifyVaultPass(event)" style="display: flex; flex-direction: column; gap: 14px;">
           <div>
             <label for="vaultSecurityInput" style="font-size: 12px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 6px;">Password or 4-Digit Security PIN</label>
             <div style="position: relative;">
-              <input type="password" id="vaultSecurityInput" placeholder="Enter account password or PIN (1234)..." required autofocus
+              <input type="password" id="vaultSecurityInput" placeholder="Enter account password or PIN (default: 1234)..."
                      style="width: 100%; padding: 12px 42px 12px 14px; border-radius: 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 14px;" />
               <button type="button" onclick="toggleVaultPassVisibility()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">
                 👁️
               </button>
             </div>
+            <p style="font-size: 11.5px; color: #64748b; margin-top: 5px;">Quick PIN: <code>1234</code> or your account password.</p>
           </div>
 
           <div id="vaultAuthErrorMsg" style="color: #f87171; font-size: 12px; display: none; text-align: center; font-weight: 600;"></div>
 
-          <div style="display: flex; gap: 10px; margin-top: 4px;">
-            <button type="button" class="btn-secondary" onclick="closeWealthSecurityModal()" style="flex: 1;">Cancel</button>
+          <div style="display: flex; gap: 10px; margin-top: 6px;">
+            <button type="button" class="btn-secondary" onclick="switchVaultAuthMode('faceid')" style="flex: 1;">
+              <span>👤</span> Scan Face ID
+            </button>
             <button type="submit" class="btn-primary" id="btnSubmitVaultAuth" style="flex: 1.4;">
               <span>🔓</span> Unlock Vault
             </button>
           </div>
         </form>
       </div>
+
     </div>
   </div>
 

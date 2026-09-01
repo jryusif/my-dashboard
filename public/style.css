@@ -1133,87 +1133,201 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   font-weight: 600;
 }
 
-/* Wealth Security / Face ID Modal */
-.vault-modal-badge {
-  width: 68px;
-  height: 68px;
+/* Wealth Security / Live Face ID Scanner Modal */
+.vault-auth-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 4px;
+  margin: 14px 0 16px;
+  gap: 4px;
+}
+
+.vault-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.vault-tab.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0.1) 100%);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.2);
+}
+
+/* Face ID Camera Viewport */
+.face-scanner-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.face-scanner-viewport {
+  width: 220px;
+  height: 220px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(232, 180, 74, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%);
-  border: 1px solid rgba(232, 180, 74, 0.45);
+  position: relative;
+  overflow: hidden;
+  background: #030712;
+  border: 2px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 35px rgba(56, 189, 248, 0.25), inset 0 0 25px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.face-scanner-viewport.scan-success {
+  border-color: #10b981;
+  box-shadow: 0 0 45px rgba(16, 185, 129, 0.5), inset 0 0 25px rgba(16, 185, 129, 0.2);
+}
+
+.face-scanner-viewport video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.face-scanner-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scanner-face-silhouette {
+  color: rgba(56, 189, 248, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.face-scanner-viewport.video-active .scanner-face-silhouette {
+  opacity: 0.15;
+}
+
+.scanner-bracket {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid #38bdf8;
+  transition: all 0.3s ease;
+}
+.scanner-bracket.top-left {
+  top: 26px; left: 26px;
+  border-right: none; border-bottom: none;
+}
+.scanner-bracket.top-right {
+  top: 26px; right: 26px;
+  border-left: none; border-bottom: none;
+}
+.scanner-bracket.bottom-left {
+  bottom: 26px; left: 26px;
+  border-right: none; border-top: none;
+}
+.scanner-bracket.bottom-right {
+  bottom: 26px; right: 26px;
+  border-left: none; border-top: none;
+}
+
+.face-scanner-viewport.scan-success .scanner-bracket {
+  border-color: #10b981;
+}
+
+.scanner-laser-line {
+  position: absolute;
+  left: 10%;
+  width: 80%;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
+  box-shadow: 0 0 12px #38bdf8, 0 0 20px rgba(56, 189, 248, 0.8);
+  top: 20%;
+  animation: faceLaserSweep 2.2s infinite ease-in-out;
+}
+
+@keyframes faceLaserSweep {
+  0% { top: 18%; opacity: 0.2; }
+  50% { top: 82%; opacity: 1; }
+  100% { top: 18%; opacity: 0.2; }
+}
+
+.face-scanner-viewport.scan-success .scanner-laser-line {
+  background: #10b981;
+  box-shadow: 0 0 18px #10b981;
+  animation: none;
+  top: 50%;
+  opacity: 0;
+}
+
+.face-scan-status-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.face-scan-status-text {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #cbd5e1;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
-  box-shadow: 0 0 28px rgba(232, 180, 74, 0.25);
-  margin: 0 auto;
+  gap: 8px;
 }
 
-.vault-modal-icon {
-  font-size: 30px;
+.face-scan-status-text.text-success {
+  color: #34d399;
 }
 
-.vault-pulse-ring {
-  position: absolute;
-  inset: -6px;
+.scan-pulse-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  border: 1px solid rgba(232, 180, 74, 0.4);
-  animation: pulseRing 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: livePulse 1.4s infinite ease-in-out;
 }
 
-@keyframes pulseRing {
-  0% { transform: scale(0.9); opacity: 0.8; }
-  50% { transform: scale(1.15); opacity: 0.2; }
-  100% { transform: scale(0.9); opacity: 0.8; }
-}
-
-.btn-biometric-auth {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(16, 185, 129, 0.12) 100%);
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  border-radius: 12px;
-  padding: 14px 18px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.face-scan-progress-bar-wrap {
   width: 100%;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  max-width: 280px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
 }
 
-.btn-biometric-auth:hover {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(16, 185, 129, 0.2) 100%);
-  border-color: #38bdf8;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.25);
+.face-scan-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8 0%, #10b981 100%);
+  border-radius: 999px;
+  transition: width 0.15s ease;
 }
 
-.biometric-icon-scan {
-  color: #38bdf8;
+.face-scan-controls {
   display: flex;
-  align-items: center;
+  gap: 10px;
+  width: 100%;
   justify-content: center;
-}
-
-.vault-modal-divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  color: #64748b;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  margin: 4px 0;
-}
-
-.vault-modal-divider::before,
-.vault-modal-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.vault-modal-divider span {
-  padding: 0 10px;
 }
 
 @media (max-width: 768px) {
