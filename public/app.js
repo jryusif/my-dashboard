@@ -282,6 +282,8 @@ const categoryTaskArea    = document.getElementById('categoryTaskArea');
 let meta = { categories: [], segmentsByCategory: {}, priorities: [] };
 let weekDates = [];
 let selectedDayIndex = 0;
+let currentTodayTasks = [];
+window.allTasks = currentTodayTasks;
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -496,8 +498,10 @@ async function loadTasks() {
   const res = await fetch(`/api/tasks?date=${todayStr}`);
   if (!res.ok) return showToast('Could not load today\'s tasks.');
   const { date, tasks: allTasks } = await res.json();
+  currentTodayTasks = allTasks || [];
+  window.allTasks = currentTodayTasks;
   renderDateLabel(date || todayStr);
-  const tasks = allTasks.filter(t => t.category !== 'Routine');
+  const tasks = currentTodayTasks.filter(t => t.category !== 'Routine');
   const total = tasks.length;
   const done  = tasks.filter(t => t.completed).length;
   updateRing(done, total);
@@ -7836,7 +7840,8 @@ function checkAutomatedReminders() {
   if (notifSettings.morningBriefing && !triggered[todayStr].morningBriefing) {
     if (currentTime >= notifSettings.morningTime) {
       triggered[todayStr].morningBriefing = true;
-      const pendingCount = (allTasks || []).filter(t => !t.done).length;
+      const tasksList = window.allTasks || currentTodayTasks || [];
+      const pendingCount = tasksList.filter(t => !t.completed && !t.done).length;
       dispatchNotification({
         type: 'routines',
         title: '🌅 Good Morning Briefing',
@@ -7850,8 +7855,9 @@ function checkAutomatedReminders() {
   if (notifSettings.eveningReport && !triggered[todayStr].eveningReport) {
     if (currentTime >= notifSettings.eveningTime) {
       triggered[todayStr].eveningReport = true;
-      const total = (allTasks || []).length;
-      const done = (allTasks || []).filter(t => t.done).length;
+      const tasksList = window.allTasks || currentTodayTasks || [];
+      const total = tasksList.length;
+      const done = tasksList.filter(t => t.completed || t.done).length;
       const pct = total > 0 ? Math.round((done / total) * 100) : 100;
       dispatchNotification({
         type: 'reports',
