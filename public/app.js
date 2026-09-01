@@ -6056,31 +6056,68 @@ let prevMinutesStr = null;
 let prevSecondsStr = null;
 
 function initSidebarState() {
-  const isCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
-  document.body.classList.toggle('sidebar-is-collapsed', isCollapsed);
-}
-
-function toggleSidebar(collapsed) {
-  const willCollapse = typeof collapsed === 'boolean' 
-    ? collapsed 
-    : !document.body.classList.contains('sidebar-is-collapsed');
-  
-  document.body.classList.toggle('sidebar-is-collapsed', willCollapse);
-  try {
-    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, willCollapse ? '1' : '0');
-  } catch (_) {}
-  
-  if (willCollapse) {
-    showToast('Sidebar hidden — Clock & Date transferred to main screen ⏰');
+  const isMobileOrTablet = window.innerWidth <= 1024;
+  if (isMobileOrTablet) {
+    document.body.classList.remove('sidebar-mobile-open');
+    document.body.classList.add('sidebar-is-collapsed');
+  } else {
+    const isCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+    document.body.classList.toggle('sidebar-is-collapsed', isCollapsed);
   }
 }
 
+function toggleSidebar(collapsed) {
+  const isMobileOrTablet = window.innerWidth <= 1024;
+  
+  if (isMobileOrTablet) {
+    const willOpen = typeof collapsed === 'boolean'
+      ? !collapsed
+      : !document.body.classList.contains('sidebar-mobile-open');
+    
+    document.body.classList.toggle('sidebar-mobile-open', willOpen);
+    if (willOpen) {
+      showToast('📋 Tasks & Routines drawer opened');
+    }
+  } else {
+    const willCollapse = typeof collapsed === 'boolean' 
+      ? collapsed 
+      : !document.body.classList.contains('sidebar-is-collapsed');
+    
+    document.body.classList.toggle('sidebar-is-collapsed', willCollapse);
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, willCollapse ? '1' : '0');
+    } catch (_) {}
+    
+    if (willCollapse) {
+      showToast('Sidebar hidden — Clock & Date transferred to main screen ⏰');
+    } else {
+      showToast('Sidebar restored 📌');
+    }
+  }
+}
+window.toggleSidebar = toggleSidebar;
+
 if (btnSidebarCollapse) {
-  btnSidebarCollapse.addEventListener('click', () => toggleSidebar(true));
+  btnSidebarCollapse.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleSidebar(true);
+  });
 }
 if (btnSidebarToggle) {
-  btnSidebarToggle.addEventListener('click', () => toggleSidebar(false));
+  btnSidebarToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleSidebar(false);
+  });
 }
+
+// Window resize listener to gracefully adapt between desktop and tablet/mobile
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 1024) {
+    document.body.classList.remove('sidebar-mobile-open');
+    const isCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+    document.body.classList.toggle('sidebar-is-collapsed', isCollapsed);
+  }
+});
 
 // Keyboard shortcut: Ctrl + \ or Cmd + \
 document.addEventListener('keydown', (e) => {
@@ -10724,11 +10761,25 @@ function closeAdminConfirmModal() {
 }
 window.closeAdminConfirmModal = closeAdminConfirmModal;
 
+// Sticky Top Navbar Dynamic Scroll Blur & Animation
+function initTopNavScroll() {
+  const topNav = document.getElementById('mainTopNavbar');
+  const onScroll = () => {
+    const isScrolled = window.scrollY > 15;
+    document.body.classList.toggle('is-scrolled', isScrolled);
+    if (topNav) topNav.classList.toggle('scrolled', isScrolled);
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+}
+
 // =============================================================================
 // INIT
 // =============================================================================
 
 initAuthEvents();
+initSidebarState();
+initTopNavScroll();
 renderDashboard();
 loadMeta();
 loadTasks();
