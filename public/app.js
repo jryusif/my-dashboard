@@ -902,6 +902,27 @@ async function openCategoryPage(category) {
   await loadCategoryPage(category);
 }
 
+function getSegmentsForCategory(category) {
+  const norm = (category || '').toLowerCase().trim();
+  let custom = null;
+
+  if (currentUser && currentUser.departmentSegments) {
+    const ds = currentUser.departmentSegments;
+    if (norm === 'work') custom = ds.work;
+    else if (norm === 'studies' || norm === 'study') custom = ds.studies;
+    else if (norm.includes('trad') || norm.includes('stock')) custom = ds.trading || ds.work;
+    else if (norm === 'workouts' || norm === 'fitness' || norm === 'gym') custom = ds.fitness;
+    else if (norm === 'finance') custom = ds.finance || ds.incomeSources;
+    else if (norm === 'religion') custom = ds.religion;
+    else if (ds[category]) custom = ds[category];
+    else if (ds[norm]) custom = ds[norm];
+  }
+
+  if (Array.isArray(custom) && custom.length > 0) return custom;
+  return meta?.segmentsByCategory?.[category] || [];
+}
+window.getSegmentsForCategory = getSegmentsForCategory;
+
 async function loadCategoryPage(category) {
   if (category === 'Workouts') {
     return loadWorkoutsPage();
@@ -940,12 +961,12 @@ async function loadCategoryPage(category) {
       catProgPctEl.style.color = `var(--${color})`;
     }
 
-    // Quick-add form
-    const segments = meta.segmentsByCategory[category] || [];
+    // Quick-add form with custom dynamic user segments
+    const segments = getSegmentsForCategory(category);
     const segmentHtml = segments.length ? `
       <select id="catQuickSegment" style="--card-color: var(--${color})">
         <option value="">Segment…</option>
-        ${segments.map(s => `<option value="${s}">${s}</option>`).join('')}
+        ${segments.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
       </select>` : '';
 
     const priorityHtml = meta.priorities.length ? `
@@ -8743,15 +8764,44 @@ async function loadProfileData() {
     const profileSelectCurrency = document.getElementById('profileSelectCurrency');
     const profileSelectExperience = document.getElementById('profileSelectExperience');
     const profileInputFocus = document.getElementById('profileInputFocus');
+    const profileBudgetCurrencySymbol = document.getElementById('profileBudgetCurrencySymbol');
 
     if (profileSelectPersona) profileSelectPersona.value = user.persona || 'DOCTOR';
     if (profileSelectCurrency) profileSelectCurrency.value = user.currency || 'USD';
     if (profileSelectExperience) profileSelectExperience.value = user.experienceLevel || 'Senior / Specialist';
     if (profileInputFocus) profileInputFocus.value = user.primaryFocus || '';
+    if (profileBudgetCurrencySymbol) {
+      const currencySymbols = { USD: '$', EUR: '€', GBP: '£', EGP: 'E£', SAR: '﷼', AED: 'د.إ' };
+      profileBudgetCurrencySymbol.textContent = currencySymbols[user.currency || 'USD'] || '$';
+    }
 
     const defaultSegments = PERSONA_PRESETS[user.persona || 'DOCTOR']?.departmentSegments || PERSONA_PRESETS.DOCTOR.departmentSegments;
-    profileSegmentsState = user.departmentSegments || JSON.parse(JSON.stringify(defaultSegments));
+    const initialSegments = user.departmentSegments || JSON.parse(JSON.stringify(defaultSegments));
+    
+    // Ensure all keys exist
+    if (!initialSegments.incomeSources) {
+      initialSegments.incomeSources = initialSegments.finance || ['Clinical Practice', 'US Stocks Trading', 'Salary', 'Investment Returns', 'Freelance / Consulting', 'Other Income'];
+    }
+    if (!initialSegments.expenseCategories) {
+      initialSegments.expenseCategories = ['Clinic & Dental Materials', 'Trading Tools / Subscriptions', 'Studies & Books', 'Gym & Nutrition', 'Living & Food', 'Transport', 'Tech & Gear', 'Other Expenses'];
+    }
+    if (!initialSegments.accounts) {
+      initialSegments.accounts = ['Cash Wallet', 'Bank Checking', 'Trading Account', 'Gold Bullion Vault', 'Savings Account'];
+    }
+    if (!initialSegments.work) {
+      initialSegments.work = ['Clinical Cases & Surgery', 'Patient Consultations', 'Clinic Management', 'Emergency Procedures'];
+    }
+    if (!initialSegments.studies) {
+      initialSegments.studies = ['Board Exams & Mocks', 'Evidence-Based Research', 'Continuing Medical Education (CME)'];
+    }
+    if (!initialSegments.fitness) {
+      initialSegments.fitness = ['Ergonomic Posture & Mobility', 'Strength & Core Conditioning', 'Cardio & Stamina'];
+    }
+
+    profileSegmentsState = initialSegments;
     renderProfileSegmentChips();
+    loadProfileFinanceSettings();
+    loadProfileFinancialGoals();
 
     // Populate Stats (Tab 4)
     const profileStatTasks = document.getElementById('profileStatTasks');
@@ -8768,6 +8818,167 @@ async function loadProfileData() {
     showToast('Could not load profile details.');
   }
 }
+
+async function loadProfileFinanceSettings() {
+  try {
+    const res = await fetch('/api/finance/settings');
+    if (!res.ok) return;
+    const { setting } = await res.json();
+    if (setting) {
+      const budgetInput = document.getElementById('profileMonthlyBudget');
+      const targetPctInput = document.getElementById('profileSavingsTargetPct');
+      const targetRangeInput = document.getElementById('profileSavingsTargetRange');
+      if (budgetInput) budgetInput.value = setting.monthlyBudget || 3000;
+      if (targetPctInput) targetPctInput.value = setting.savingsTargetPct || 25;
+      if (targetRangeInput) targetRangeInput.value = setting.savingsTargetPct || 25;
+    }
+  } catch (err) {
+    console.warn('Could not load finance settings:', err);
+  }
+}
+
+async function loadProfileFinancialGoals() {
+  const container = document.getElementById('profileFinancialGoalsList');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/finance/goals');
+    if (!res.ok) return;
+    const { goals } = await res.json();
+
+    if (!goals || goals.length === 0) {
+      container.innerHTML = `
+        <div style="grid-column: 1 / -1; padding: 20px; text-align: center; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px; color: #94a3b8; font-size: 13px;">
+          No financial goals defined yet. Click "➕ Add New Goal" to set your first target price and deadline!
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = goals.map(g => {
+      const pct = g.targetAmount > 0 ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0;
+      return `
+        <div class="profile-goal-card" id="goalCard_${g.id}">
+          <div class="profile-goal-head">
+            <h4 class="profile-goal-title">${escapeHtml(g.title)}</h4>
+            ${g.deadline ? `<span class="profile-goal-deadline">📅 ${fmtDate(g.deadline)}</span>` : ''}
+          </div>
+          <div class="profile-goal-progress-wrap">
+            <div class="profile-goal-amounts">
+              <span><strong>${fmtMoney(g.currentAmount)}</strong> of ${fmtMoney(g.targetAmount)}</span>
+              <span style="font-weight: 700; color: ${pct >= 100 ? '#10b981' : '#38bdf8'};">${pct}%</span>
+            </div>
+            <div class="profile-goal-bar">
+              <div class="profile-goal-bar-fill" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+          <div class="profile-goal-actions">
+            <button type="button" class="btn-goal-edit" onclick="handleEditFinancialGoal('${g.id}', '${escapeHtml(g.title)}', ${g.targetAmount}, ${g.currentAmount}, '${g.deadline || ''}')">✏️ Edit</button>
+            <button type="button" class="btn-goal-del" onclick="handleDeleteFinancialGoal('${g.id}')">🗑️ Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.warn('Could not load profile financial goals:', err);
+  }
+}
+
+async function promptAddFinancialGoal() {
+  const title = prompt('🎯 Enter Financial Goal Name (e.g. Clinic Down Payment, Gold Bullion Lot, Emergency Fund):');
+  if (!title || !title.trim()) return;
+
+  const targetStr = prompt(`Enter Target Price / Amount for "${title.trim()}":`, '50000');
+  if (!targetStr) return;
+  const targetAmount = parseFloat(targetStr);
+  if (!targetAmount || targetAmount <= 0) {
+    alert('Please enter a valid positive target amount.');
+    return;
+  }
+
+  const currentStr = prompt(`Enter Current Amount Saved so far:`, '0');
+  const currentAmount = parseFloat(currentStr) || 0;
+
+  const deadline = prompt('Enter Target Deadline (YYYY-MM-DD, Optional):', toISODate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)));
+
+  try {
+    const res = await fetch('/api/finance/goals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title.trim(),
+        targetAmount,
+        currentAmount,
+        deadline: deadline ? deadline.trim() : null
+      })
+    });
+
+    if (!res.ok) throw new Error('Failed to create goal');
+    showToast('🎯 Financial goal added successfully!');
+    loadProfileFinancialGoals();
+    if (currentFinanceMonth) loadFinancePage();
+  } catch (err) {
+    console.error('Error creating goal:', err);
+    showToast('Could not save goal.');
+  }
+}
+window.promptAddFinancialGoal = promptAddFinancialGoal;
+
+async function handleEditFinancialGoal(id, oldTitle, oldTarget, oldCurrent, oldDeadline) {
+  const title = prompt('Edit Goal Title:', oldTitle);
+  if (!title || !title.trim()) return;
+
+  const targetStr = prompt('Edit Target Price / Amount:', String(oldTarget));
+  if (!targetStr) return;
+  const targetAmount = parseFloat(targetStr) || oldTarget;
+
+  const currentStr = prompt('Edit Current Amount Saved:', String(oldCurrent));
+  const currentAmount = currentStr !== null ? (parseFloat(currentStr) || 0) : oldCurrent;
+
+  const deadline = prompt('Edit Target Deadline (YYYY-MM-DD):', oldDeadline || '');
+
+  try {
+    const res = await fetch('/api/finance/goals', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        title: title.trim(),
+        targetAmount,
+        currentAmount,
+        deadline: deadline ? deadline.trim() : null
+      })
+    });
+
+    if (!res.ok) throw new Error('Failed to update goal');
+    showToast('✨ Financial goal updated!');
+    loadProfileFinancialGoals();
+    if (currentFinanceMonth) loadFinancePage();
+  } catch (err) {
+    console.error('Error updating goal:', err);
+    showToast('Could not update goal.');
+  }
+}
+window.handleEditFinancialGoal = handleEditFinancialGoal;
+
+async function handleDeleteFinancialGoal(id) {
+  if (!confirm('Are you sure you want to delete this financial goal?')) return;
+
+  try {
+    const res = await fetch(`/api/finance/goals?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+
+    if (!res.ok) throw new Error('Failed to delete goal');
+    showToast('Financial goal removed.');
+    loadProfileFinancialGoals();
+    if (currentFinanceMonth) loadFinancePage();
+  } catch (err) {
+    console.error('Error deleting goal:', err);
+    showToast('Could not delete goal.');
+  }
+}
+window.handleDeleteFinancialGoal = handleDeleteFinancialGoal;
 
 function switchProfileTab(tabName) {
   const tabs = ['details', 'persona', 'security', 'stats'];
@@ -8790,22 +9001,39 @@ window.switchProfileTab = switchProfileTab;
 
 function renderProfileSegmentChips() {
   if (!profileSegmentsState) return;
-  const depts = ['work', 'studies', 'finance', 'fitness'];
-  depts.forEach(dept => {
-    const container = document.getElementById(`chips${dept.charAt(0).toUpperCase() + dept.slice(1)}Segments`);
+  const deptConfigs = [
+    { key: 'work', containerId: 'chipsWorkSegments' },
+    { key: 'studies', containerId: 'chipsStudiesSegments' },
+    { key: 'incomeSources', containerId: 'chipsIncomeSourcesSegments' },
+    { key: 'expenseCategories', containerId: 'chipsExpenseCategoriesSegments' },
+    { key: 'accounts', containerId: 'chipsAccountsSegments' },
+    { key: 'fitness', containerId: 'chipsFitnessSegments' }
+  ];
+
+  deptConfigs.forEach(({ key, containerId }) => {
+    const container = document.getElementById(containerId);
     if (!container) return;
-    const items = profileSegmentsState[dept] || [];
+    const items = profileSegmentsState[key] || [];
     container.innerHTML = items.map((tag, idx) => `
       <span class="tag-chip">
         <span>${escapeHtml(tag)}</span>
-        <button type="button" class="tag-chip-del" onclick="removeProfileSegmentTag('${dept}', ${idx})" title="Remove tag">&times;</button>
+        <button type="button" class="tag-chip-del" onclick="removeProfileSegmentTag('${key}', ${idx})" title="Remove tag">&times;</button>
       </span>
     `).join('');
   });
 }
 
 function promptAddSegmentTag(dept) {
-  const newTag = prompt(`Add new custom segment for ${dept.toUpperCase()}:`);
+  const titles = {
+    work: 'Work / Clinical Specialty Segment',
+    studies: 'Study / Academic Learning Segment',
+    incomeSources: 'Source of Income (e.g. Clinic, Salary, Trading)',
+    expenseCategories: 'Expense Budget Category',
+    accounts: 'Bank / Cash Account Vault',
+    fitness: 'Fitness & Habit Pillar'
+  };
+  const label = titles[dept] || dept.toUpperCase();
+  const newTag = prompt(`➕ Add new ${label}:`);
   if (!newTag || !newTag.trim()) return;
   if (!profileSegmentsState) profileSegmentsState = {};
   if (!profileSegmentsState[dept]) profileSegmentsState[dept] = [];
@@ -8839,16 +9067,19 @@ async function handleSavePersonaSegments(e) {
   const currency = document.getElementById('profileSelectCurrency')?.value || 'USD';
   const experienceLevel = document.getElementById('profileSelectExperience')?.value || 'Senior / Specialist';
   const primaryFocus = document.getElementById('profileInputFocus')?.value.trim() || '';
+  const monthlyBudget = document.getElementById('profileMonthlyBudget')?.value;
+  const savingsTargetPct = document.getElementById('profileSavingsTargetPct')?.value;
 
   const saveBtn = document.getElementById('btnSavePersonaSegments');
 
   try {
     if (saveBtn) {
       saveBtn.disabled = true;
-      saveBtn.innerHTML = '<span>⏳</span> Saving Segments...';
+      saveBtn.innerHTML = '<span>⏳</span> Saving Segments & Finance Rules...';
     }
 
-    const res = await fetch('/api/user/segments', {
+    // 1. Save Persona & Segments
+    const resSegments = await fetch('/api/user/segments', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -8860,27 +9091,41 @@ async function handleSavePersonaSegments(e) {
       })
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to update segments');
+    const dataSegments = await resSegments.json();
+    if (!resSegments.ok) throw new Error(dataSegments.error || 'Failed to update segments');
 
-    currentUser = { ...currentUser, ...data.user };
+    // 2. Save Financial Setting (Budget & Savings %)
+    if (monthlyBudget !== undefined || savingsTargetPct !== undefined) {
+      await fetch('/api/finance/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          monthlyBudget: parseFloat(monthlyBudget) || 3000,
+          savingsTargetPct: parseFloat(savingsTargetPct) || 25,
+          currency
+        })
+      });
+    }
+
+    currentUser = { ...currentUser, ...dataSegments.user };
     localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
 
     updateUserUi();
     renderDynamicCategoryDropdowns();
-    showToast('✨ Persona & department segments saved successfully!');
+    if (currentFinanceMonth) loadFinancePage();
+    if (currentCategoryPage) loadCategoryPage(currentCategoryPage);
+
+    showToast('✨ All segments, financial rules & dropdown options saved successfully!');
   } catch (err) {
     console.error('Save persona segments error:', err);
     showToast(err.message || 'Failed to save segments.');
   } finally {
     if (saveBtn) {
       saveBtn.disabled = false;
-      saveBtn.innerHTML = '<span>✨</span> Save Persona & Department Customizations';
+      saveBtn.innerHTML = '<span>✨</span> Save All Persona, Segments & Financial Settings';
     }
   }
 }
-window.handleSavePersonaSegments = handleSavePersonaSegments;
-
 function setAvatarPreset(emoji) {
   const profileInputAvatar = document.getElementById('profileInputAvatar');
   const profileAvatarDisplay = document.getElementById('profileAvatarDisplay');

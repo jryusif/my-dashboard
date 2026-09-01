@@ -1,45 +1,59 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
-async function verify() {
+async function updateAdmin() {
   const prisma = new PrismaClient();
   const adminEmail = 'jryusiif@gmail.com';
 
-  console.log('🔍 Verifying and initializing Persona & Segments for master account:', adminEmail);
+  console.log('🔄 Syncing full segment suite and financial setting for:', adminEmail);
 
   try {
-    const adminUser = await prisma.user.findUnique({
+    const admin = await prisma.user.findUnique({
       where: { email: adminEmail }
     });
 
-    if (adminUser) {
-      const updated = await prisma.user.update({
-        where: { id: adminUser.id },
+    if (admin) {
+      await prisma.user.update({
+        where: { id: admin.id },
         data: {
           persona: 'DOCTOR',
           experienceLevel: 'Senior / Specialist',
           specialty: 'Clinical & Restorative Dentistry, Prop Trader',
-          primaryFocus: 'Master advanced clinical aesthetics & compound financial independence',
           currency: 'USD',
-          onboardingCompleted: true,
           departmentSegments: {
             work: ['Clinical Cases & Surgery', 'Patient Consultations', 'Clinic Management', 'Emergency Procedures'],
             studies: ['Board Exams & Mocks', 'Evidence-Based Research', 'Continuing Medical Education (CME)'],
-            finance: ['Clinical Revenue', 'Equipment & Materials', 'Private Practice Overhead', 'Investments'],
+            incomeSources: ['Clinical Practice', 'US Stocks Trading', 'Salary', 'Investment Returns', 'Freelance / Consulting', 'Other Income'],
+            expenseCategories: ['Clinic & Dental Materials', 'Trading Tools / Subscriptions', 'Studies & Books', 'Gym & Nutrition', 'Living & Food', 'Transport', 'Tech & Gear', 'Other Expenses'],
+            accounts: ['Cash Wallet', 'Bank Checking', 'Trading Account', 'Gold Bullion Vault', 'Savings Account'],
             fitness: ['Ergonomic Posture & Mobility', 'Strength & Core Conditioning', 'Cardio & Stamina'],
-            roadmap: ['Clinical Mastery', 'Clinic Scaling & Ownership', 'Academic Fellowships', 'Financial Independence']
+            trading: ['Pre-Market Prep', 'Execution & Tape Reading', 'Journaling & Review']
           }
         }
       });
-      console.log('✅ Admin initialized with Persona and Segments:', updated.persona, updated.departmentSegments);
-    } else {
-      console.warn('⚠️ Admin user not found in database');
+
+      await prisma.financialSetting.upsert({
+        where: { userId: admin.id },
+        update: {
+          monthlyBudget: 3500,
+          savingsTargetPct: 30,
+          currency: 'USD'
+        },
+        create: {
+          userId: admin.id,
+          monthlyBudget: 3500,
+          savingsTargetPct: 30,
+          currency: 'USD'
+        }
+      });
+
+      console.log('✅ Admin user synced successfully!');
     }
   } catch (err) {
-    console.error('Error during verification:', err);
+    console.error('Sync error:', err);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-verify();
+updateAdmin();
