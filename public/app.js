@@ -7757,8 +7757,7 @@ function handleUserCapsuleClick() {
   if (!authToken || !currentUser) {
     showAuthPage('login');
   } else {
-    // When logged in, open the Profile page directly
-    openProfileSection();
+    toggleUserNavDropdown();
   }
 }
 window.handleUserCapsuleClick = handleUserCapsuleClick;
@@ -7773,6 +7772,7 @@ function toggleUserNavDropdown() {
     closeUserNavDropdown();
   }
 }
+window.toggleUserNavDropdown = toggleUserNavDropdown;
 
 function closeUserNavDropdown() {
   if (!userNavDropdown) return;
@@ -7809,6 +7809,7 @@ function setAuthMode(mode) {
     if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Request Registration';
   }
 }
+window.setAuthMode = setAuthMode;
 
 function openAuthModal(mode = 'login') {
   setAuthMode(mode);
@@ -7823,6 +7824,7 @@ function openAuthModal(mode = 'login') {
     setTimeout(() => emailInput.focus(), 100);
   }
 }
+window.openAuthModal = openAuthModal;
 
 function closeAuthModal() {
   const backdrop = document.getElementById('authModalBackdrop');
@@ -7834,6 +7836,7 @@ function closeAuthModal() {
   }
   if (errorMsg) errorMsg.style.display = 'none';
 }
+window.closeAuthModal = closeAuthModal;
 
 function openPendingApprovalModal(email = '') {
   const backdrop = document.getElementById('pendingApprovalModalBackdrop');
@@ -7845,6 +7848,7 @@ function openPendingApprovalModal(email = '') {
     backdrop.style.setProperty('display', 'flex', 'important');
   }
 }
+window.openPendingApprovalModal = openPendingApprovalModal;
 
 function closePendingApprovalModal() {
   const backdrop = document.getElementById('pendingApprovalModalBackdrop');
@@ -7852,6 +7856,220 @@ function closePendingApprovalModal() {
     backdrop.hidden = true;
     backdrop.setAttribute('hidden', '');
     backdrop.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closePendingApprovalModal = closePendingApprovalModal;
+
+function updateUserUi() {
+  const userEmailLabel = document.getElementById('userEmailLabel');
+  const dockUserAvatar = document.getElementById('dockUserAvatar');
+  const btnAuthProfile = document.getElementById('btnAuthProfile');
+  const btnAuthLogout = document.getElementById('btnAuthLogout');
+  const authCalloutBanner = document.getElementById('authCalloutBanner');
+  const btnDockAdminQuick = document.getElementById('btnDockAdminQuick');
+  const ddUserName = document.getElementById('ddUserName');
+  const ddUserEmail = document.getElementById('ddUserEmail');
+  const ddUserRoleTag = document.getElementById('ddUserRoleTag');
+  const ddAvatarWrap = document.getElementById('ddAvatarWrap');
+  const ddAdminItem = document.getElementById('ddAdminItem');
+  const sidebarAdminBtn = document.getElementById('sidebarAdminBtn');
+  const profileGoToAdminBtn = document.getElementById('profileGoToAdminBtn');
+
+  if (currentUser && authToken) {
+    const displayName = currentUser.name || currentUser.email.split('@')[0];
+    if (userEmailLabel) {
+      userEmailLabel.textContent = displayName;
+    }
+    if (dockUserAvatar) {
+      dockUserAvatar.textContent = (currentUser.avatar && currentUser.avatar.length <= 4) ? currentUser.avatar : (currentUser.role === 'ADMIN' ? '👑' : '👤');
+    }
+    if (btnAuthLogout) btnAuthLogout.style.display = 'flex';
+    if (authCalloutBanner) authCalloutBanner.style.display = 'none';
+
+    if (btnAuthProfile) {
+      btnAuthProfile.title = `${displayName} (${currentUser.role || 'USER'}) — Click for account options`;
+    }
+
+    // Update Dropdown Details
+    if (ddUserName) ddUserName.textContent = displayName;
+    if (ddUserEmail) ddUserEmail.textContent = currentUser.email;
+    if (ddUserRoleTag) {
+      ddUserRoleTag.textContent = currentUser.role || 'USER';
+      ddUserRoleTag.className = currentUser.role === 'ADMIN' ? 'user-role-tag role-admin' : 'user-role-tag';
+    }
+    if (ddAvatarWrap) {
+      ddAvatarWrap.textContent = (currentUser.avatar && currentUser.avatar.length <= 4) ? currentUser.avatar : (currentUser.role === 'ADMIN' ? '👑' : '👤');
+    }
+
+    // Admin Controls
+    const isAdmin = currentUser.role === 'ADMIN';
+    if (btnDockAdminQuick) btnDockAdminQuick.style.display = isAdmin ? 'inline-flex' : 'none';
+    if (ddAdminItem) ddAdminItem.style.display = isAdmin ? 'flex' : 'none';
+    if (sidebarAdminBtn) sidebarAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    if (profileGoToAdminBtn) profileGoToAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+    if (isAdmin) {
+      fetchAdminBadgeCounts();
+    }
+  } else {
+    if (userEmailLabel) userEmailLabel.textContent = 'Sign In';
+    if (dockUserAvatar) dockUserAvatar.textContent = '👤';
+    if (btnAuthLogout) btnAuthLogout.style.display = 'none';
+    if (authCalloutBanner) authCalloutBanner.style.display = 'flex';
+    if (btnDockAdminQuick) btnDockAdminQuick.style.display = 'none';
+    if (ddAdminItem) ddAdminItem.style.display = 'none';
+    if (sidebarAdminBtn) sidebarAdminBtn.style.display = 'none';
+    if (profileGoToAdminBtn) profileGoToAdminBtn.style.display = 'none';
+    if (btnAuthProfile) btnAuthProfile.title = 'Sign In to Workspace';
+  }
+}
+window.updateUserUi = updateUserUi;
+
+function handleSignOut(promptModal = true) {
+  authToken = null;
+  currentUser = null;
+  localStorage.removeItem('antigravity_token');
+  localStorage.removeItem('antigravity_user');
+  closeUserNavDropdown();
+  updateUserUi();
+  showToast('Signed out successfully.');
+  if (promptModal) {
+    showAuthPage('login');
+  } else {
+    showDashboard();
+  }
+}
+window.handleSignOut = handleSignOut;
+
+async function checkAuthSession(isManualCheck = false) {
+  if (!authToken) {
+    updateUserUi();
+    return;
+  }
+
+  try {
+    const res = await _originalFetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (res.status === 403) {
+      const data = await res.json();
+      if (data.status === 'PENDING') {
+        openPendingApprovalModal(currentUser?.email || '');
+      } else {
+        handleSignOut(false);
+        showToast('Your account is not active.');
+      }
+      return;
+    }
+
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data.user;
+      localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+      closePendingApprovalModal();
+      updateUserUi();
+      renderDynamicCategoryDropdowns();
+      if (isManualCheck) {
+        showToast('🎉 Your account is approved and active!');
+        loadMeta();
+        loadTasks();
+        loadWeeklyProgress();
+        loadWealthCard();
+      }
+    } else {
+      handleSignOut(false);
+    }
+  } catch (err) {
+    console.warn('Session check warning:', err);
+  }
+}
+window.checkAuthSession = checkAuthSession;
+
+async function handleAuthSubmit(e) {
+  e.preventDefault();
+  if (authErrorMsg) authErrorMsg.style.display = 'none';
+
+  const email = authEmailInput.value.trim();
+  const password = authPasswordInput.value;
+  const name = authNameInput ? authNameInput.value.trim() : '';
+
+  if (!email || !password) {
+    showAuthError('Please fill in all required fields.');
+    return;
+  }
+
+  const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+  const payload = authMode === 'register' ? { email, password, name } : { email, password };
+
+  try {
+    if (authSubmitBtn) {
+      authSubmitBtn.disabled = true;
+      authSubmitBtn.innerHTML = '<span>⏳</span> Processing...';
+    }
+
+    const res = await _originalFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if ((res.status === 403 && data.status === 'PENDING') || (res.status === 201 && data.pending)) {
+      closeAuthModal();
+      openPendingApprovalModal(email);
+      showToast('Registration submitted! Awaiting administrator approval.', 6000);
+      return;
+    }
+
+    if (res.status === 403 && data.status === 'REJECTED') {
+      showAuthError('Your access request has been declined or deactivated by the administrator.');
+      return;
+    }
+
+    if (!res.ok) {
+      showAuthError(data.error || 'Authentication failed.');
+      return;
+    }
+
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('antigravity_token', authToken);
+    localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+
+    updateUserUi();
+    closeAuthModal();
+    closePendingApprovalModal();
+    renderDynamicCategoryDropdowns();
+    showToast(`Welcome back, ${currentUser.name || currentUser.email}!`);
+
+    if (data.onboardingNeeded || !currentUser.onboardingCompleted) {
+      showDashboard();
+      setTimeout(() => openOnboardingWizard(currentUser), 400);
+    } else {
+      showDashboard();
+      loadMeta();
+      loadTasks();
+      loadWeeklyProgress();
+      loadWealthCard();
+      if (currentUser.role === 'ADMIN') fetchAdminBadgeCounts();
+    }
+  } catch (err) {
+    console.error('Auth submit error:', err);
+    showAuthError('Network error connecting to server.');
+  } finally {
+    if (authSubmitBtn) {
+      authSubmitBtn.disabled = false;
+      authSubmitBtn.innerHTML = authMode === 'register' ? '<span>✨</span> Request Registration' : '<span>🚀</span> Sign In';
+    }
+  }
+}
+
+function showAuthError(msg) {
+  if (authErrorMsg) {
+    authErrorMsg.textContent = msg;
+    authErrorMsg.style.display = 'block';
   }
 }
 
