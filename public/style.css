@@ -8762,70 +8762,90 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
     box-sizing: border-box !important;
   }
 
-  /* Floating Glass Action Button for Sidebar Drawer */
+  /* Ultra-Minimalist Floating Glass Top Nav Bar */
+  .main-top-navbar {
+    position: sticky !important;
+    top: 8px !important;
+    z-index: 100 !important;
+    width: fit-content !important;
+    max-width: 95% !important;
+    margin: 0 auto 16px !important;
+    padding: 4px 10px 4px 6px !important;
+    border-radius: 999px !important;
+    background: rgba(10, 14, 26, 0.82) !important;
+    backdrop-filter: blur(28px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    border: 1px solid rgba(56, 189, 248, 0.28) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    min-height: 42px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Seamless Integrated Sidebar Toggle Pill Button */
   .btn-sidebar-toggle {
-    position: fixed !important;
-    bottom: 24px !important;
-    left: 20px !important;
+    position: static !important;
     top: auto !important;
-    z-index: 1200 !important;
-    width: 52px !important;
-    height: 52px !important;
-    min-width: 52px !important;
-    min-height: 52px !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    z-index: 1 !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    margin: 0 2px 0 0 !important;
     padding: 0 !important;
     border-radius: 50% !important;
-    background: linear-gradient(135deg, rgba(20, 28, 52, 0.94) 0%, rgba(10, 14, 28, 0.98) 100%) !important;
-    backdrop-filter: blur(25px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(25px) saturate(200%) !important;
-    border: 1.5px solid rgba(56, 189, 248, 0.5) !important;
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(56, 189, 248, 0.4) !important;
+    background: rgba(56, 189, 248, 0.16) !important;
+    border: 1px solid rgba(56, 189, 248, 0.45) !important;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.25) !important;
     color: #38bdf8 !important;
-    display: flex !important;
+    display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: auto !important;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease !important;
+    flex-shrink: 0 !important;
+    transition: all 0.2s ease !important;
   }
 
   .btn-sidebar-toggle:hover,
   .btn-sidebar-toggle:active {
-    transform: scale(1.1) !important;
-    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.6) !important;
+    background: rgba(56, 189, 248, 0.3) !important;
+    border-color: #38bdf8 !important;
+    transform: scale(1.06) !important;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.5) !important;
   }
+
+  .btn-sidebar-toggle .toggle-icon-wrap {
+    width: 14px !important;
+    height: 11px !important;
+    gap: 2.5px !important;
+  }
+
+  .btn-sidebar-toggle .toggle-bar {
+    height: 1.5px !important;
+  }
+
+  .btn-sidebar-toggle .toggle-bar.bar-1 { width: 14px !important; }
+  .btn-sidebar-toggle .toggle-bar.bar-2 { width: 8px !important; }
+  .btn-sidebar-toggle .toggle-bar.bar-3 { width: 14px !important; }
 
   .toggle-label-text {
     display: none !important;
   }
 
-  /* Ultra-Minimalist Floating Glass Top Nav Bar */
-  .main-top-navbar {
-    position: sticky !important;
-    top: 10px !important;
-    z-index: 100 !important;
-    width: fit-content !important;
-    max-width: 92% !important;
-    margin: 0 auto 20px !important;
-    padding: 5px 14px !important;
-    border-radius: 999px !important;
-    background: rgba(10, 14, 26, 0.72) !important;
-    backdrop-filter: blur(28px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
-
   body.is-scrolled .main-top-navbar,
   .main-top-navbar.scrolled {
-    background: rgba(10, 14, 26, 0.88) !important;
-    border-color: rgba(56, 189, 248, 0.3) !important;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.2) !important;
+    background: rgba(10, 14, 26, 0.92) !important;
+    border-color: rgba(56, 189, 248, 0.4) !important;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.75), 0 0 25px rgba(56, 189, 248, 0.25) !important;
   }
 
   .header-flip-clock-wrap {
