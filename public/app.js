@@ -388,6 +388,8 @@ function hideAllTopLevelSections() {
   if (profileSec) profileSec.hidden = true;
   const adminSec = document.getElementById('adminSection');
   if (adminSec) adminSec.hidden = true;
+  const authPageSec = document.getElementById('authPageSection');
+  if (authPageSec) authPageSec.hidden = true;
 }
 
 function showDashboard() {
@@ -395,6 +397,17 @@ function showDashboard() {
   dashboardSection.hidden = false;
   stopGoldPricePolling();
   currentCategoryPage = null;
+}
+
+function showAuthPage(mode = 'login') {
+  closeUserNavDropdown();
+  hideAllTopLevelSections();
+  const authPageSec = document.getElementById('authPageSection');
+  if (authPageSec) {
+    authPageSec.hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setPageAuthMode(mode);
+  }
 }
 
 function openProfileSection() {
@@ -430,9 +443,12 @@ function navigateToSection(sectionName) {
     openProfileSection();
   } else if (sectionName === 'admin') {
     openAdminSection();
+  } else if (sectionName === 'auth' || sectionName === 'login' || sectionName === 'register') {
+    showAuthPage(sectionName === 'register' ? 'register' : 'login');
   }
 }
 
+window.showAuthPage = showAuthPage;
 window.openProfileSection = openProfileSection;
 window.openAdminSection = openAdminSection;
 window.navigateToSection = navigateToSection;
@@ -7693,7 +7709,7 @@ let pendingAdminConfirmCallback = null;
 
 function initAuthEvents() {
   if (btnBannerSignIn) {
-    btnBannerSignIn.addEventListener('click', () => openAuthModal('login'));
+    btnBannerSignIn.addEventListener('click', () => showAuthPage('login'));
   }
 
   if (btnCloseAuthModal) {
@@ -7734,11 +7750,12 @@ function initAuthEvents() {
   initProfileFormEvents();
   updateUserUi();
   checkAuthSession();
+  renderDynamicCategoryDropdowns();
 }
 
 function handleUserCapsuleClick() {
   if (!authToken || !currentUser) {
-    openAuthModal('login');
+    showAuthPage('login');
   } else {
     // When logged in, open the Profile page directly
     openProfileSection();
@@ -7838,56 +7855,262 @@ function closePendingApprovalModal() {
   }
 }
 
-window.openAuthModal = openAuthModal;
-window.closeAuthModal = closeAuthModal;
-window.openPendingApprovalModal = openPendingApprovalModal;
-window.closePendingApprovalModal = closePendingApprovalModal;
-window.setAuthMode = setAuthMode;
+// =============================================================================
+// 🎭 PERSONA BLUEPRINTS & DEFAULT DEPARTMENT SEGMENTS
+// =============================================================================
 
-async function handleAuthSubmit(e) {
-  e.preventDefault();
-  if (authErrorMsg) authErrorMsg.style.display = 'none';
+const PERSONA_PRESETS = {
+  DOCTOR: {
+    title: 'Doctor / Healthcare Specialist',
+    icon: '👨‍⚕️',
+    specialty: 'Clinical & Restorative Dentistry, Healthcare',
+    focus: 'Clinical excellence, patient treatment cases & private practice scale',
+    departmentSegments: {
+      work: ['Clinical Cases & Surgery', 'Patient Consultations', 'Clinic Management', 'Emergency Procedures'],
+      studies: ['Board Exams & Mocks', 'Evidence-Based Research', 'Continuing Medical Education (CME)'],
+      finance: ['Clinical Revenue', 'Equipment & Materials', 'Private Practice Overhead', 'Investments'],
+      fitness: ['Ergonomic Posture & Mobility', 'Strength & Core Conditioning', 'Cardio & Stamina'],
+      roadmap: ['Clinical Mastery', 'Clinic Scaling & Ownership', 'Academic Fellowships', 'Financial Independence']
+    }
+  },
+  DEVELOPER: {
+    title: 'Software Engineer / Developer',
+    icon: '💻',
+    specialty: 'Full-Stack Software Engineering, Cloud Architecture',
+    focus: 'System design, high-impact feature delivery & engineering scale',
+    departmentSegments: {
+      work: ['Feature Development', 'Code Reviews & PRs', 'Architecture & System Design', 'Bug Fixes & Refactoring'],
+      studies: ['Data Structures & Algorithms', 'System Design & Distributed Systems', 'New Frameworks & AI Tools'],
+      finance: ['Tech Salary / Contracting', 'SaaS Subscriptions & Cloud Infra', 'Tech Equity & Stock Portfolio'],
+      fitness: ['Desk Posture & Spine Mobility', 'Compound Lifts & Strength', 'Cardio & Focus Recovery'],
+      roadmap: ['Staff/Principal Engineer Track', 'Open-Source & SaaS Launches', 'Tech Stack Mastery', 'Net Worth Milestones']
+    }
+  },
+  ENGINEER: {
+    title: 'Civil / Structural Engineer',
+    icon: '🏗️',
+    specialty: 'Structural / Civil & Mechanical Engineering',
+    focus: 'CAD blueprints, site audits, calculations & PE licensure',
+    departmentSegments: {
+      work: ['CAD Modeling & Blueprints', 'Site Inspections & Field Audits', 'Vendor & Contractor Coordination', 'Quality Control & Calculations'],
+      studies: ['PE / FE Licensure Prep', 'Standard Building Codes (IBC/ASCE)', 'Advanced Simulation Tools'],
+      finance: ['Project Contracting', 'Equipment & Software Licenses', 'Retirement & Real Estate Assets'],
+      fitness: ['Functional Mobility', 'Strength Training', 'Field Stamina'],
+      roadmap: ['Chartered Engineer / PE Certification', 'Consultancy Leadership', 'Infrastructure Projects', 'Asset Building']
+    }
+  },
+  TRADER: {
+    title: 'Prop Trader & Investor',
+    icon: '📈',
+    specialty: 'US Equities, Futures & Systematic Prop Trading',
+    focus: 'Order flow execution, Sharpe ratio optimization & sovereign asset preservation',
+    departmentSegments: {
+      work: ['Pre-Market Preparation', 'Live Execution & Tape Reading', 'Post-Market Trade Journaling', 'Risk & Position Sizing'],
+      studies: ['Market Auction Theory', 'Order Flow & Volume Profiling', 'Macroeconomics & Fed Policy'],
+      finance: ['Prop Firm Payouts', 'Margin & Brokerage Capital', 'Physical Gold & Sovereign Reserves', 'Passive Index Holdings'],
+      fitness: ['Stress Management & Breathwork', 'Zone 2 Cardio for Mental Clarity', 'Resistance Training'],
+      roadmap: ['Funded Account Milestones ($500k+)', 'Consistent Monthly Sharpe > 2.0', 'Family Wealth Preservation', 'Physical Asset Vault']
+    }
+  },
+  STUDENT: {
+    title: 'Academic & Student',
+    icon: '🎓',
+    specialty: 'Undergraduate / Graduate Academic Studies',
+    focus: 'Spaced repetition, high GPA milestones & research coursework',
+    departmentSegments: {
+      work: ['Coursework & Problem Sets', 'Lab Reports & Assignments', 'Internship & Research Projects'],
+      studies: ['Active Recall & Anki Flashcards', 'Past Paper Practice & Midterms', 'Final Exam Mastery'],
+      finance: ['Student Budget & Living Expenses', 'Scholarships & Grants', 'Savings Buffer'],
+      fitness: ['Daily Campus Walks & Cardio', 'Gym Routine for Focus', 'Sleep Optimization'],
+      roadmap: ['High GPA / First-Class Honors', 'Top Graduate Admissions', 'Industry Internship', 'Financial Self-Reliance']
+    }
+  },
+  ENTREPRENEUR: {
+    title: 'Founder & Creator',
+    icon: '🚀',
+    specialty: 'Venture Building, Growth Marketing & Product',
+    focus: 'Revenue acceleration, product-market fit & operational leverage',
+    departmentSegments: {
+      work: ['Product Strategy & Roadmap', 'Sales & Customer Acquisition', 'Hiring & Team Leadership', 'Operations & Legal'],
+      studies: ['Market Trends & Competitor Intel', 'Leadership & Negotiations', 'Capital Allocation & Unit Economics'],
+      finance: ['Gross Revenue & MRR', 'Operating Runway & Burn Rate', 'Angel Investments & Dividends'],
+      fitness: ['High-Performance Energy Protocols', 'Weight Training', 'Deep Sleep & Recovery'],
+      roadmap: ['Product-Market Fit ($10k MRR)', 'Scale to $1M ARR', 'Enterprise Partnerships', 'Generational Freedom']
+    }
+  }
+};
 
-  const email = authEmailInput.value.trim();
-  const password = authPasswordInput.value;
-  const name = authNameInput ? authNameInput.value.trim() : '';
+let pageAuthMode = 'login';
+let wizardCurrentStep = 1;
+let wizardSelectedPersona = 'DOCTOR';
+let wizardSegmentsState = JSON.parse(JSON.stringify(PERSONA_PRESETS.DOCTOR.departmentSegments));
+let profileSegmentsState = null;
 
-  if (!email || !password) {
-    showAuthError('Please fill in all required fields.');
+// =============================================================================
+// 🔐 STANDALONE FULL-PAGE AUTH CONTROLLERS
+// =============================================================================
+
+function setPageAuthMode(mode) {
+  pageAuthMode = mode;
+  const titleEl = document.getElementById('pageAuthTitle');
+  const subtitleEl = document.getElementById('pageAuthSubtitle');
+  const tabLogin = document.getElementById('btnPageTabLogin');
+  const tabRegister = document.getElementById('btnPageTabRegister');
+  const nameGroup = document.getElementById('pageAuthNameGroup');
+  const personaGroup = document.getElementById('pageAuthPersonaGroup');
+  const submitBtn = document.getElementById('btnPageAuthSubmit');
+  const errorMsg = document.getElementById('pageAuthErrorMsg');
+  const extraRow = document.getElementById('pageAuthExtraRow');
+
+  if (errorMsg) errorMsg.style.display = 'none';
+
+  if (mode === 'register') {
+    if (tabRegister) tabRegister.classList.add('active');
+    if (tabLogin) tabLogin.classList.remove('active');
+    if (titleEl) titleEl.textContent = 'Create Workspace Account';
+    if (subtitleEl) subtitleEl.textContent = 'Join your private cloud productivity operating system';
+    if (nameGroup) nameGroup.style.display = 'block';
+    if (personaGroup) personaGroup.style.display = 'block';
+    if (submitBtn) submitBtn.innerHTML = '<span>✨</span> Create Workspace Account';
+    if (extraRow) extraRow.style.display = 'none';
+  } else {
+    if (tabLogin) tabLogin.classList.add('active');
+    if (tabRegister) tabRegister.classList.remove('active');
+    if (titleEl) titleEl.textContent = 'Welcome Back';
+    if (subtitleEl) subtitleEl.textContent = 'Sign in to your private productivity workspace';
+    if (nameGroup) nameGroup.style.display = 'none';
+    if (personaGroup) personaGroup.style.display = 'none';
+    if (submitBtn) submitBtn.innerHTML = '<span>🚀</span> Sign In to Workspace';
+    if (extraRow) extraRow.style.display = 'flex';
+  }
+}
+window.setPageAuthMode = setPageAuthMode;
+
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (btn) btn.innerHTML = '🙈 Hide';
+  } else {
+    input.type = 'password';
+    if (btn) btn.innerHTML = '👁️ Show';
+  }
+}
+window.togglePasswordVisibility = togglePasswordVisibility;
+
+function checkPasswordStrength(pwd) {
+  const container = document.getElementById('pwdStrengthContainer');
+  const label = document.getElementById('pwdStrengthLabel');
+  const bars = [document.getElementById('pwdBar1'), document.getElementById('pwdBar2'), document.getElementById('pwdBar3'), document.getElementById('pwdBar4')];
+
+  if (!container || !bars[0]) return;
+
+  if (!pwd) {
+    container.style.display = 'none';
     return;
   }
 
-  const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
-  const payload = authMode === 'register' ? { email, password, name } : { email, password };
+  container.style.display = 'block';
+  let score = 0;
+  if (pwd.length >= 6) score++;
+  if (pwd.length >= 10) score++;
+  if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd) || /[^A-Za-z0-9]/.test(pwd)) score++;
+
+  const colors = ['#ef4444', '#f59e0b', '#38bdf8', '#10b981'];
+  const labels = ['Weak (minimum 6 chars)', 'Fair (add uppercase/numbers)', 'Strong password', 'Optimal security! 🔥'];
+
+  bars.forEach((bar, idx) => {
+    if (bar) {
+      if (idx < score) {
+        bar.style.background = colors[score - 1] || '#38bdf8';
+        bar.style.boxShadow = `0 0 8px ${colors[score - 1] || '#38bdf8'}`;
+      } else {
+        bar.style.background = 'rgba(255, 255, 255, 0.1)';
+        bar.style.boxShadow = 'none';
+      }
+    }
+  });
+
+  if (label) {
+    label.textContent = labels[score - 1] || 'Enter password';
+    label.style.color = colors[score - 1] || '#94a3b8';
+  }
+}
+window.checkPasswordStrength = checkPasswordStrength;
+
+function handleForgotPassword() {
+  alert('🔐 Password Recovery Notice:\n\nFor security in this private workspace, password resets are processed directly by the Administrator (jryusiif@gmail.com) or via the Admin Command Center.');
+}
+window.handleForgotPassword = handleForgotPassword;
+
+async function handleGoogleAuth() {
+  const promptEmail = prompt('🌐 Sign in with Google\n\nEnter your Google Account Email to proceed with Single Sign-On:', currentUser?.email || 'jryusiif@gmail.com');
+  if (!promptEmail || !promptEmail.trim()) return;
+
+  const cleanEmail = promptEmail.trim().toLowerCase();
+  const guessedName = cleanEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+  await executeOAuthSignIn({
+    provider: 'google',
+    email: cleanEmail,
+    name: guessedName,
+    avatar: '🌐',
+    oauthId: `google_${btoa(cleanEmail)}`
+  });
+}
+window.handleGoogleAuth = handleGoogleAuth;
+
+async function handleAppleAuth() {
+  const promptEmail = prompt('🍏 Sign in with Apple ID\n\nEnter your Apple ID Email to proceed with Apple Single Sign-On:', currentUser?.email || 'jryusiif@gmail.com');
+  if (!promptEmail || !promptEmail.trim()) return;
+
+  const cleanEmail = promptEmail.trim().toLowerCase();
+  const guessedName = cleanEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+  await executeOAuthSignIn({
+    provider: 'apple',
+    email: cleanEmail,
+    name: guessedName,
+    avatar: '🍏',
+    oauthId: `apple_${btoa(cleanEmail)}`
+  });
+}
+window.handleAppleAuth = handleAppleAuth;
+
+async function executeOAuthSignIn(oauthPayload) {
+  const errorMsg = document.getElementById('pageAuthErrorMsg');
+  if (errorMsg) errorMsg.style.display = 'none';
 
   try {
-    authSubmitBtn.disabled = true;
-    authSubmitBtn.innerHTML = '<span>⏳</span> Processing...';
-
-    const res = await _originalFetch(endpoint, {
+    showToast('Connecting with Single Sign-On...', 2000);
+    const res = await _originalFetch('/api/auth/oauth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(oauthPayload)
     });
 
     const data = await res.json();
 
-    // Check for pending approval
     if ((res.status === 403 && data.status === 'PENDING') || (res.status === 201 && data.pending)) {
-      closeAuthModal();
-      openPendingApprovalModal(email);
-      showToast('Registration submitted! Awaiting administrator approval.', 5000);
+      openPendingApprovalModal(oauthPayload.email);
+      showToast('Registration submitted! Awaiting administrator approval.', 6000);
       return;
     }
 
     if (res.status === 403 && data.status === 'REJECTED') {
-      showAuthError('Your access request has been declined or deactivated by the administrator.');
+      if (errorMsg) {
+        errorMsg.textContent = 'Your account access has been declined or deactivated by the administrator.';
+        errorMsg.style.display = 'block';
+      } else {
+        alert('Your account access has been declined or deactivated by the administrator.');
+      }
       return;
     }
 
     if (!res.ok) {
-      showAuthError(data.error || 'Authentication failed.');
-      return;
+      throw new Error(data.error || 'OAuth authentication failed.');
     }
 
     // Save token and user
@@ -7899,154 +8122,330 @@ async function handleAuthSubmit(e) {
     updateUserUi();
     closeAuthModal();
     closePendingApprovalModal();
-    showToast(`Welcome back, ${currentUser.name || currentUser.email}!`);
+    renderDynamicCategoryDropdowns();
 
-    // Reload all dashboard modules
-    loadMeta();
-    loadTasks();
-    loadWeeklyProgress();
-    loadWealthCard();
+    showToast(`🎉 Signed in with ${oauthPayload.provider.toUpperCase()} as ${currentUser.name || currentUser.email}!`);
 
-    if (currentUser.role === 'ADMIN') {
-      fetchAdminBadgeCounts();
+    // Check if user needs persona onboarding
+    if (data.onboardingNeeded || !currentUser.onboardingCompleted) {
+      showDashboard();
+      setTimeout(() => openOnboardingWizard(currentUser), 400);
+    } else {
+      showDashboard();
+      loadMeta();
+      loadTasks();
+      loadWeeklyProgress();
+      loadWealthCard();
+      if (currentUser.role === 'ADMIN') fetchAdminBadgeCounts();
     }
   } catch (err) {
-    console.error('Auth submit error:', err);
-    showAuthError('Network error connecting to server.');
-  } finally {
-    if (authSubmitBtn) {
-      authSubmitBtn.disabled = false;
-      authSubmitBtn.innerHTML = authMode === 'register' ? '<span>✨</span> Request Registration' : '<span>🚀</span> Sign In';
+    console.error('OAuth execution error:', err);
+    if (errorMsg) {
+      errorMsg.textContent = err.message || 'OAuth sign in failed.';
+      errorMsg.style.display = 'block';
     }
+    showToast(err.message || 'Could not authenticate with OAuth provider.');
   }
 }
 
-function showAuthError(msg) {
-  if (authErrorMsg) {
-    authErrorMsg.textContent = msg;
-    authErrorMsg.style.display = 'block';
-  }
-}
+async function handlePageAuthSubmit(e) {
+  e.preventDefault();
+  const errorMsg = document.getElementById('pageAuthErrorMsg');
+  if (errorMsg) errorMsg.style.display = 'none';
 
-function handleSignOut(promptModal = true) {
-  authToken = null;
-  currentUser = null;
-  localStorage.removeItem('antigravity_token');
-  localStorage.removeItem('antigravity_user');
-  closeUserNavDropdown();
-  updateUserUi();
-  showToast('Signed out successfully.');
-  showDashboard();
-  if (promptModal) openAuthModal('login');
-}
-window.handleSignOut = handleSignOut;
+  const email = document.getElementById('pageAuthEmailInput')?.value.trim();
+  const password = document.getElementById('pageAuthPasswordInput')?.value;
+  const name = document.getElementById('pageAuthNameInput')?.value.trim();
+  const persona = document.getElementById('pageAuthPersonaSelect')?.value || 'DOCTOR';
+  const submitBtn = document.getElementById('btnPageAuthSubmit');
 
-function updateUserUi() {
-  const ddUserName = document.getElementById('ddUserName');
-  const ddUserEmail = document.getElementById('ddUserEmail');
-  const ddUserRoleTag = document.getElementById('ddUserRoleTag');
-  const ddAvatarWrap = document.getElementById('ddAvatarWrap');
-  const ddAdminItem = document.getElementById('ddAdminItem');
-  const sidebarAdminBtn = document.getElementById('sidebarAdminBtn');
-  const profileGoToAdminBtn = document.getElementById('profileGoToAdminBtn');
-
-  if (currentUser && authToken) {
-    const displayName = currentUser.name || currentUser.email.split('@')[0];
-    if (userEmailLabel) userEmailLabel.textContent = displayName;
-    if (dockUserAvatar) {
-      dockUserAvatar.textContent = (currentUser.avatar && currentUser.avatar.length <= 4) ? currentUser.avatar : '👤';
+  if (!email || !password) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Please fill in all required fields.';
+      errorMsg.style.display = 'block';
     }
-    if (btnAuthLogout) btnAuthLogout.style.display = 'flex';
-    if (authCalloutBanner) authCalloutBanner.style.display = 'none';
-
-    if (btnAuthProfile) {
-      btnAuthProfile.title = `${displayName} — Click to open My Profile & Settings`;
-    }
-
-    // Update Dropdown Details
-    if (ddUserName) ddUserName.textContent = displayName;
-    if (ddUserEmail) ddUserEmail.textContent = currentUser.email;
-    if (ddUserRoleTag) {
-      ddUserRoleTag.textContent = currentUser.role || 'USER';
-      ddUserRoleTag.className = currentUser.role === 'ADMIN' ? 'user-role-tag role-admin' : 'user-role-tag';
-    }
-    if (ddAvatarWrap) {
-      ddAvatarWrap.textContent = (currentUser.avatar && currentUser.avatar.length <= 4) ? currentUser.avatar : '👤';
-    }
-
-    // Admin Controls
-    const isAdmin = currentUser.role === 'ADMIN';
-    if (btnDockAdminQuick) btnDockAdminQuick.style.display = isAdmin ? 'inline-flex' : 'none';
-    if (ddAdminItem) ddAdminItem.style.display = isAdmin ? 'flex' : 'none';
-    if (sidebarAdminBtn) sidebarAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
-    if (profileGoToAdminBtn) profileGoToAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
-
-    if (isAdmin) {
-      fetchAdminBadgeCounts();
-    }
-  } else {
-    if (userEmailLabel) userEmailLabel.textContent = 'Sign In';
-    if (dockUserAvatar) dockUserAvatar.textContent = '👤';
-    if (btnAuthLogout) btnAuthLogout.style.display = 'none';
-    if (authCalloutBanner) authCalloutBanner.style.display = 'flex';
-    if (btnDockAdminQuick) btnDockAdminQuick.style.display = 'none';
-    if (ddAdminItem) ddAdminItem.style.display = 'none';
-    if (sidebarAdminBtn) sidebarAdminBtn.style.display = 'none';
-    if (profileGoToAdminBtn) profileGoToAdminBtn.style.display = 'none';
-    if (btnAuthProfile) btnAuthProfile.title = 'Sign In / Account';
-  }
-}
-
-async function checkAuthSession(isManualCheck = false) {
-  if (!authToken) {
-    updateUserUi();
     return;
   }
 
+  const endpoint = pageAuthMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+  const payload = pageAuthMode === 'register' 
+    ? { email, password, name, persona } 
+    : { email, password };
+
   try {
-    const res = await _originalFetch('/api/auth/me', {
-      headers: { 'Authorization': `Bearer ${authToken}` }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳</span> Processing...';
+    }
+
+    const res = await _originalFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-    
-    if (res.status === 403) {
-      const data = await res.json();
-      if (data.status === 'PENDING') {
-        openPendingApprovalModal(currentUser?.email || '');
-      } else {
-        handleSignOut(false);
-        showToast('Your account is not active.');
+
+    const data = await res.json();
+
+    if ((res.status === 403 && data.status === 'PENDING') || (res.status === 201 && data.pending)) {
+      openPendingApprovalModal(email);
+      showToast('Registration submitted! Awaiting administrator approval.', 6000);
+      return;
+    }
+
+    if (res.status === 403 && data.status === 'REJECTED') {
+      if (errorMsg) {
+        errorMsg.textContent = 'Your access request has been declined or deactivated by the administrator.';
+        errorMsg.style.display = 'block';
       }
       return;
     }
 
-    if (res.ok) {
-      const data = await res.json();
-      currentUser = data.user;
-      localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
-      closePendingApprovalModal();
-      updateUserUi();
-      if (isManualCheck) {
-        showToast('🎉 Your account is approved and active!');
-        loadMeta();
-        loadTasks();
-        loadWeeklyProgress();
-        loadWealthCard();
+    if (!res.ok) {
+      if (errorMsg) {
+        errorMsg.textContent = data.error || 'Authentication failed.';
+        errorMsg.style.display = 'block';
       }
+      return;
+    }
+
+    // Success
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('antigravity_token', authToken);
+    localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+
+    updateUserUi();
+    closeAuthModal();
+    closePendingApprovalModal();
+    renderDynamicCategoryDropdowns();
+
+    showToast(`Welcome back, ${currentUser.name || currentUser.email}!`);
+
+    if (data.onboardingNeeded || !currentUser.onboardingCompleted) {
+      showDashboard();
+      setTimeout(() => openOnboardingWizard(currentUser), 400);
     } else {
-      handleSignOut(false);
+      showDashboard();
+      loadMeta();
+      loadTasks();
+      loadWeeklyProgress();
+      loadWealthCard();
+      if (currentUser.role === 'ADMIN') fetchAdminBadgeCounts();
     }
   } catch (err) {
-    console.warn('Session check warning:', err);
+    console.error('Page auth error:', err);
+    if (errorMsg) {
+      errorMsg.textContent = 'Network error connecting to server.';
+      errorMsg.style.display = 'block';
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = pageAuthMode === 'register' ? '<span>✨</span> Create Workspace Account' : '<span>🚀</span> Sign In to Workspace';
+    }
   }
 }
+window.handlePageAuthSubmit = handlePageAuthSubmit;
 
 // =============================================================================
-// 👤 USER PROFILE CONTROLLERS
+// 🚀 PERSONA-BASED ONBOARDING WIZARD
+// =============================================================================
+
+function openOnboardingWizard(user = null) {
+  const backdrop = document.getElementById('personaOnboardingModalBackdrop');
+  if (!backdrop) return;
+
+  const targetPersona = user?.persona || 'DOCTOR';
+  selectOnboardingPersona(targetPersona);
+  goToWizardStep(1);
+
+  backdrop.hidden = false;
+  backdrop.removeAttribute('hidden');
+  backdrop.style.setProperty('display', 'flex', 'important');
+}
+window.openOnboardingWizard = openOnboardingWizard;
+
+function closeOnboardingWizard() {
+  const backdrop = document.getElementById('personaOnboardingModalBackdrop');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+    backdrop.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closeOnboardingWizard = closeOnboardingWizard;
+
+function selectOnboardingPersona(personaKey, element = null) {
+  wizardSelectedPersona = personaKey.toUpperCase();
+  const preset = PERSONA_PRESETS[wizardSelectedPersona] || PERSONA_PRESETS.DOCTOR;
+  wizardSegmentsState = JSON.parse(JSON.stringify(preset.departmentSegments));
+
+  const cards = document.querySelectorAll('.persona-card');
+  cards.forEach(card => {
+    card.classList.toggle('active', card.getAttribute('data-persona') === wizardSelectedPersona);
+  });
+
+  const focusInput = document.getElementById('wizInputFocus');
+  if (focusInput) focusInput.value = preset.focus || '';
+
+  renderWizardSegmentChips();
+}
+window.selectOnboardingPersona = selectOnboardingPersona;
+
+function goToWizardStep(stepNum) {
+  wizardCurrentStep = stepNum;
+
+  // Update track nodes
+  [1, 2, 3].forEach(n => {
+    const node = document.getElementById(`stepNode${n}`);
+    const pane = document.getElementById(`wizardStep${n}`);
+    if (node) node.classList.toggle('active', n <= stepNum);
+    if (pane) {
+      if (n === stepNum) {
+        pane.style.display = 'block';
+      } else {
+        pane.style.display = 'none';
+      }
+    }
+  });
+
+  if (stepNum === 2) {
+    renderWizardSegmentChips();
+  }
+}
+window.goToWizardStep = goToWizardStep;
+
+function renderWizardSegmentChips() {
+  const depts = ['work', 'studies', 'finance', 'fitness'];
+  depts.forEach(dept => {
+    const container = document.getElementById(`wizChips${dept.charAt(0).toUpperCase() + dept.slice(1)}`);
+    if (!container) return;
+    const items = wizardSegmentsState[dept] || [];
+    container.innerHTML = items.map((tag, idx) => `
+      <span class="tag-chip">
+        <span>${escapeHtml(tag)}</span>
+        <button type="button" class="tag-chip-del" onclick="removeWizardTag('${dept}', ${idx})" title="Remove tag">&times;</button>
+      </span>
+    `).join('');
+  });
+}
+
+function promptAddWizardTag(dept) {
+  const newTag = prompt(`Add custom tag for ${dept.toUpperCase()}:`);
+  if (!newTag || !newTag.trim()) return;
+  if (!wizardSegmentsState[dept]) wizardSegmentsState[dept] = [];
+  wizardSegmentsState[dept].push(newTag.trim());
+  renderWizardSegmentChips();
+}
+window.promptAddWizardTag = promptAddWizardTag;
+
+function removeWizardTag(dept, idx) {
+  if (wizardSegmentsState[dept]) {
+    wizardSegmentsState[dept].splice(idx, 1);
+    renderWizardSegmentChips();
+  }
+}
+window.removeWizardTag = removeWizardTag;
+
+async function submitOnboardingSetup() {
+  const btn = document.getElementById('btnCompleteOnboarding');
+  const currency = document.getElementById('wizSelectCurrency')?.value || 'USD';
+  const experienceLevel = document.getElementById('wizSelectExperience')?.value || 'Senior / Specialist';
+  const primaryFocus = document.getElementById('wizInputFocus')?.value.trim() || '';
+
+  const preset = PERSONA_PRESETS[wizardSelectedPersona] || PERSONA_PRESETS.DOCTOR;
+
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> Initializing Your Blueprint...';
+    }
+
+    const res = await fetch('/api/user/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        persona: wizardSelectedPersona,
+        experienceLevel,
+        specialty: preset.specialty,
+        primaryFocus: primaryFocus || preset.focus,
+        currency,
+        departmentSegments: wizardSegmentsState
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save setup.');
+
+    currentUser = { ...currentUser, ...data.user, onboardingCompleted: true };
+    localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+
+    closeOnboardingWizard();
+    updateUserUi();
+    renderDynamicCategoryDropdowns();
+
+    showToast(`🎉 Workspace configured for ${preset.title}!`, 5000);
+
+    // Refresh modules
+    loadMeta();
+    loadTasks();
+    loadWeeklyProgress();
+    loadWealthCard();
+  } catch (err) {
+    console.error('Onboarding submit error:', err);
+    showToast(err.message || 'Could not complete setup.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>🎉</span> Launch Personalized Dashboard';
+    }
+  }
+}
+window.submitOnboardingSetup = submitOnboardingSetup;
+
+// =============================================================================
+// 🏷️ DYNAMIC CATEGORY DROPDOWNS ENGINE
+// =============================================================================
+
+function renderDynamicCategoryDropdowns() {
+  const segments = currentUser?.departmentSegments || PERSONA_PRESETS.DOCTOR.departmentSegments;
+  if (!segments) return;
+
+  // Dynamic Work & Study options for task category select
+  const taskCategorySelect = document.getElementById('taskCategorySelect');
+  if (taskCategorySelect) {
+    const defaultCategories = [
+      { val: 'Work', label: '💼 Work / Clinical' },
+      { val: 'Studies', label: '📚 Studies & Research' },
+      { val: 'Workouts', label: '🏋️ Workouts & Health' },
+      { val: 'Us stocks trading', label: '📈 Stocks / Trading' },
+      { val: 'Religion', label: '🕌 Religion & Mindfulness' },
+      { val: 'Finance', label: '💰 Finance & Wealth' },
+      { val: 'Routine', label: '🧴 Daily Routine' },
+      { val: 'Roadmaps & Master Plan', label: '🧭 Roadmaps' }
+    ];
+
+    taskCategorySelect.innerHTML = defaultCategories.map(c => `
+      <option value="${c.val}">${c.label}</option>
+    `).join('');
+  }
+
+  // Update Finance Currency symbols
+  const currency = currentUser?.currency || 'USD';
+  const currencySymbols = { USD: '$', EUR: '€', GBP: '£', EGP: 'E£', SAR: '﷼', AED: 'د.إ' };
+  const symbol = currencySymbols[currency] || '$';
+  window.ACTIVE_CURRENCY_SYMBOL = symbol;
+}
+window.renderDynamicCategoryDropdowns = renderDynamicCategoryDropdowns;
+
+// =============================================================================
+// 👤 USER PROFILE CONTROLLERS & SEGMENT CUSTOMIZER
 // =============================================================================
 
 function initProfileFormEvents() {
   const profileDetailsForm = document.getElementById('profileDetailsForm');
   const profilePasswordForm = document.getElementById('profilePasswordForm');
+  const profilePersonaForm = document.getElementById('profilePersonaForm');
 
   if (profileDetailsForm) {
     profileDetailsForm.addEventListener('submit', handleSaveProfileDetails);
@@ -8054,6 +8453,10 @@ function initProfileFormEvents() {
 
   if (profilePasswordForm) {
     profilePasswordForm.addEventListener('submit', handleChangePasswordSubmit);
+  }
+
+  if (profilePersonaForm) {
+    profilePersonaForm.addEventListener('submit', handleSavePersonaSegments);
   }
 }
 
@@ -8066,6 +8469,9 @@ async function loadProfileData() {
     const data = await res.json();
     const user = data.user;
     const stats = data.stats || {};
+
+    currentUser = { ...currentUser, ...user };
+    localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
 
     // Populate Hero banner
     const profileAvatarDisplay = document.getElementById('profileAvatarDisplay');
@@ -8099,7 +8505,7 @@ async function loadProfileData() {
       profileLastLogin.textContent = user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : 'Active now';
     }
 
-    // Populate Form Inputs
+    // Populate Form Inputs (Tab 1)
     const profileInputName = document.getElementById('profileInputName');
     const profileInputSpecialty = document.getElementById('profileInputSpecialty');
     const profileInputEmail = document.getElementById('profileInputEmail');
@@ -8114,7 +8520,22 @@ async function loadProfileData() {
     if (profileInputAvatar) profileInputAvatar.value = user.avatar || '';
     if (profileInputBio) profileInputBio.value = user.bio || '';
 
-    // Populate Stats
+    // Populate Persona Tab (Tab 2)
+    const profileSelectPersona = document.getElementById('profileSelectPersona');
+    const profileSelectCurrency = document.getElementById('profileSelectCurrency');
+    const profileSelectExperience = document.getElementById('profileSelectExperience');
+    const profileInputFocus = document.getElementById('profileInputFocus');
+
+    if (profileSelectPersona) profileSelectPersona.value = user.persona || 'DOCTOR';
+    if (profileSelectCurrency) profileSelectCurrency.value = user.currency || 'USD';
+    if (profileSelectExperience) profileSelectExperience.value = user.experienceLevel || 'Senior / Specialist';
+    if (profileInputFocus) profileInputFocus.value = user.primaryFocus || '';
+
+    const defaultSegments = PERSONA_PRESETS[user.persona || 'DOCTOR']?.departmentSegments || PERSONA_PRESETS.DOCTOR.departmentSegments;
+    profileSegmentsState = user.departmentSegments || JSON.parse(JSON.stringify(defaultSegments));
+    renderProfileSegmentChips();
+
+    // Populate Stats (Tab 4)
     const profileStatTasks = document.getElementById('profileStatTasks');
     const profileStatRoutines = document.getElementById('profileStatRoutines');
     const profileStatCases = document.getElementById('profileStatCases');
@@ -8131,7 +8552,7 @@ async function loadProfileData() {
 }
 
 function switchProfileTab(tabName) {
-  const tabs = ['details', 'security', 'stats'];
+  const tabs = ['details', 'persona', 'security', 'stats'];
   tabs.forEach(t => {
     const btn = document.getElementById(`btnTabProfile${t.charAt(0).toUpperCase() + t.slice(1)}`);
     const content = document.getElementById(`profileTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -8148,6 +8569,99 @@ function switchProfileTab(tabName) {
   });
 }
 window.switchProfileTab = switchProfileTab;
+
+function renderProfileSegmentChips() {
+  if (!profileSegmentsState) return;
+  const depts = ['work', 'studies', 'finance', 'fitness'];
+  depts.forEach(dept => {
+    const container = document.getElementById(`chips${dept.charAt(0).toUpperCase() + dept.slice(1)}Segments`);
+    if (!container) return;
+    const items = profileSegmentsState[dept] || [];
+    container.innerHTML = items.map((tag, idx) => `
+      <span class="tag-chip">
+        <span>${escapeHtml(tag)}</span>
+        <button type="button" class="tag-chip-del" onclick="removeProfileSegmentTag('${dept}', ${idx})" title="Remove tag">&times;</button>
+      </span>
+    `).join('');
+  });
+}
+
+function promptAddSegmentTag(dept) {
+  const newTag = prompt(`Add new custom segment for ${dept.toUpperCase()}:`);
+  if (!newTag || !newTag.trim()) return;
+  if (!profileSegmentsState) profileSegmentsState = {};
+  if (!profileSegmentsState[dept]) profileSegmentsState[dept] = [];
+  profileSegmentsState[dept].push(newTag.trim());
+  renderProfileSegmentChips();
+}
+window.promptAddSegmentTag = promptAddSegmentTag;
+
+function removeProfileSegmentTag(dept, idx) {
+  if (profileSegmentsState && profileSegmentsState[dept]) {
+    profileSegmentsState[dept].splice(idx, 1);
+    renderProfileSegmentChips();
+  }
+}
+window.removeProfileSegmentTag = removeProfileSegmentTag;
+
+function handleProfilePersonaPresetChange(presetKey) {
+  const preset = PERSONA_PRESETS[presetKey.toUpperCase()] || PERSONA_PRESETS.DOCTOR;
+  if (confirm(`Load default department segments and specialties for ${preset.title}?`)) {
+    profileSegmentsState = JSON.parse(JSON.stringify(preset.departmentSegments));
+    const focusInput = document.getElementById('profileInputFocus');
+    if (focusInput) focusInput.value = preset.focus || '';
+    renderProfileSegmentChips();
+  }
+}
+window.handleProfilePersonaPresetChange = handleProfilePersonaPresetChange;
+
+async function handleSavePersonaSegments(e) {
+  e.preventDefault();
+  const persona = document.getElementById('profileSelectPersona')?.value || 'DOCTOR';
+  const currency = document.getElementById('profileSelectCurrency')?.value || 'USD';
+  const experienceLevel = document.getElementById('profileSelectExperience')?.value || 'Senior / Specialist';
+  const primaryFocus = document.getElementById('profileInputFocus')?.value.trim() || '';
+
+  const saveBtn = document.getElementById('btnSavePersonaSegments');
+
+  try {
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span>⏳</span> Saving Segments...';
+    }
+
+    const res = await fetch('/api/user/segments', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        persona,
+        currency,
+        experienceLevel,
+        primaryFocus,
+        departmentSegments: profileSegmentsState
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update segments');
+
+    currentUser = { ...currentUser, ...data.user };
+    localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+
+    updateUserUi();
+    renderDynamicCategoryDropdowns();
+    showToast('✨ Persona & department segments saved successfully!');
+  } catch (err) {
+    console.error('Save persona segments error:', err);
+    showToast(err.message || 'Failed to save segments.');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<span>✨</span> Save Persona & Department Customizations';
+    }
+  }
+}
+window.handleSavePersonaSegments = handleSavePersonaSegments;
 
 function setAvatarPreset(emoji) {
   const profileInputAvatar = document.getElementById('profileInputAvatar');

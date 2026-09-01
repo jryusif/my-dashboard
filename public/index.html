@@ -227,6 +227,157 @@
         </div>
       </header>
 
+      <!-- ===================================================================
+           🔐 DEDICATED FULL-PAGE AUTHENTICATION EXPERIENCE
+           =================================================================== -->
+      <section class="page-section auth-page-section" id="authPageSection" hidden>
+        <div class="auth-page-container">
+          <!-- Left Hero Branding Showcase -->
+          <div class="auth-hero-showcase">
+            <div class="auth-hero-glass-inner">
+              <div class="auth-brand-pill">
+                <span class="auth-live-dot"></span>
+                <span>ENTERPRISE GRADE &bull; NEON POSTGRESQL</span>
+              </div>
+              <h1 class="auth-hero-title">Your High-Performance Life &amp; Career Operating System</h1>
+              <p class="auth-hero-desc">
+                A unified executive dashboard tailored specifically to your profession. Seamlessly orchestrate daily habits, complex clinical cases, software sprints, trading capital, and life milestones in one secure cloud workspace.
+              </p>
+
+              <!-- Persona Showcase Pills -->
+              <div class="auth-persona-chips">
+                <span class="auth-chip">👨‍⚕️ Doctors &amp; Surgeons</span>
+                <span class="auth-chip">💻 Software Engineers</span>
+                <span class="auth-chip">📈 Prop Traders &amp; Investors</span>
+                <span class="auth-chip">🏗️ Civil &amp; Structural Engineers</span>
+                <span class="auth-chip">🎓 Academics &amp; Students</span>
+                <span class="auth-chip">🚀 Founders &amp; Creators</span>
+              </div>
+
+              <div class="auth-trust-grid">
+                <div class="auth-trust-item">
+                  <span class="trust-icon">🛡️</span>
+                  <div>
+                    <strong>Isolated Multi-Tenancy</strong>
+                    <span>Your private database records are strictly protected</span>
+                  </div>
+                </div>
+                <div class="auth-trust-item">
+                  <span class="trust-icon">⚡</span>
+                  <div>
+                    <strong>Live Instant Sync</strong>
+                    <span>Serverless auto-scaling backend powered by Neon</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Interactive Auth Card -->
+          <div class="auth-card-panel">
+            <div class="auth-card-glass">
+              <div class="auth-card-header">
+                <h2 id="pageAuthTitle">Welcome Back</h2>
+                <p id="pageAuthSubtitle">Sign in to your private productivity workspace</p>
+              </div>
+
+              <!-- Auth Mode Switcher -->
+              <div class="auth-segmented-control">
+                <button type="button" class="auth-seg-btn active" id="btnPageTabLogin" onclick="setPageAuthMode('login')">Sign In</button>
+                <button type="button" class="auth-seg-btn" id="btnPageTabRegister" onclick="setPageAuthMode('register')">Create Account</button>
+              </div>
+
+              <!-- Social Single Sign-On (Google & Apple) -->
+              <div class="social-auth-grid">
+                <button type="button" class="btn-social-oauth btn-google" id="btnGoogleAuth" onclick="handleGoogleAuth()">
+                  <svg class="oauth-svg" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                  </svg>
+                  <span>Continue with Google</span>
+                </button>
+
+                <button type="button" class="btn-social-oauth btn-apple" id="btnAppleAuth" onclick="handleAppleAuth()">
+                  <svg class="oauth-svg" viewBox="0 0 170 170" width="18" height="18" fill="currentColor">
+                    <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.67-7.81-11.96-14.34-6.3-9.57-11.19-20.73-14.65-33.47-3.47-12.74-5.2-24.62-5.2-35.63 0-16.1 4.19-29.35 12.57-39.75 8.38-10.4 18.73-15.7 31.05-15.91 4.58 0 9.77 1.22 15.57 3.67 5.8 2.45 9.77 3.73 11.9 3.84 1.74 0 5.8-1.39 12.18-4.17 6.38-2.78 11.83-4 16.35-3.67 13.91.65 24.96 5.83 33.14 15.55-12.18 7.39-18.15 17.5-17.93 30.33.22 10.22 4.24 18.75 12.06 25.59 7.83 6.85 17.07 10.65 27.72 11.41-2.18 6.74-4.89 13.8-8.15 21.19zM119.22 33.15c0-7.39 2.67-14.4 8.01-21.03 5.33-6.63 11.85-10.87 19.57-12.72.33 1.2.49 2.39.49 3.59 0 7.39-2.72 14.4-8.15 21.03-5.44 6.63-12.06 10.76-19.92 12.4-.11-1.09-.17-2.19-.17-3.27z"/>
+                  </svg>
+                  <span>Continue with Apple</span>
+                </button>
+              </div>
+
+              <div class="auth-divider">
+                <span>or continue with email</span>
+              </div>
+
+              <!-- Main Auth Form -->
+              <form id="pageAuthForm" class="page-auth-form" onsubmit="handlePageAuthSubmit(event)">
+                <div class="form-group" id="pageAuthNameGroup" style="display: none;">
+                  <label for="pageAuthNameInput">Full Name</label>
+                  <input type="text" id="pageAuthNameInput" placeholder="e.g. Dr. Mohamed Yousef" autocomplete="name" />
+                </div>
+
+                <div class="form-group" id="pageAuthPersonaGroup" style="display: none;">
+                  <label for="pageAuthPersonaSelect">Profession / Primary Workspace Focus</label>
+                  <select id="pageAuthPersonaSelect" class="auth-glass-select">
+                    <option value="DOCTOR">👨‍⚕️ Doctor / Healthcare Specialist</option>
+                    <option value="DEVELOPER">💻 Software Engineer / Developer</option>
+                    <option value="ENGINEER">🏗️ Civil / Structural / Mechanical Engineer</option>
+                    <option value="TRADER">📈 Financial Trader / Prop Investor</option>
+                    <option value="STUDENT">🎓 Academic / University Student</option>
+                    <option value="ENTREPRENEUR">🚀 Entrepreneur / Creator</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="pageAuthEmailInput">Email Address</label>
+                  <input type="email" id="pageAuthEmailInput" required placeholder="name@example.com" autocomplete="email" />
+                </div>
+
+                <div class="form-group">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <label for="pageAuthPasswordInput">Password</label>
+                    <button type="button" class="btn-toggle-pwd" onclick="togglePasswordVisibility('pageAuthPasswordInput', this)" title="Toggle password visibility">👁️ Show</button>
+                  </div>
+                  <input type="password" id="pageAuthPasswordInput" required placeholder="••••••••" autocomplete="current-password" minlength="6" oninput="checkPasswordStrength(this.value)" />
+                  
+                  <!-- Password Strength Meter -->
+                  <div class="pwd-strength-container" id="pwdStrengthContainer" style="display: none;">
+                    <div class="pwd-strength-bars">
+                      <div class="pwd-bar" id="pwdBar1"></div>
+                      <div class="pwd-bar" id="pwdBar2"></div>
+                      <div class="pwd-bar" id="pwdBar3"></div>
+                      <div class="pwd-bar" id="pwdBar4"></div>
+                    </div>
+                    <span class="pwd-strength-label" id="pwdStrengthLabel">Enter password</span>
+                  </div>
+                </div>
+
+                <div class="auth-extra-row" id="pageAuthExtraRow">
+                  <label class="checkbox-container">
+                    <input type="checkbox" id="pageAuthRememberMe" checked />
+                    <span class="checkmark"></span>
+                    <span class="checkbox-label">Keep me signed in</span>
+                  </label>
+                  <a href="javascript:void(0)" onclick="handleForgotPassword()" class="auth-forgot-link">Forgot password?</a>
+                </div>
+
+                <div class="auth-error-msg" id="pageAuthErrorMsg" style="display: none;"></div>
+
+                <button type="submit" class="btn-auth-submit" id="btnPageAuthSubmit">
+                  <span>🚀</span> Sign In to Workspace
+                </button>
+              </form>
+
+              <div class="auth-footer-notice">
+                <span>By continuing, you agree to workspace data privacy &amp; cloud sync terms.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Dashboard Home -->
       <section class="dashboard-section" id="dashboardSection">
         <header class="dashboard-header">
@@ -839,6 +990,9 @@
           <button type="button" class="profile-tab-btn active" data-tab="details" id="btnTabProfileDetails" onclick="switchProfileTab('details')">
             <span>👤</span> Personal Info &amp; Bio
           </button>
+          <button type="button" class="profile-tab-btn" data-tab="persona" id="btnTabProfilePersona" onclick="switchProfileTab('persona')">
+            <span>🎯</span> Persona &amp; Departments
+          </button>
           <button type="button" class="profile-tab-btn" data-tab="security" id="btnTabProfileSecurity" onclick="switchProfileTab('security')">
             <span>🔐</span> Password &amp; Security
           </button>
@@ -879,6 +1033,8 @@
                 <div class="avatar-preset-pills" id="avatarPresetPills">
                   <button type="button" class="avatar-pill" onclick="setAvatarPreset('👨‍⚕️')">👨‍⚕️</button>
                   <button type="button" class="avatar-pill" onclick="setAvatarPreset('🦷')">🦷</button>
+                  <button type="button" class="avatar-pill" onclick="setAvatarPreset('💻')">💻</button>
+                  <button type="button" class="avatar-pill" onclick="setAvatarPreset('🏗️')">🏗️</button>
                   <button type="button" class="avatar-pill" onclick="setAvatarPreset('📈')">📈</button>
                   <button type="button" class="avatar-pill" onclick="setAvatarPreset('🏋️')">🏋️</button>
                   <button type="button" class="avatar-pill" onclick="setAvatarPreset('👑')">👑</button>
@@ -901,7 +1057,110 @@
           </form>
         </div>
 
-        <!-- Tab 2: Password & Security -->
+        <!-- Tab 2: Persona & Dynamic Department Segments Customization -->
+        <div class="profile-tab-content" id="profileTabPersona" style="display: none;">
+          <form class="profile-card-form" id="profilePersonaForm" onsubmit="handleSavePersonaSegments(event)">
+            <div class="security-info-box" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(99, 102, 241, 0.08)); border-color: rgba(56, 189, 248, 0.35);">
+              <span class="sec-icon">🎯</span>
+              <div>
+                <strong>Customized Workspace Intelligence</strong>
+                <p>Configure your profession and department segments. All dropdown menus across your Tasks, Finances, Routines, and Roadmap will automatically adapt to your custom tags.</p>
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label for="profileSelectPersona">Your Profession &amp; Experience Blueprint</label>
+                <select id="profileSelectPersona" class="auth-glass-select" onchange="handleProfilePersonaPresetChange(this.value)">
+                  <option value="DOCTOR">👨‍⚕️ Doctor / Healthcare Specialist</option>
+                  <option value="DEVELOPER">💻 Software Engineer / Developer</option>
+                  <option value="ENGINEER">🏗️ Civil / Structural / Mechanical Engineer</option>
+                  <option value="TRADER">📈 Financial Trader / Prop Investor</option>
+                  <option value="STUDENT">🎓 Academic / University Student</option>
+                  <option value="ENTREPRENEUR">🚀 Entrepreneur / Creator</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="profileSelectCurrency">Primary Currency</label>
+                <select id="profileSelectCurrency" class="auth-glass-select">
+                  <option value="USD">USD ($) &bull; United States Dollar</option>
+                  <option value="EUR">EUR (€) &bull; Euro</option>
+                  <option value="GBP">GBP (£) &bull; British Pound</option>
+                  <option value="EGP">EGP (E£) &bull; Egyptian Pound</option>
+                  <option value="SAR">SAR (﷼) &bull; Saudi Riyal</option>
+                  <option value="AED">AED (د.إ) &bull; UAE Dirham</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label for="profileSelectExperience">Experience Level</label>
+                <select id="profileSelectExperience" class="auth-glass-select">
+                  <option value="Student / Junior">Student / Junior Practitioner</option>
+                  <option value="Mid-Level">Mid-Level Professional</option>
+                  <option value="Senior / Specialist" selected>Senior / Specialist</option>
+                  <option value="Lead / Founder">Lead / Practice Founder</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="profileInputFocus">Primary Focus / Mission Statement</label>
+                <input type="text" id="profileInputFocus" placeholder="e.g. Master aesthetic dentistry &amp; scale prop portfolio" />
+              </div>
+            </div>
+
+            <div class="segments-editor-section">
+              <h3 class="segment-editor-title">🏷️ Department Segments &amp; Dropdown Options</h3>
+              <p class="segment-editor-desc">These items will appear in your category selectors and dropdown menus across the entire dashboard.</p>
+
+              <!-- Work Segments -->
+              <div class="segment-group-card">
+                <div class="segment-group-header">
+                  <strong>💼 Work &amp; Career Specialties</strong>
+                  <button type="button" class="btn-add-tag" onclick="promptAddSegmentTag('work')">+ Add Segment</button>
+                </div>
+                <div class="tag-chips-container" id="chipsWorkSegments"></div>
+              </div>
+
+              <!-- Studies Segments -->
+              <div class="segment-group-card">
+                <div class="segment-group-header">
+                  <strong>📚 Studies &amp; Continuous Learning</strong>
+                  <button type="button" class="btn-add-tag" onclick="promptAddSegmentTag('studies')">+ Add Segment</button>
+                </div>
+                <div class="tag-chips-container" id="chipsStudiesSegments"></div>
+              </div>
+
+              <!-- Finance Categories -->
+              <div class="segment-group-card">
+                <div class="segment-group-header">
+                  <strong>💰 Finance Accounts &amp; Cashflows</strong>
+                  <button type="button" class="btn-add-tag" onclick="promptAddSegmentTag('finance')">+ Add Segment</button>
+                </div>
+                <div class="tag-chips-container" id="chipsFinanceSegments"></div>
+              </div>
+
+              <!-- Fitness & Habits Focus -->
+              <div class="segment-group-card">
+                <div class="segment-group-header">
+                  <strong>🏋️ Health, Routines &amp; Fitness Focus</strong>
+                  <button type="button" class="btn-add-tag" onclick="promptAddSegmentTag('fitness')">+ Add Segment</button>
+                </div>
+                <div class="tag-chips-container" id="chipsFitnessSegments"></div>
+              </div>
+            </div>
+
+            <div class="profile-form-footer">
+              <button type="submit" class="btn-primary" id="btnSavePersonaSegments">
+                <span>✨</span> Save Persona &amp; Department Customizations
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tab 3: Password & Security -->
         <div class="profile-tab-content" id="profileTabSecurity" style="display: none;">
           <form class="profile-card-form" id="profilePasswordForm">
             <div class="security-info-box">
@@ -936,7 +1195,7 @@
           </form>
         </div>
 
-        <!-- Tab 3: Workspace Statistics -->
+        <!-- Tab 4: Workspace Statistics -->
         <div class="profile-tab-content" id="profileTabStats" style="display: none;">
           <div class="profile-stats-grid" id="profileStatsGrid">
             <div class="profile-stat-card">
@@ -2316,6 +2575,201 @@
       <div class="modal-actions" style="margin-top: 24px;">
         <button type="button" class="btn-secondary" id="btnAdminConfirmCancel" onclick="closeAdminConfirmModal()">Cancel</button>
         <button type="button" class="btn-primary" id="btnAdminConfirmExecute">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       🚀 PERSONA-BASED ONBOARDING EXPERIENCE WIZARD (MULTI-STEP)
+       =================================================================== -->
+  <div class="modal-backdrop" id="personaOnboardingModalBackdrop" hidden>
+    <div class="modal onboarding-wizard-modal" role="dialog" aria-modal="true" aria-labelledby="onboardingWizardTitle">
+      <div class="wizard-header">
+        <div class="wizard-badge">✨ PERSONALIZED WORKSPACE SETUP</div>
+        <h2 id="onboardingWizardTitle">Welcome to Your Personal Command Center</h2>
+        <p id="onboardingWizardSubtitle">Let's tailor your dashboard tools, templates, and categories to match your exact profession.</p>
+        
+        <!-- Step Progress Tracker -->
+        <div class="wizard-progress-track">
+          <div class="wizard-step-node active" id="stepNode1">
+            <span class="step-num">1</span>
+            <span class="step-txt">Profession</span>
+          </div>
+          <div class="wizard-track-line"></div>
+          <div class="wizard-step-node" id="stepNode2">
+            <span class="step-num">2</span>
+            <span class="step-txt">Segments</span>
+          </div>
+          <div class="wizard-track-line"></div>
+          <div class="wizard-step-node" id="stepNode3">
+            <span class="step-num">3</span>
+            <span class="step-txt">Launch</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1: Persona Selection -->
+      <div class="wizard-step-pane active" id="wizardStep1">
+        <h3 class="wizard-pane-title">Choose Your Primary Professional Domain</h3>
+        <p class="wizard-pane-desc">We will initialize specialized modules, habit templates, and roadmap pillars for your discipline.</p>
+
+        <div class="persona-grid">
+          <div class="persona-card active" data-persona="DOCTOR" onclick="selectOnboardingPersona('DOCTOR', this)">
+            <div class="persona-card-icon">👨‍⚕️</div>
+            <div class="persona-card-body">
+              <strong>Doctor / Healthcare Specialist</strong>
+              <p>Clinical case logs, patient consultations, CME medical exams &amp; practice finance.</p>
+            </div>
+            <span class="persona-check">✓</span>
+          </div>
+
+          <div class="persona-card" data-persona="DEVELOPER" onclick="selectOnboardingPersona('DEVELOPER', this)">
+            <div class="persona-card-icon">💻</div>
+            <div class="persona-card-body">
+              <strong>Software Engineer / Developer</strong>
+              <p>Code sprints, PR reviews, architecture design, tech stacks &amp; portfolio roadmaps.</p>
+            </div>
+            <span class="persona-check">✓</span>
+          </div>
+
+          <div class="persona-card" data-persona="ENGINEER" onclick="selectOnboardingPersona('ENGINEER', this)">
+            <div class="persona-card-icon">🏗️</div>
+            <div class="persona-card-body">
+              <strong>Civil / Structural Engineer</strong>
+              <p>CAD blueprints, site audits, contractor deliverables, calculations &amp; PE licensure.</p>
+            </div>
+            <span class="persona-check">✓</span>
+          </div>
+
+          <div class="persona-card" data-persona="TRADER" onclick="selectOnboardingPersona('TRADER', this)">
+            <div class="persona-card-icon">📈</div>
+            <div class="persona-card-body">
+              <strong>Prop Trader &amp; Investor</strong>
+              <p>Tape reading, trade journals, risk management, asset vault &amp; market macro.</p>
+            </div>
+            <span class="persona-check">✓</span>
+          </div>
+
+          <div class="persona-card" data-persona="STUDENT" onclick="selectOnboardingPersona('STUDENT', this)">
+            <div class="persona-card-icon">🎓</div>
+            <div class="persona-card-body">
+              <strong>Academic &amp; Student</strong>
+              <p>Active recall study blocks, exam preparation, GPA targets &amp; research coursework.</p>
+            </div>
+            <span class="persona-check">✓</span>
+          </div>
+
+          <div class="persona-card" data-persona="ENTREPRENEUR" onclick="selectOnboardingPersona('ENTREPRENEUR', this)">
+            <div class="persona-card-icon">🚀</div>
+            <div class="persona-card-body">
+              <strong>Founder &amp; Creator</strong>
+              <p>Revenue growth, MRR pipelines, product launches, client delivery &amp; scaling.</p>
+            </div>
+            <span class="persona-check">✓</span>
+          </div>
+        </div>
+
+        <div class="wizard-actions">
+          <div></div>
+          <button type="button" class="btn-primary" onclick="goToWizardStep(2)">
+            Continue to Segments &rarr;
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Department Segments Customizer -->
+      <div class="wizard-step-pane" id="wizardStep2" style="display: none;">
+        <h3 class="wizard-pane-title">Customize Your Department Segments</h3>
+        <p class="wizard-pane-desc">We've pre-loaded smart tags based on your selection. Add or remove any tags to personalize your dropdown menus.</p>
+
+        <div class="wizard-segments-wrap">
+          <div class="wiz-segment-box">
+            <div class="wiz-segment-head">
+              <strong>💼 Work Specialties</strong>
+              <button type="button" class="btn-add-tag-sm" onclick="promptAddWizardTag('work')">+ Add</button>
+            </div>
+            <div class="tag-chips-container" id="wizChipsWork"></div>
+          </div>
+
+          <div class="wiz-segment-box">
+            <div class="wiz-segment-head">
+              <strong>📚 Study &amp; Knowledge Areas</strong>
+              <button type="button" class="btn-add-tag-sm" onclick="promptAddWizardTag('studies')">+ Add</button>
+            </div>
+            <div class="tag-chips-container" id="wizChipsStudies"></div>
+          </div>
+
+          <div class="wiz-segment-box">
+            <div class="wiz-segment-head">
+              <strong>💰 Finance Accounts &amp; Streams</strong>
+              <button type="button" class="btn-add-tag-sm" onclick="promptAddWizardTag('finance')">+ Add</button>
+            </div>
+            <div class="tag-chips-container" id="wizChipsFinance"></div>
+          </div>
+
+          <div class="wiz-segment-box">
+            <div class="wiz-segment-head">
+              <strong>🏋️ Fitness &amp; Habit Tracks</strong>
+              <button type="button" class="btn-add-tag-sm" onclick="promptAddWizardTag('fitness')">+ Add</button>
+            </div>
+            <div class="tag-chips-container" id="wizChipsFitness"></div>
+          </div>
+        </div>
+
+        <div class="wizard-actions">
+          <button type="button" class="btn-secondary" onclick="goToWizardStep(1)">&larr; Back</button>
+          <button type="button" class="btn-primary" onclick="goToWizardStep(3)">Continue to Final Step &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Preferences & Launch -->
+      <div class="wizard-step-pane" id="wizardStep3" style="display: none;">
+        <h3 class="wizard-pane-title">Final Touches &amp; Preferences</h3>
+        <p class="wizard-pane-desc">Set your currency and mission focus to launch your workspace.</p>
+
+        <div class="wizard-form-grid">
+          <div class="form-group">
+            <label for="wizSelectCurrency">Primary Currency</label>
+            <select id="wizSelectCurrency" class="auth-glass-select">
+              <option value="USD" selected>USD ($) &bull; United States Dollar</option>
+              <option value="EUR">EUR (€) &bull; Euro</option>
+              <option value="GBP">GBP (£) &bull; British Pound</option>
+              <option value="EGP">EGP (E£) &bull; Egyptian Pound</option>
+              <option value="SAR">SAR (﷼) &bull; Saudi Riyal</option>
+              <option value="AED">AED (د.إ) &bull; UAE Dirham</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="wizSelectExperience">Experience Level</label>
+            <select id="wizSelectExperience" class="auth-glass-select">
+              <option value="Student / Junior">Student / Junior</option>
+              <option value="Mid-Level">Mid-Level</option>
+              <option value="Senior / Specialist" selected>Senior / Specialist</option>
+              <option value="Lead / Founder">Lead / Founder</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label for="wizInputFocus">Your Primary Focus / Objective</label>
+          <input type="text" id="wizInputFocus" placeholder="e.g. Master surgical precision and scale independent revenue" />
+        </div>
+
+        <div class="wizard-summary-box">
+          <div class="summary-check-icon">🚀</div>
+          <div>
+            <strong>Ready to launch!</strong>
+            <p>Your dashboard will instantly adapt all category dropdowns, templates, and analytics to your chosen blueprint.</p>
+          </div>
+        </div>
+
+        <div class="wizard-actions">
+          <button type="button" class="btn-secondary" onclick="goToWizardStep(2)">&larr; Back</button>
+          <button type="button" class="btn-primary btn-launch-wizard" id="btnCompleteOnboarding" onclick="submitOnboardingSetup()">
+            <span>🎉</span> Launch Personalized Dashboard
+          </button>
+        </div>
       </div>
     </div>
   </div>

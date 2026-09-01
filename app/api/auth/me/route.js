@@ -18,6 +18,13 @@ export async function GET(req) {
         bio: true,
         specialty: true,
         phone: true,
+        persona: true,
+        experienceLevel: true,
+        primaryFocus: true,
+        currency: true,
+        departmentSegments: true,
+        customCategories: true,
+        onboardingCompleted: true,
         createdAt: true,
         lastLoginAt: true
       }

@@ -75,10 +75,16 @@ export async function POST(req) {
         avatar: user.avatar,
         role: user.role,
         status: user.status,
+        persona: user.persona,
+        experienceLevel: user.experienceLevel,
         specialty: user.specialty,
         bio: user.bio,
-        phone: user.phone
-      }
+        phone: user.phone,
+        currency: user.currency || 'USD',
+        departmentSegments: user.departmentSegments,
+        onboardingCompleted: user.onboardingCompleted
+      },
+      onboardingNeeded: !user.onboardingCompleted
     });
   } catch (err) {
     console.error('Login error:', err);

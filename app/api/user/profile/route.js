@@ -18,6 +18,13 @@ export async function GET(req) {
         bio: true,
         specialty: true,
         phone: true,
+        persona: true,
+        experienceLevel: true,
+        primaryFocus: true,
+        currency: true,
+        departmentSegments: true,
+        customCategories: true,
+        onboardingCompleted: true,
         createdAt: true,
         lastLoginAt: true,
         approvedAt: true
@@ -59,7 +66,7 @@ export async function PATCH(req) {
     if (!auth || !auth.authenticated) return unauthorizedResponse();
 
     const body = await req.json();
-    const { name, avatar, bio, specialty, phone } = body;
+    const { name, avatar, bio, specialty, phone, persona, experienceLevel, primaryFocus, currency, departmentSegments, customCategories } = body;
 
     const dataToUpdate = {};
     if (name !== undefined) dataToUpdate.name = name.trim();
@@ -67,6 +74,12 @@ export async function PATCH(req) {
     if (bio !== undefined) dataToUpdate.bio = bio ? bio.trim() : null;
     if (specialty !== undefined) dataToUpdate.specialty = specialty ? specialty.trim() : null;
     if (phone !== undefined) dataToUpdate.phone = phone ? phone.trim() : null;
+    if (persona !== undefined) dataToUpdate.persona = persona;
+    if (experienceLevel !== undefined) dataToUpdate.experienceLevel = experienceLevel;
+    if (primaryFocus !== undefined) dataToUpdate.primaryFocus = primaryFocus;
+    if (currency !== undefined) dataToUpdate.currency = currency;
+    if (departmentSegments !== undefined) dataToUpdate.departmentSegments = departmentSegments;
+    if (customCategories !== undefined) dataToUpdate.customCategories = customCategories;
 
     const updatedUser = await prisma.user.update({
       where: { id: auth.userId },
@@ -81,6 +94,13 @@ export async function PATCH(req) {
         bio: true,
         specialty: true,
         phone: true,
+        persona: true,
+        experienceLevel: true,
+        primaryFocus: true,
+        currency: true,
+        departmentSegments: true,
+        customCategories: true,
+        onboardingCompleted: true,
         updatedAt: true
       }
     });

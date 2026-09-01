@@ -22,6 +22,15 @@ model User {
   bio                     String?                 @db.Text
   specialty               String?
   phone                   String?
+  persona                 String?                 // 'DOCTOR' | 'DEVELOPER' | 'ENGINEER' | 'TRADER' | 'STUDENT' | 'ENTREPRENEUR' | 'OTHER'
+  experienceLevel         String?                 @map("experience_level") // 'Student / Junior' | 'Mid-Level' | 'Senior / Specialist' | 'Lead / Founder'
+  primaryFocus            String?                 @map("primary_focus")
+  currency                String                  @default("USD")
+  departmentSegments      Json?                   @map("department_segments") // Custom segments per department
+  customCategories        Json?                   @map("custom_categories") // Custom category definitions
+  onboardingCompleted     Boolean                 @default(false) @map("onboarding_completed")
+  oauthProvider           String?                 @map("oauth_provider") // 'google' | 'apple' | 'credentials'
+  oauthId                 String?                 @map("oauth_id")
   approvedAt              DateTime?               @map("approved_at")
   approvedBy              String?                 @map("approved_by")
   lastLoginAt             DateTime?               @map("last_login_at")
@@ -47,6 +56,7 @@ model User {
 
   @@index([role])
   @@index([status])
+  @@index([persona])
   @@map("users")
 }
 
