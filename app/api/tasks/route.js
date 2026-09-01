@@ -1,27 +1,55 @@
 import { prisma } from '@/lib/prisma.js';
 import { getAuthUser, errorResponse, successResponse } from '@/lib/auth.js';
 
-async function resolveUserId(req) {
+async function resolveUserAndPerms(req) {
   const auth = getAuthUser(req);
-  if (auth && auth.authenticated && auth.userId) return auth.userId;
-  const user = await prisma.user.findFirst({ where: { email: 'jryusif@dashboard.com' } });
-  return user ? user.id : null;
+  if (auth && auth.authenticated && auth.userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: auth.userId },
+      select: { id: true, role: true, dentalApproved: true, tradingApproved: true }
+    });
+    return user;
+  }
+  const defaultUser = await prisma.user.findFirst({ where: { email: 'jryusiif@gmail.com' } });
+  return defaultUser ? { id: defaultUser.id, role: defaultUser.role, dentalApproved: defaultUser.dentalApproved, tradingApproved: defaultUser.tradingApproved } : null;
 }
 
 export async function GET(req) {
   try {
-    const userId = await resolveUserId(req);
-    if (!userId) return successResponse({ date: new Date().toISOString().split('T')[0], tasks: [] });
+    const user = await resolveUserAndPerms(req);
+    if (!user) return successResponse({ date: new Date().toISOString().split('T')[0], tasks: [] });
 
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category');
     const date = searchParams.get('date');
     const completed = searchParams.get('completed');
 
-    const where = { userId };
+    const isMasterAdmin = user.role === 'ADMIN';
+
+    // If querying locked category directly as regular user, return empty list
+    if (category) {
+      if ((category === 'Us stocks trading' || category === 'Trading') && !isMasterAdmin && !user.tradingApproved) {
+        return successResponse({ date: date || new Date().toISOString().split('T')[0], tasks: [] });
+      }
+      if (category === 'Dental Cases' && !isMasterAdmin && !user.dentalApproved) {
+        return successResponse({ date: date || new Date().toISOString().split('T')[0], tasks: [] });
+      }
+    }
+
+    const where = { userId: user.id };
     if (category) where.category = category;
     if (date) where.date = date;
     if (completed !== null && completed !== undefined) where.completed = completed === 'true';
+
+    // If general query without category filter, exclude locked categories for non-admin
+    if (!category && !isMasterAdmin) {
+      const notInList = [];
+      if (!user.tradingApproved) notInList.push('Us stocks trading', 'Trading');
+      if (!user.dentalApproved) notInList.push('Dental Cases');
+      if (notInList.length > 0) {
+        where.category = { notIn: notInList };
+      }
+    }
 
     const rawTasks = await prisma.task.findMany({
       where,
@@ -53,13 +81,22 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const userId = await resolveUserId(req);
-    if (!userId) return errorResponse('User workspace not found.', 401);
+    const user = await resolveUserAndPerms(req);
+    if (!user) return errorResponse('User workspace not found.', 401);
 
     const body = await req.json();
     const title = body.title || body.task;
     const date = body.date || body.dueDate || new Date().toISOString().split('T')[0];
-    const { category, segment, completed, timeBlock, priority } = body;
+    const { category = 'Work', segment, completed, timeBlock, priority } = body;
+
+    const isMasterAdmin = user.role === 'ADMIN';
+
+    if ((category === 'Us stocks trading' || category === 'Trading') && !isMasterAdmin && !user.tradingApproved) {
+      return errorResponse('US Stocks Trading access is locked by your Administrator.', 403);
+    }
+    if (category === 'Dental Cases' && !isMasterAdmin && !user.dentalApproved) {
+      return errorResponse('Dental Cases access is locked by your Administrator.', 403);
+    }
 
     if (!title || !title.trim()) {
       return errorResponse('Title is required.', 400);
@@ -67,9 +104,9 @@ export async function POST(req) {
 
     const task = await prisma.task.create({
       data: {
-        userId,
+        userId: user.id,
         title: title.trim(),
-        category: category || 'Work',
+        category,
         segment: segment || null,
         date,
         completed: Boolean(completed),

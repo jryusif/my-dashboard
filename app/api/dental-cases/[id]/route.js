@@ -10,9 +10,9 @@ async function resolveAndCheckDentalUser(req) {
   });
   if (!user) return { error: 'User not found', status: 404 };
   const isMasterAdmin = user.role === 'ADMIN';
-  const isApprovedDentist = user.persona === 'DOCTOR' && user.dentalApproved;
-  if (!isMasterAdmin && !isApprovedDentist) {
-    return { error: 'Dental Cases archive requires Dentist specialization and Administrator approval.', status: 403 };
+  const isApproved = Boolean(user.dentalApproved);
+  if (!isMasterAdmin && !isApproved) {
+    return { error: 'Dental Cases archive is locked. Administrator approval required.', status: 403 };
   }
   return { userId: user.id };
 }

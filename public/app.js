@@ -1041,13 +1041,12 @@ window.openEditSpaceModal = openEditSpaceModal;
 
 function renderDashboard() {
   const isAdmin = currentUser && currentUser.role === 'ADMIN';
-  const persona = (currentUser && currentUser.persona) ? currentUser.persona.toUpperCase() : 'DOCTOR';
-  const canAccessDental = isAdmin || (persona === 'DOCTOR' && Boolean(currentUser?.dentalApproved));
-  const canAccessTrading = isAdmin || (persona === 'TRADER' && Boolean(currentUser?.tradingApproved));
+  const canAccessDental = isAdmin || Boolean(currentUser?.dentalApproved);
+  const canAccessTrading = isAdmin || Boolean(currentUser?.tradingApproved);
 
   const visibleCards = DASHBOARD_CARDS.filter(c => {
     if (c.category === 'Dental Cases') return canAccessDental;
-    if (c.category === 'Us stocks trading') return canAccessTrading;
+    if (c.category === 'Us stocks trading' || c.category === 'Trading') return canAccessTrading;
     return true;
   });
 
@@ -1170,30 +1169,21 @@ async function loadCardBadges() {
 
 function openPage(category) {
   const isAdmin = currentUser && currentUser.role === 'ADMIN';
-  const persona = (currentUser && currentUser.persona) ? currentUser.persona.toUpperCase() : 'DOCTOR';
+  const canAccessDental = isAdmin || Boolean(currentUser?.dentalApproved);
+  const canAccessTrading = isAdmin || Boolean(currentUser?.tradingApproved);
 
   if (category === 'Dental Cases') {
-    const canAccess = isAdmin || (persona === 'DOCTOR' && Boolean(currentUser?.dentalApproved));
-    if (!canAccess) {
-      if (persona === 'DOCTOR') {
-        showToast('🔒 Dental Cases archive is pending Administrator approval.');
-      } else {
-        showToast('🔒 Dental Cases archive is restricted to verified Dentist accounts.');
-      }
+    if (!canAccessDental) {
+      showToast('🔒 Dental Cases archive is locked. Administrator approval required.');
       return;
     }
     openDentalCasesPage();
     return;
   }
 
-  if (category === 'Us stocks trading') {
-    const canAccess = isAdmin || (persona === 'TRADER' && Boolean(currentUser?.tradingApproved));
-    if (!canAccess) {
-      if (persona === 'TRADER') {
-        showToast('🔒 US Stocks Trading is pending Administrator approval.');
-      } else {
-        showToast('🔒 US Stocks Trading is restricted to verified Trader accounts.');
-      }
+  if (category === 'Us stocks trading' || category === 'US Stocks Trading' || category === 'Trading') {
+    if (!canAccessTrading) {
+      showToast('🔒 US Stocks Trading workspace is locked. Administrator approval required.');
       return;
     }
   }
@@ -8999,6 +8989,8 @@ async function checkAuthSession(isManualCheck = false) {
       closePendingApprovalModal();
       updateUserUi();
       renderDynamicCategoryDropdowns();
+      renderDashboard();
+      if (typeof syncBoards === 'function') syncBoards();
       if (isManualCheck) {
         showToast('🎉 Your account is approved and active!');
         loadMeta();
@@ -10607,6 +10599,12 @@ async function handleTogglePermission(userId, module, newStatus) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to update module permission');
     showToast(`✨ ${module === 'dental' ? 'Dental Cases' : 'US Stocks Trading'} access ${newStatus ? 'APPROVED' : 'LOCKED'} for user.`);
+    if (currentUser && currentUser.id === userId) {
+      currentUser = { ...currentUser, ...payload };
+      localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+      renderDashboard();
+      if (typeof syncBoards === 'function') syncBoards();
+    }
     await loadAdminData();
   } catch (err) {
     console.error('Permission toggle error:', err);
