@@ -11841,6 +11841,373 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   transform: scale(1.1);
 }
 
+/* =====================================================================
+   🎨 MULTI-THEME ENGINE SUITE — 7 BESPOKE LUXURY PALETTES
+   ===================================================================== */
+
+/* 1. 🌸 Blossom Velvet (Pink Girly / Rose Quartz) */
+[data-theme="blossom-velvet"],
+[data-theme="pink-girly"] {
+  --bg: #0f0510;
+  --surface: rgba(30, 14, 32, 0.68);
+  --surface-raised: rgba(42, 20, 46, 0.78);
+  --surface-quiet: rgba(22, 10, 24, 0.6);
+  --surface-glass: rgba(35, 16, 38, 0.58);
+  --surface-glass-active: rgba(55, 24, 60, 0.85);
+  
+  --border: rgba(244, 114, 182, 0.22);
+  --border-soft: rgba(244, 114, 182, 0.12);
+  --border-glow: rgba(236, 72, 153, 0.45);
+  
+  --ink: #fff1f5;
+  --ink-mid: #fbcfe8;
+  --ink-soft: #f472b6;
+  
+  --work: #f472b6;
+  --studies: #e879f9;
+  --workouts: #fb7185;
+  --trading: #f59e0b;
+  --religion: #c084fc;
+  --finance: #ec4899;
+  --gold: #fbbf24;
+  --dental: #f472b6;
+  --analytics: #f472b6;
+}
+
+[data-theme="blossom-velvet"] body,
+[data-theme="pink-girly"] body {
+  background-color: #0f0510 !important;
+  background-image: 
+    radial-gradient(ellipse at 20% 0%, rgba(236, 72, 153, 0.28) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(244, 114, 182, 0.22) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(15, 5, 16, 0.5) 0%, rgba(15, 5, 16, 0.85) 100%),
+    url('dashboard-bg.jpg') !important;
+}
+
+[data-theme="blossom-velvet"] .btn-sidebar-toggle,
+[data-theme="pink-girly"] .btn-sidebar-toggle {
+  border-color: rgba(244, 114, 182, 0.5) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(236, 72, 153, 0.4) !important;
+  color: #f472b6 !important;
+}
+
+[data-theme="blossom-velvet"] .toggle-bar,
+[data-theme="pink-girly"] .toggle-bar {
+  background: linear-gradient(90deg, #f472b6 0%, #fda4af 100%) !important;
+  box-shadow: 0 0 8px rgba(236, 72, 153, 0.6) !important;
+}
+
+[data-theme="blossom-velvet"] .main-top-navbar,
+[data-theme="pink-girly"] .main-top-navbar {
+  border-color: rgba(244, 114, 182, 0.25) !important;
+}
+
+[data-theme="blossom-velvet"] .flip-digit-tile,
+[data-theme="pink-girly"] .flip-digit-tile {
+  background: linear-gradient(180deg, #260f25 0%, #150616 100%) !important;
+  border-color: rgba(244, 114, 182, 0.3) !important;
+  color: #fbcfe8 !important;
+}
+
+[data-theme="blossom-velvet"] .flip-clock-live-badge,
+[data-theme="pink-girly"] .flip-clock-live-badge {
+  background: rgba(236, 72, 153, 0.2) !important;
+  border-color: rgba(236, 72, 153, 0.4) !important;
+  color: #f472b6 !important;
+}
+
+[data-theme="blossom-velvet"] .live-pulse-dot,
+[data-theme="pink-girly"] .live-pulse-dot {
+  background: #ec4899 !important;
+  box-shadow: 0 0 8px #ec4899 !important;
+}
+
+/* 2. 👑 Sovereign Gold (Imperial Luxury) */
+[data-theme="sovereign-gold"] {
+  --bg: #090702;
+  --surface: rgba(24, 19, 10, 0.7);
+  --surface-raised: rgba(36, 28, 14, 0.8);
+  --surface-quiet: rgba(18, 14, 7, 0.6);
+  --surface-glass: rgba(28, 22, 12, 0.6);
+  --surface-glass-active: rgba(48, 38, 18, 0.85);
+  
+  --border: rgba(245, 158, 11, 0.25);
+  --border-soft: rgba(245, 158, 11, 0.12);
+  --border-glow: rgba(251, 191, 36, 0.45);
+  
+  --ink: #fefce8;
+  --ink-mid: #fef08a;
+  --ink-soft: #f59e0b;
+}
+
+[data-theme="sovereign-gold"] body {
+  background-color: #090702 !important;
+  background-image: 
+    radial-gradient(ellipse at 20% 0%, rgba(245, 158, 11, 0.26) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(217, 119, 6, 0.2) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(9, 7, 2, 0.5) 0%, rgba(9, 7, 2, 0.88) 100%),
+    url('dashboard-bg.jpg') !important;
+}
+
+[data-theme="sovereign-gold"] .btn-sidebar-toggle {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(245, 158, 11, 0.4) !important;
+  color: #f59e0b !important;
+}
+
+[data-theme="sovereign-gold"] .toggle-bar {
+  background: linear-gradient(90deg, #f59e0b 0%, #fef08a 100%) !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6) !important;
+}
+
+/* 3. 🌿 Emerald Prestige (Bespoke Forest) */
+[data-theme="emerald-prestige"] {
+  --bg: #02140d;
+  --surface: rgba(6, 32, 22, 0.7);
+  --surface-raised: rgba(10, 44, 30, 0.8);
+  --surface-quiet: rgba(4, 22, 15, 0.6);
+  --surface-glass: rgba(8, 36, 25, 0.6);
+  --surface-glass-active: rgba(16, 60, 42, 0.85);
+  
+  --border: rgba(16, 185, 129, 0.25);
+  --border-soft: rgba(16, 185, 129, 0.12);
+  --border-glow: rgba(52, 211, 153, 0.45);
+  
+  --ink: #ecfdf5;
+  --ink-mid: #a7f3d0;
+  --ink-soft: #34d399;
+}
+
+[data-theme="emerald-prestige"] body {
+  background-color: #02140d !important;
+  background-image: 
+    radial-gradient(ellipse at 20% 0%, rgba(16, 185, 129, 0.28) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(5, 150, 105, 0.2) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(2, 20, 13, 0.5) 0%, rgba(2, 20, 13, 0.88) 100%),
+    url('dashboard-bg.jpg') !important;
+}
+
+[data-theme="emerald-prestige"] .btn-sidebar-toggle {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(16, 185, 129, 0.4) !important;
+  color: #34d399 !important;
+}
+
+[data-theme="emerald-prestige"] .toggle-bar {
+  background: linear-gradient(90deg, #10b981 0%, #6ee7b7 100%) !important;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6) !important;
+}
+
+/* 4. 🔮 Royal Amethyst (Cyber Violet) */
+[data-theme="royal-amethyst"] {
+  --bg: #0c0618;
+  --surface: rgba(25, 14, 46, 0.7);
+  --surface-raised: rgba(36, 20, 64, 0.8);
+  --surface-quiet: rgba(18, 10, 32, 0.6);
+  --surface-glass: rgba(28, 16, 50, 0.6);
+  --surface-glass-active: rgba(48, 28, 85, 0.85);
+  
+  --border: rgba(168, 85, 247, 0.25);
+  --border-soft: rgba(168, 85, 247, 0.12);
+  --border-glow: rgba(192, 132, 252, 0.45);
+  
+  --ink: #faf5ff;
+  --ink-mid: #e9d5ff;
+  --ink-soft: #c084fc;
+}
+
+[data-theme="royal-amethyst"] body {
+  background-color: #0c0618 !important;
+  background-image: 
+    radial-gradient(ellipse at 20% 0%, rgba(168, 85, 247, 0.28) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(147, 51, 234, 0.2) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(12, 6, 24, 0.5) 0%, rgba(12, 6, 24, 0.88) 100%),
+    url('dashboard-bg.jpg') !important;
+}
+
+[data-theme="royal-amethyst"] .btn-sidebar-toggle {
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(168, 85, 247, 0.4) !important;
+  color: #c084fc !important;
+}
+
+[data-theme="royal-amethyst"] .toggle-bar {
+  background: linear-gradient(90deg, #a855f7 0%, #e9d5ff 100%) !important;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.6) !important;
+}
+
+/* 5. 🌑 Obsidian Monochrome (Stealth Carbon) */
+[data-theme="obsidian-mono"] {
+  --bg: #050505;
+  --surface: rgba(20, 20, 20, 0.72);
+  --surface-raised: rgba(30, 30, 30, 0.82);
+  --surface-quiet: rgba(14, 14, 14, 0.65);
+  --surface-glass: rgba(24, 24, 24, 0.6);
+  --surface-glass-active: rgba(45, 45, 45, 0.85);
+  
+  --border: rgba(255, 255, 255, 0.16);
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(255, 255, 255, 0.35);
+  
+  --ink: #ffffff;
+  --ink-mid: #e2e8f0;
+  --ink-soft: #94a3b8;
+}
+
+[data-theme="obsidian-mono"] body {
+  background-color: #050505 !important;
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(5, 5, 5, 0.6) 0%, rgba(5, 5, 5, 0.95) 100%),
+    url('dashboard-bg.jpg') !important;
+}
+
+[data-theme="obsidian-mono"] .btn-sidebar-toggle {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="obsidian-mono"] .toggle-bar {
+  background: linear-gradient(90deg, #ffffff 0%, #94a3b8 100%) !important;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* 6. 🌅 Sunset Radiance (Cosmic Coral) */
+[data-theme="sunset-radiance"] {
+  --bg: #14050a;
+  --surface: rgba(35, 12, 20, 0.7);
+  --surface-raised: rgba(48, 18, 28, 0.8);
+  --surface-quiet: rgba(24, 8, 14, 0.6);
+  --surface-glass: rgba(38, 14, 22, 0.6);
+  --surface-glass-active: rgba(65, 24, 38, 0.85);
+  
+  --border: rgba(249, 115, 22, 0.25);
+  --border-soft: rgba(249, 115, 22, 0.12);
+  --border-glow: rgba(251, 113, 133, 0.45);
+  
+  --ink: #fff7ed;
+  --ink-mid: #ffedd5;
+  --ink-soft: #fb7185;
+}
+
+[data-theme="sunset-radiance"] body {
+  background-color: #14050a !important;
+  background-image: 
+    radial-gradient(ellipse at 20% 0%, rgba(249, 115, 22, 0.26) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(244, 63, 94, 0.22) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(20, 5, 10, 0.5) 0%, rgba(20, 5, 10, 0.88) 100%),
+    url('dashboard-bg.jpg') !important;
+}
+
+/* 7. 🌌 Cyber Cyan (Default Pro Dark) */
+[data-theme="cyber-cyan"] {
+  --bg: #06080d;
+  --surface: rgba(15, 20, 32, 0.65);
+  --surface-raised: rgba(22, 29, 46, 0.75);
+  --surface-quiet: rgba(12, 16, 26, 0.6);
+  --surface-glass: rgba(18, 25, 40, 0.55);
+  --surface-glass-active: rgba(30, 40, 62, 0.8);
+  
+  --border: rgba(255, 255, 255, 0.1);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --border-glow: rgba(56, 189, 248, 0.35);
+  
+  --ink: #f8fafc;
+  --ink-mid: #cbd5e1;
+  --ink-soft: #94a3b8;
+}
+
+/* =====================================================================
+   THEME CARDS GALLERY & PICKER
+   ===================================================================== */
+.theme-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.theme-card-option {
+  position: relative;
+  border-radius: var(--radius-md);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 20, 32, 0.6);
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.theme-card-option:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.theme-card-option.active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.theme-card-preview-bar {
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 8px;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.theme-swatch-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+}
+
+.theme-card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.theme-card-desc {
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.theme-active-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #38bdf8;
+  color: #030712;
+  text-transform: uppercase;
+}
+
+/* Goal Stepper Pills */
+.goal-stepper-pills {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+
 
 
 

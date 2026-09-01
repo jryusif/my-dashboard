@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700;800&family=Oswald:wght@500;600;700&family=Pathway+Gothic+One&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="alternate icon" href="/favicon.ico" />
-<link rel="stylesheet" href="style.css?v=8.0" />
+<link rel="stylesheet" href="style.css?v=12.0" />
 </head>
 <body>
 
@@ -65,8 +65,11 @@
             <span class="sidebar-user-role-badge" id="sidebarUserRoleBadge">USER</span>
           </div>
           <div class="sidebar-user-actions">
-            <button type="button" class="btn-sidebar-user-act" id="sidebarProfileBtn" onclick="openProfileSection()" title="My Profile & Settings">
+            <button type="button" class="btn-sidebar-user-act" id="sidebarProfileBtn" onclick="openProfileSection()" title="My Profile &amp; Settings">
               <span>👤</span> Profile
+            </button>
+            <button type="button" class="btn-sidebar-user-act" onclick="openThemeSelectorModal()" title="Switch Workspace Theme">
+              <span>🎨</span> Theme
             </button>
             <button type="button" class="btn-sidebar-user-act admin-act" id="sidebarAdminBtn" style="display: none;" onclick="openAdminSection()" title="Admin Control Center">
               <span>👑</span> Admin
@@ -230,6 +233,9 @@
                 <div class="dropdown-divider"></div>
                 <button type="button" class="dropdown-item" onclick="openProfileSection()">
                   <span>👤</span> My Profile &amp; Settings
+                </button>
+                <button type="button" class="dropdown-item" onclick="openThemeSelectorModal()">
+                  <span>🎨</span> Themes &amp; Appearance
                 </button>
                 <button type="button" class="dropdown-item admin-only-item" id="ddAdminItem" style="display: none;" onclick="openAdminSection()">
                   <span>👑</span> Admin Control Center
@@ -1105,6 +1111,9 @@
           <button type="button" class="profile-tab-btn active" data-tab="details" id="btnTabProfileDetails" onclick="switchProfileTab('details')">
             <span>👤</span> Personal Info &amp; Bio
           </button>
+          <button type="button" class="profile-tab-btn" data-tab="appearance" id="btnTabProfileAppearance" onclick="switchProfileTab('appearance')">
+            <span>🎨</span> Appearance &amp; Themes
+          </button>
           <button type="button" class="profile-tab-btn" data-tab="persona" id="btnTabProfilePersona" onclick="switchProfileTab('persona')">
             <span>🎯</span> Persona &amp; Departments
           </button>
@@ -1379,7 +1388,7 @@
                   <h3 class="segment-editor-title" style="margin: 0;">🎯 Financial Goals &amp; Milestones</h3>
                   <p class="segment-editor-desc" style="margin: 4px 0 0 0;">Define your target price, current progress, and deadlines.</p>
                 </div>
-                <button type="button" class="btn-secondary btn-sm" onclick="promptAddFinancialGoal()">➕ Add New Goal</button>
+                <button type="button" class="btn-secondary btn-sm" onclick="openAddFinancialGoalModal()">➕ Add New Goal</button>
               </div>
 
               <div id="profileFinancialGoalsList" class="profile-goals-grid">
@@ -1428,6 +1437,23 @@
               </button>
             </div>
           </form>
+        </div>
+
+        <!-- Tab: Appearance & Themes -->
+        <div class="profile-tab-content" id="profileTabAppearance" style="display: none;">
+          <div class="profile-card-form">
+            <div class="security-info-box">
+              <span class="sec-icon">🎨</span>
+              <div>
+                <strong>Workspace Aesthetic &amp; Color Theme</strong>
+                <p>Personalize your entire dashboard, wealth vault, cards, clock, and charts with bespoke luxury color schemes.</p>
+              </div>
+            </div>
+
+            <div class="theme-cards-grid" id="profileThemeCardsGrid">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
         </div>
 
         <!-- Tab 4: Workspace Statistics -->
@@ -3255,10 +3281,183 @@
     </div>
   </div>
 
+  <!-- ===================================================================
+       🎯 ADVANCED PRO FINANCIAL GOAL CREATOR & EDITOR MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="financialGoalModalBackdrop" hidden>
+    <div class="modal financial-goal-modal" role="dialog" aria-modal="true" aria-labelledby="financialGoalModalTitle" style="max-width: 620px;">
+      <button type="button" class="modal-close-btn" onclick="closeFinancialGoalModal()" title="Close modal">✕</button>
+      
+      <div class="modal-header">
+        <div class="space-modal-badge">🎯 STRATEGIC WEALTH MILESTONE</div>
+        <h2 id="financialGoalModalTitle">Create Financial Goal</h2>
+        <p class="subtitle">Define capital target, timeline horizon, icon, savings progress, and milestone rules.</p>
+      </div>
+
+      <form id="financialGoalForm" onsubmit="handleSaveFinancialGoal(event)">
+        <input type="hidden" id="goalFormId" />
+
+        <!-- 1. Icon & Visual Badge Presets -->
+        <div class="form-group">
+          <label>Goal Icon / Symbol</label>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <input type="text" id="goalFormIcon" value="🎯" style="width: 54px; text-align: center; font-size: 22px; padding: 6px;" oninput="updateGoalModalPreview()" />
+            <div class="avatar-preset-pills" style="margin: 0; flex: 1; display:flex; flex-wrap:wrap; gap:5px;">
+              <button type="button" class="avatar-pill" onclick="setGoalIconPreset('🏢')">🏢 Clinic</button>
+              <button type="button" class="avatar-pill" onclick="setGoalIconPreset('🥇')">🥇 Gold</button>
+              <button type="button" class="avatar-pill" onclick="setGoalIconPreset('📈')">📈 Trading</button>
+              <button type="button" class="avatar-pill" onclick="setGoalIconPreset('🚗')">🚗 Vehicle</button>
+              <button type="button" class="avatar-pill" onclick="setGoalIconPreset('🛡️')">🛡️ Vault</button>
+              <button type="button" class="avatar-pill" onclick="setGoalIconPreset('✈️')">✈️ Travel</button>
+              <button type="button" class="avatar-pill" onclick="setGoalIconPreset('💎')">💎 Luxury</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Goal Title & Category Bucket -->
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="goalFormTitle">Goal Name / Objective *</label>
+            <input type="text" id="goalFormTitle" required placeholder="e.g. Clinic Expansion &amp; Down Payment" oninput="updateGoalModalPreview()" />
+          </div>
+          <div class="form-group">
+            <label for="goalFormCategory">Category Bucket</label>
+            <select id="goalFormCategory" onchange="updateGoalModalPreview()">
+              <option value="Real Estate &amp; Clinic">🏢 Real Estate &amp; Clinic</option>
+              <option value="Physical Gold &amp; Bullion">🥇 Physical Gold &amp; Bullion</option>
+              <option value="Investment &amp; Trading">📈 Investment &amp; Trading</option>
+              <option value="Emergency Reserve">🛡️ Emergency Reserve</option>
+              <option value="Lifestyle &amp; Assets">💎 Lifestyle &amp; Assets</option>
+              <option value="General Milestone">🎯 General Milestone</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 3. Target Capital & Steppers -->
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="goalFormTarget">Target Capital Amount *</label>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <input type="number" id="goalFormTarget" step="any" min="1" required placeholder="e.g. 500000" oninput="updateGoalModalPreview()" />
+              <div class="goal-stepper-pills">
+                <button type="button" class="stepper-btn" style="font-size:11px; padding:3px 7px;" onclick="adjustGoalTarget(10000)">+10k</button>
+                <button type="button" class="stepper-btn" style="font-size:11px; padding:3px 7px;" onclick="adjustGoalTarget(50000)">+50k</button>
+                <button type="button" class="stepper-btn" style="font-size:11px; padding:3px 7px;" onclick="adjustGoalTarget(100000)">+100k</button>
+                <button type="button" class="stepper-btn" style="font-size:11px; padding:3px 7px;" onclick="adjustGoalTarget(500000)">+500k</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="goalFormCurrent">Current Saved / Funded Amount</label>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <input type="number" id="goalFormCurrent" step="any" min="0" value="0" placeholder="e.g. 125000" oninput="updateGoalModalPreview()" />
+              <div class="goal-stepper-pills">
+                <button type="button" class="stepper-btn" style="font-size:11px; padding:3px 7px;" onclick="adjustGoalCurrent(5000)">+5k</button>
+                <button type="button" class="stepper-btn" style="font-size:11px; padding:3px 7px;" onclick="adjustGoalCurrent(25000)">+25k</button>
+                <button type="button" class="stepper-btn" style="font-size:11px; padding:3px 7px;" onclick="adjustGoalCurrent(50000)">+50k</button>
+                <button type="button" class="stepper-btn" style="font-size:11px; padding:3px 7px;" onclick="setGoalCurrentToTarget()">Match Target</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Target Deadline & Timeline Horizon -->
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="goalFormDeadline">Target Deadline (Optional)</label>
+            <input type="date" id="goalFormDeadline" onchange="updateGoalModalPreview()" />
+          </div>
+          <div class="form-group">
+            <label>Quick Timeline Horizon</label>
+            <div class="avatar-preset-pills" style="margin-top: 4px; display:flex; flex-wrap:wrap; gap:4px;">
+              <button type="button" class="avatar-pill" onclick="setGoalDeadlineHorizon(3)">3 Months</button>
+              <button type="button" class="avatar-pill" onclick="setGoalDeadlineHorizon(6)">6 Months</button>
+              <button type="button" class="avatar-pill" onclick="setGoalDeadlineHorizon(12)">1 Year</button>
+              <button type="button" class="avatar-pill" onclick="setGoalDeadlineHorizon(24)">2 Years</button>
+              <button type="button" class="avatar-pill" onclick="setGoalDeadlineHorizon(60)">5 Years</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Funding Strategy / Notes -->
+        <div class="form-group">
+          <label for="goalFormNotes">Funding Strategy &amp; Execution Notes (Optional)</label>
+          <textarea id="goalFormNotes" rows="2" placeholder="e.g. Allocate 60% of monthly clinic revenue + 50% trading profits to this bucket..." oninput="updateGoalModalPreview()"></textarea>
+        </div>
+
+        <!-- 6. Interactive Live Card Preview -->
+        <div class="goal-modal-preview-box" style="margin-top:14px; padding:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:14px;">
+          <div class="goal-preview-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span class="preview-badge" style="font-size:10px; font-weight:800; letter-spacing:0.08em; color:#38bdf8;">✨ LIVE CARD PREVIEW</span>
+            <span id="goalPreviewPctBadge" class="goal-preview-pct-badge" style="font-size:11px; font-weight:800; color:#34d399; background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:999px;">0% FUNDED</span>
+          </div>
+          <div class="goal-preview-card" style="padding:12px; background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.25); border-radius:12px;">
+            <div class="goal-card-top" style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span id="goalPreviewIcon" style="font-size:20px;">🎯</span>
+                <div>
+                  <strong id="goalPreviewTitle" style="font-size:14.5px; color:#fff; display:block;">Goal Title</strong>
+                  <span id="goalPreviewCategory" style="font-size:11px; color:#38bdf8;">Real Estate &amp; Clinic</span>
+                </div>
+              </div>
+              <span id="goalPreviewDeadline" class="goal-deadline-tag" style="font-size:11px; color:#94a3b8; background:rgba(255,255,255,0.06); padding:2px 7px; border-radius:6px;">📅 Set date</span>
+            </div>
+            <div class="goal-progress-wrap" style="margin: 10px 0 6px;">
+              <div class="goal-progress-bar" style="height:6px; background:rgba(255,255,255,0.1); border-radius:999px; overflow:hidden;">
+                <div id="goalPreviewProgressFill" class="goal-progress-fill" style="width: 0%; height:100%; background:linear-gradient(90deg, #38bdf8, #34d399); border-radius:999px; transition:width 0.3s ease;"></div>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--ink-soft);">
+              <span id="goalPreviewValues">E£0 of E£500,000</span>
+              <span id="goalPreviewRemaining">Remaining: E£500,000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="modal-actions" style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
+          <button type="button" class="btn-secondary" id="btnDeleteGoalFromModal" style="display:none; color:#f87171; border-color:rgba(239,68,68,0.35);" onclick="handleDeleteGoalModalAction()">
+            <span>🗑️</span> Delete Goal
+          </button>
+          <div style="display:flex; gap:10px; margin-left:auto;">
+            <button type="button" class="btn-secondary" onclick="closeFinancialGoalModal()">Cancel</button>
+            <button type="submit" class="btn-primary" id="btnSaveFinancialGoalModal">
+              <span>💾</span> Save Financial Goal
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       🎨 THEME SELECTOR & AESTHETIC STUDIO MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="themeSelectorModalBackdrop" hidden>
+    <div class="modal theme-selector-modal" role="dialog" aria-modal="true" aria-labelledby="themeModalTitle" style="max-width: 680px;">
+      <button type="button" class="modal-close-btn" onclick="closeThemeSelectorModal()" title="Close modal">✕</button>
+      
+      <div class="modal-header">
+        <div class="space-modal-badge">🎨 WORKSPACE AESTHETIC STUDIO</div>
+        <h2 id="themeModalTitle">Select Workspace Theme</h2>
+        <p class="subtitle">Choose from luxury glassmorphic colorways tailored for peak focus and style.</p>
+      </div>
+
+      <div class="theme-cards-grid" id="themeCardsGrid">
+        <!-- Rendered dynamically with live color palettes, swatch dots, and active checkmarks -->
+      </div>
+
+      <div class="modal-actions" style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn-secondary" onclick="closeThemeSelectorModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
 
   <!-- Chart.js Engine -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="app.js?v=11.0"></script>
+  <script src="app.js?v=12.0"></script>
 </body>
 </html>

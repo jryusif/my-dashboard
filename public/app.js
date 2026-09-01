@@ -9904,14 +9904,14 @@ function renderProfileAllocations() {
   }
 
   container.innerHTML = profileAllocationsState.map((a, idx) => `
-    <div class="profile-alloc-card">
+    <div class="profile-alloc-card" id="allocCard_${idx}">
       <div class="profile-alloc-header">
         <strong class="profile-alloc-name">${escapeHtml(a.name)}</strong>
         <button type="button" class="btn-goal-del" onclick="removeAllocationBucket(${idx})" title="Remove this bucket">&times;</button>
       </div>
       <div class="profile-alloc-row">
-        <input type="range" min="0" max="100" step="5" value="${a.pct}" style="flex: 1;" oninput="updateAllocationBucketPct(${idx}, this.value)" />
-        <input type="number" min="0" max="100" class="profile-alloc-input" value="${a.pct}" oninput="updateAllocationBucketPct(${idx}, this.value)" />
+        <input type="range" min="0" max="100" step="1" id="allocRange_${idx}" value="${a.pct}" style="flex: 1;" oninput="handleAllocRangeChange(${idx}, this.value)" />
+        <input type="number" min="0" max="100" class="profile-alloc-input" id="allocNumber_${idx}" value="${a.pct}" oninput="handleAllocNumberChange(${idx}, this.value)" />
         <span style="font-weight:700; color:#38bdf8;">%</span>
       </div>
     </div>
@@ -9921,11 +9921,31 @@ function renderProfileAllocations() {
 }
 window.renderProfileAllocations = renderProfileAllocations;
 
-function updateAllocationBucketPct(idx, val) {
+function handleAllocRangeChange(idx, val) {
+  const num = Math.max(0, Math.min(100, parseFloat(val) || 0));
   if (profileAllocationsState && profileAllocationsState[idx]) {
-    profileAllocationsState[idx].pct = Math.max(0, Math.min(100, parseFloat(val) || 0));
-    renderProfileAllocations();
+    profileAllocationsState[idx].pct = num;
   }
+  const numInput = document.getElementById(`allocNumber_${idx}`);
+  if (numInput && document.activeElement !== numInput) numInput.value = num;
+  updateAllocTotalBadge();
+}
+window.handleAllocRangeChange = handleAllocRangeChange;
+
+function handleAllocNumberChange(idx, val) {
+  const rawVal = parseFloat(val);
+  const num = isNaN(rawVal) ? 0 : Math.max(0, Math.min(100, rawVal));
+  if (profileAllocationsState && profileAllocationsState[idx]) {
+    profileAllocationsState[idx].pct = num;
+  }
+  const rangeInput = document.getElementById(`allocRange_${idx}`);
+  if (rangeInput) rangeInput.value = num;
+  updateAllocTotalBadge();
+}
+window.handleAllocNumberChange = handleAllocNumberChange;
+
+function updateAllocationBucketPct(idx, val) {
+  handleAllocNumberChange(idx, val);
 }
 window.updateAllocationBucketPct = updateAllocationBucketPct;
 
@@ -9965,6 +9985,144 @@ function updateAllocTotalBadge() {
   }
 }
 
+// =============================================================================
+// 🎨 MULTI-THEME ENGINE SUITE
+// =============================================================================
+
+const THEMES_LIST = [
+  {
+    id: 'cyber-cyan',
+    name: 'Cyber Cyan',
+    badge: 'PRO DEFAULT',
+    desc: 'Midnight navy with glowing electric cyan and royal indigo accents.',
+    bgHex: '#06080d',
+    previewGradient: 'linear-gradient(135deg, #06080d 0%, #1e293b 100%)',
+    swatches: ['#38bdf8', '#6366f1', '#1e293b']
+  },
+  {
+    id: 'blossom-velvet',
+    name: 'Blossom Velvet (Pink Girly)',
+    badge: 'CHIC & LUXURY',
+    desc: 'Soft blush rose, neon magenta luminescence, and deep plum obsidian glass.',
+    bgHex: '#0f0510',
+    previewGradient: 'linear-gradient(135deg, #2a0e28 0%, #0f0510 100%)',
+    swatches: ['#f472b6', '#ec4899', '#fda4af']
+  },
+  {
+    id: 'sovereign-gold',
+    name: 'Sovereign Gold',
+    badge: 'IMPERIAL WEALTH',
+    desc: 'Deep imperial espresso black with 24K gold and warm amber glow.',
+    bgHex: '#090702',
+    previewGradient: 'linear-gradient(135deg, #261908 0%, #090702 100%)',
+    swatches: ['#f59e0b', '#fbbf24', '#78350f']
+  },
+  {
+    id: 'emerald-prestige',
+    name: 'Emerald Prestige',
+    badge: 'HIGH GROWTH',
+    desc: 'Forest obsidian jade with vibrant emerald and mint bioluminescent glass.',
+    bgHex: '#02140d',
+    previewGradient: 'linear-gradient(135deg, #06281b 0%, #02140d 100%)',
+    swatches: ['#10b981', '#34d399', '#064e3b']
+  },
+  {
+    id: 'royal-amethyst',
+    name: 'Royal Amethyst',
+    badge: 'CYBER VIOLET',
+    desc: 'Cosmic violet with neon purple, ultraviolet, and radiant highlights.',
+    bgHex: '#0c0618',
+    previewGradient: 'linear-gradient(135deg, #240e42 0%, #0c0618 100%)',
+    swatches: ['#a855f7', '#c084fc', '#581c87']
+  },
+  {
+    id: 'obsidian-mono',
+    name: 'Obsidian Monochrome',
+    badge: 'STEALTH CARBON',
+    desc: 'Minimalist carbon black with crisp titanium silver and crystal glass borders.',
+    bgHex: '#050505',
+    previewGradient: 'linear-gradient(135deg, #1f2937 0%, #050505 100%)',
+    swatches: ['#ffffff', '#cbd5e1', '#374151']
+  },
+  {
+    id: 'sunset-radiance',
+    name: 'Sunset Radiance',
+    badge: 'COSMIC CORAL',
+    desc: 'Deep burgundy with sunrise orange, coral glow, and radiant warmth.',
+    bgHex: '#14050a',
+    previewGradient: 'linear-gradient(135deg, #380d19 0%, #14050a 100%)',
+    swatches: ['#f97316', '#fb7185', '#be123c']
+  }
+];
+
+let currentActiveTheme = 'cyber-cyan';
+
+function initTheme() {
+  const saved = localStorage.getItem('antigravity_theme') || 'cyber-cyan';
+  setTheme(saved, false);
+}
+window.initTheme = initTheme;
+
+function setTheme(themeId, notify = true) {
+  const theme = THEMES_LIST.find(t => t.id === themeId) || THEMES_LIST[0];
+  currentActiveTheme = theme.id;
+  document.documentElement.setAttribute('data-theme', theme.id);
+  document.body.setAttribute('data-theme', theme.id);
+  localStorage.setItem('antigravity_theme', theme.id);
+
+  renderThemeGallery('themeCardsGrid');
+  renderThemeGallery('profileThemeCardsGrid');
+
+  if (notify) {
+    showToast(`✨ Workspace theme set to ${theme.name}!`);
+  }
+}
+window.setTheme = setTheme;
+
+function renderThemeGallery(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = THEMES_LIST.map(t => {
+    const isActive = t.id === currentActiveTheme;
+    return `
+      <div class="theme-card-option ${isActive ? 'active' : ''}" onclick="setTheme('${t.id}')">
+        <div class="theme-card-preview-bar" style="background: ${t.previewGradient};">
+          ${t.swatches.map(color => `<span class="theme-swatch-dot" style="background: ${color};"></span>`).join('')}
+        </div>
+        <div class="theme-card-title">
+          <span>${escapeHtml(t.name)}</span>
+          ${isActive ? '<span class="theme-active-tag">ACTIVE</span>' : ''}
+        </div>
+        <div class="theme-card-desc">${escapeHtml(t.desc)}</div>
+      </div>
+    `;
+  }).join('');
+}
+window.renderThemeGallery = renderThemeGallery;
+
+function openThemeSelectorModal() {
+  const modal = document.getElementById('themeSelectorModalBackdrop');
+  if (modal) {
+    modal.hidden = false;
+    renderThemeGallery('themeCardsGrid');
+  }
+}
+window.openThemeSelectorModal = openThemeSelectorModal;
+
+function closeThemeSelectorModal() {
+  const modal = document.getElementById('themeSelectorModalBackdrop');
+  if (modal) modal.hidden = true;
+}
+window.closeThemeSelectorModal = closeThemeSelectorModal;
+
+// =============================================================================
+// 🎯 ADVANCED PRO FINANCIAL GOAL SUITE
+// =============================================================================
+
+let currentEditingGoalId = null;
+let currentProfileGoalsCache = [];
+
 async function loadProfileFinancialGoals() {
   const container = document.getElementById('profileFinancialGoalsList');
   if (!container) return;
@@ -9973,11 +10131,12 @@ async function loadProfileFinancialGoals() {
     const res = await fetch('/api/finance/goals');
     if (!res.ok) return;
     const { goals } = await res.json();
+    currentProfileGoalsCache = goals || [];
 
     if (!goals || goals.length === 0) {
       container.innerHTML = `
-        <div style="grid-column: 1 / -1; padding: 20px; text-align: center; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px; color: #94a3b8; font-size: 13px;">
-          No financial goals defined yet. Click "➕ Add New Goal" to set your first target price and deadline!
+        <div style="grid-column: 1 / -1; padding: 24px; text-align: center; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 14px; color: #94a3b8; font-size: 13px;">
+          🎯 No financial goals defined yet. Click "➕ Add New Goal" to set your first capital target and deadline!
         </div>
       `;
       return;
@@ -9985,10 +10144,22 @@ async function loadProfileFinancialGoals() {
 
     container.innerHTML = goals.map(g => {
       const pct = g.targetAmount > 0 ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0;
+      let icon = '🎯';
+      let displayTitle = g.title || '';
+      const emojiMatch = displayTitle.match(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u);
+      if (emojiMatch) {
+        icon = emojiMatch[1];
+        displayTitle = displayTitle.slice(emojiMatch[0].length).trim();
+      }
       return `
         <div class="profile-goal-card" id="goalCard_${g.id}">
           <div class="profile-goal-head">
-            <h4 class="profile-goal-title">${escapeHtml(g.title)}</h4>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">${icon}</span>
+              <div>
+                <h4 class="profile-goal-title">${escapeHtml(displayTitle || g.title)}</h4>
+              </div>
+            </div>
             ${g.deadline ? `<span class="profile-goal-deadline">📅 ${fmtDate(g.deadline)}</span>` : ''}
           </div>
           <div class="profile-goal-progress-wrap">
@@ -10001,7 +10172,7 @@ async function loadProfileFinancialGoals() {
             </div>
           </div>
           <div class="profile-goal-actions">
-            <button type="button" class="btn-goal-edit" onclick="handleEditFinancialGoal('${g.id}', '${escapeHtml(g.title)}', ${g.targetAmount}, ${g.currentAmount}, '${g.deadline || ''}')">✏️ Edit</button>
+            <button type="button" class="btn-goal-edit" onclick="openEditFinancialGoalModal('${g.id}')">✏️ Edit</button>
             <button type="button" class="btn-goal-del" onclick="handleDeleteFinancialGoal('${g.id}')">🗑️ Delete</button>
           </div>
         </div>
@@ -10011,83 +10182,256 @@ async function loadProfileFinancialGoals() {
     console.warn('Could not load profile financial goals:', err);
   }
 }
+window.loadProfileFinancialGoals = loadProfileFinancialGoals;
 
-async function promptAddFinancialGoal() {
-  const title = prompt('🎯 Enter Financial Goal Name (e.g. Clinic Down Payment, Gold Bullion Lot, Emergency Fund):');
-  if (!title || !title.trim()) return;
+function openAddFinancialGoalModal() {
+  currentEditingGoalId = null;
+  const modal = document.getElementById('financialGoalModalBackdrop');
+  const titleEl = document.getElementById('financialGoalModalTitle');
+  const delBtn = document.getElementById('btnDeleteGoalFromModal');
+  const form = document.getElementById('financialGoalForm');
 
-  const targetStr = prompt(`Enter Target Price / Amount for "${title.trim()}":`, '50000');
-  if (!targetStr) return;
-  const targetAmount = parseFloat(targetStr);
-  if (!targetAmount || targetAmount <= 0) {
-    alert('Please enter a valid positive target amount.');
+  if (titleEl) titleEl.textContent = 'Create Strategic Financial Goal';
+  if (delBtn) delBtn.style.display = 'none';
+  if (form) form.reset();
+
+  const idInp = document.getElementById('goalFormId');
+  const iconInp = document.getElementById('goalFormIcon');
+  const titleInp = document.getElementById('goalFormTitle');
+  const catInp = document.getElementById('goalFormCategory');
+  const targetInp = document.getElementById('goalFormTarget');
+  const curInp = document.getElementById('goalFormCurrent');
+  const deadInp = document.getElementById('goalFormDeadline');
+  const notesInp = document.getElementById('goalFormNotes');
+
+  if (idInp) idInp.value = '';
+  if (iconInp) iconInp.value = '🎯';
+  if (titleInp) titleInp.value = '';
+  if (catInp) catInp.value = 'Real Estate & Clinic';
+  if (targetInp) targetInp.value = 100000;
+  if (curInp) curInp.value = 0;
+  if (deadInp) deadInp.value = toISODate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000));
+  if (notesInp) notesInp.value = '';
+
+  updateGoalModalPreview();
+  if (modal) modal.hidden = false;
+}
+window.openAddFinancialGoalModal = openAddFinancialGoalModal;
+window.promptAddFinancialGoal = openAddFinancialGoalModal;
+
+function openEditFinancialGoalModal(goalId) {
+  const goal = currentProfileGoalsCache.find(g => g.id === goalId);
+  if (!goal) return;
+
+  currentEditingGoalId = goal.id;
+  const modal = document.getElementById('financialGoalModalBackdrop');
+  const titleEl = document.getElementById('financialGoalModalTitle');
+  const delBtn = document.getElementById('btnDeleteGoalFromModal');
+
+  if (titleEl) titleEl.textContent = 'Edit Financial Goal';
+  if (delBtn) delBtn.style.display = 'inline-flex';
+
+  let icon = '🎯';
+  let displayTitle = goal.title || '';
+  const emojiMatch = displayTitle.match(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u);
+  if (emojiMatch) {
+    icon = emojiMatch[1];
+    displayTitle = displayTitle.slice(emojiMatch[0].length).trim();
+  }
+
+  const idInp = document.getElementById('goalFormId');
+  const iconInp = document.getElementById('goalFormIcon');
+  const titleInp = document.getElementById('goalFormTitle');
+  const catInp = document.getElementById('goalFormCategory');
+  const targetInp = document.getElementById('goalFormTarget');
+  const curInp = document.getElementById('goalFormCurrent');
+  const deadInp = document.getElementById('goalFormDeadline');
+  const notesInp = document.getElementById('goalFormNotes');
+
+  if (idInp) idInp.value = goal.id;
+  if (iconInp) iconInp.value = icon;
+  if (titleInp) titleInp.value = displayTitle;
+  if (catInp) catInp.value = goal.category || 'Real Estate & Clinic';
+  if (targetInp) targetInp.value = goal.targetAmount || 100000;
+  if (curInp) curInp.value = goal.currentAmount || 0;
+  if (deadInp) deadInp.value = goal.deadline || '';
+  if (notesInp) notesInp.value = goal.notes || '';
+
+  updateGoalModalPreview();
+  if (modal) modal.hidden = false;
+}
+window.openEditFinancialGoalModal = openEditFinancialGoalModal;
+
+function closeFinancialGoalModal() {
+  const modal = document.getElementById('financialGoalModalBackdrop');
+  if (modal) modal.hidden = true;
+}
+window.closeFinancialGoalModal = closeFinancialGoalModal;
+
+function setGoalIconPreset(icon) {
+  const input = document.getElementById('goalFormIcon');
+  if (input) {
+    input.value = icon;
+    updateGoalModalPreview();
+  }
+}
+window.setGoalIconPreset = setGoalIconPreset;
+
+function adjustGoalTarget(delta) {
+  const input = document.getElementById('goalFormTarget');
+  if (input) {
+    const cur = parseFloat(input.value) || 0;
+    input.value = Math.max(1, cur + delta);
+    updateGoalModalPreview();
+  }
+}
+window.adjustGoalTarget = adjustGoalTarget;
+
+function adjustGoalCurrent(delta) {
+  const input = document.getElementById('goalFormCurrent');
+  if (input) {
+    const cur = parseFloat(input.value) || 0;
+    input.value = Math.max(0, cur + delta);
+    updateGoalModalPreview();
+  }
+}
+window.adjustGoalCurrent = adjustGoalCurrent;
+
+function setGoalCurrentToTarget() {
+  const target = document.getElementById('goalFormTarget');
+  const current = document.getElementById('goalFormCurrent');
+  if (target && current) {
+    current.value = target.value;
+    updateGoalModalPreview();
+  }
+}
+window.setGoalCurrentToTarget = setGoalCurrentToTarget;
+
+function setGoalDeadlineHorizon(months) {
+  const input = document.getElementById('goalFormDeadline');
+  if (input) {
+    const d = new Date();
+    d.setMonth(d.getMonth() + months);
+    input.value = toISODate(d);
+    updateGoalModalPreview();
+  }
+}
+window.setGoalDeadlineHorizon = setGoalDeadlineHorizon;
+
+function updateGoalModalPreview() {
+  const icon = document.getElementById('goalFormIcon')?.value || '🎯';
+  const title = document.getElementById('goalFormTitle')?.value || 'Goal Title';
+  const category = document.getElementById('goalFormCategory')?.value || 'Real Estate & Clinic';
+  const target = Math.max(1, parseFloat(document.getElementById('goalFormTarget')?.value) || 0);
+  const current = Math.max(0, parseFloat(document.getElementById('goalFormCurrent')?.value) || 0);
+  const deadline = document.getElementById('goalFormDeadline')?.value;
+
+  const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+  const remaining = Math.max(0, target - current);
+
+  const prevIcon = document.getElementById('goalPreviewIcon');
+  const prevTitle = document.getElementById('goalPreviewTitle');
+  const prevCategory = document.getElementById('goalPreviewCategory');
+  const prevDeadline = document.getElementById('goalPreviewDeadline');
+  const prevFill = document.getElementById('goalPreviewProgressFill');
+  const prevValues = document.getElementById('goalPreviewValues');
+  const prevRemaining = document.getElementById('goalPreviewRemaining');
+  const prevPctBadge = document.getElementById('goalPreviewPctBadge');
+
+  if (prevIcon) prevIcon.textContent = icon;
+  if (prevTitle) prevTitle.textContent = title;
+  if (prevCategory) prevCategory.textContent = category;
+  if (prevDeadline) prevDeadline.textContent = deadline ? `📅 ${fmtDate(deadline)}` : '📅 No deadline';
+  if (prevFill) prevFill.style.width = `${pct}%`;
+  if (prevValues) prevValues.textContent = `${fmtMoney(current)} of ${fmtMoney(target)}`;
+  if (prevRemaining) prevRemaining.textContent = `Remaining: ${fmtMoney(remaining)}`;
+  if (prevPctBadge) {
+    prevPctBadge.textContent = `${pct}% FUNDED`;
+    prevPctBadge.style.color = pct >= 100 ? '#34d399' : (pct >= 50 ? '#38bdf8' : '#f59e0b');
+  }
+}
+window.updateGoalModalPreview = updateGoalModalPreview;
+
+async function handleSaveFinancialGoal(e) {
+  e.preventDefault();
+  const id = document.getElementById('goalFormId')?.value;
+  const icon = document.getElementById('goalFormIcon')?.value || '🎯';
+  const title = document.getElementById('goalFormTitle')?.value.trim();
+  const category = document.getElementById('goalFormCategory')?.value;
+  const targetAmount = parseFloat(document.getElementById('goalFormTarget')?.value) || 0;
+  const currentAmount = parseFloat(document.getElementById('goalFormCurrent')?.value) || 0;
+  const deadline = document.getElementById('goalFormDeadline')?.value || null;
+  const notes = document.getElementById('goalFormNotes')?.value.trim() || null;
+
+  if (!title) {
+    showToast('Please enter a goal title.');
+    return;
+  }
+  if (targetAmount <= 0) {
+    showToast('Please enter a target amount greater than 0.');
     return;
   }
 
-  const currentStr = prompt(`Enter Current Amount Saved so far:`, '0');
-  const currentAmount = parseFloat(currentStr) || 0;
+  const cleanTitle = title.replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u, '').trim();
+  const fullTitle = icon ? `${icon} ${cleanTitle}` : cleanTitle;
 
-  const deadline = prompt('Enter Target Deadline (YYYY-MM-DD, Optional):', toISODate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)));
+  const payload = {
+    title: fullTitle,
+    targetAmount,
+    currentAmount,
+    deadline: deadline || null
+  };
+  if (id) payload.id = id;
 
+  const btn = document.getElementById('btnSaveFinancialGoalModal');
   try {
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> Saving Goal...';
+    }
+    const method = id ? 'PATCH' : 'POST';
     const res = await fetch('/api/finance/goals', {
-      method: 'POST',
+      method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: title.trim(),
-        targetAmount,
-        currentAmount,
-        deadline: deadline ? deadline.trim() : null
-      })
+      body: JSON.stringify(payload)
     });
 
-    if (!res.ok) throw new Error('Failed to create goal');
-    showToast('🎯 Financial goal added successfully!');
+    if (!res.ok) throw new Error('Failed to save goal');
+    showToast(`🎯 Financial goal ${id ? 'updated' : 'created'} successfully!`);
+    closeFinancialGoalModal();
     loadProfileFinancialGoals();
-    if (currentFinanceMonth) loadFinancePage();
+    if (typeof loadFinancePage === 'function' && currentFinanceMonth) loadFinancePage();
   } catch (err) {
-    console.error('Error creating goal:', err);
-    showToast('Could not save goal.');
+    console.error('Error saving goal:', err);
+    showToast(err.message || 'Could not save financial goal.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>💾</span> Save Financial Goal';
+    }
   }
 }
-window.promptAddFinancialGoal = promptAddFinancialGoal;
+window.handleSaveFinancialGoal = handleSaveFinancialGoal;
 
-async function handleEditFinancialGoal(id, oldTitle, oldTarget, oldCurrent, oldDeadline) {
-  const title = prompt('Edit Goal Title:', oldTitle);
-  if (!title || !title.trim()) return;
-
-  const targetStr = prompt('Edit Target Price / Amount:', String(oldTarget));
-  if (!targetStr) return;
-  const targetAmount = parseFloat(targetStr) || oldTarget;
-
-  const currentStr = prompt('Edit Current Amount Saved:', String(oldCurrent));
-  const currentAmount = currentStr !== null ? (parseFloat(currentStr) || 0) : oldCurrent;
-
-  const deadline = prompt('Edit Target Deadline (YYYY-MM-DD):', oldDeadline || '');
+async function handleDeleteGoalModalAction() {
+  if (!currentEditingGoalId) return;
+  if (!confirm('Are you sure you want to delete this financial goal?')) return;
 
   try {
-    const res = await fetch('/api/finance/goals', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id,
-        title: title.trim(),
-        targetAmount,
-        currentAmount,
-        deadline: deadline ? deadline.trim() : null
-      })
+    const res = await fetch(`/api/finance/goals?id=${encodeURIComponent(currentEditingGoalId)}`, {
+      method: 'DELETE'
     });
-
-    if (!res.ok) throw new Error('Failed to update goal');
-    showToast('✨ Financial goal updated!');
+    if (!res.ok) throw new Error('Failed to delete goal');
+    showToast('Financial goal deleted.');
+    closeFinancialGoalModal();
     loadProfileFinancialGoals();
-    if (currentFinanceMonth) loadFinancePage();
+    if (typeof loadFinancePage === 'function' && currentFinanceMonth) loadFinancePage();
   } catch (err) {
-    console.error('Error updating goal:', err);
-    showToast('Could not update goal.');
+    console.error('Error deleting goal:', err);
+    showToast('Could not delete financial goal.');
   }
 }
-window.handleEditFinancialGoal = handleEditFinancialGoal;
+window.handleDeleteGoalModalAction = handleDeleteGoalModalAction;
 
 async function handleDeleteFinancialGoal(id) {
   if (!confirm('Are you sure you want to delete this financial goal?')) return;
@@ -10100,7 +10444,7 @@ async function handleDeleteFinancialGoal(id) {
     if (!res.ok) throw new Error('Failed to delete goal');
     showToast('Financial goal removed.');
     loadProfileFinancialGoals();
-    if (currentFinanceMonth) loadFinancePage();
+    if (typeof loadFinancePage === 'function' && currentFinanceMonth) loadFinancePage();
   } catch (err) {
     console.error('Error deleting goal:', err);
     showToast('Could not delete goal.');
@@ -10109,7 +10453,7 @@ async function handleDeleteFinancialGoal(id) {
 window.handleDeleteFinancialGoal = handleDeleteFinancialGoal;
 
 function switchProfileTab(tabName) {
-  const tabs = ['details', 'persona', 'security', 'stats'];
+  const tabs = ['details', 'appearance', 'persona', 'security', 'stats'];
   tabs.forEach(t => {
     const btn = document.getElementById(`btnTabProfile${t.charAt(0).toUpperCase() + t.slice(1)}`);
     const content = document.getElementById(`profileTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -10124,6 +10468,10 @@ function switchProfileTab(tabName) {
       }
     }
   });
+
+  if (tabName === 'appearance') {
+    renderThemeGallery('profileThemeCardsGrid');
+  }
 }
 window.switchProfileTab = switchProfileTab;
 
@@ -10803,6 +11151,7 @@ function initTopNavScroll() {
 // INIT
 // =============================================================================
 
+initTheme();
 initAuthEvents();
 initSidebarState();
 initTopNavScroll();
@@ -10813,4 +11162,5 @@ loadWeeklyProgress();
 initWeekTabs();
 loadWealthCard();
 initRoadmapEvents();
+
 
