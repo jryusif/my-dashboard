@@ -7355,6 +7355,24 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   padding: 24px;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.roadmap-phase-card.phase-active-sprint {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.06) 0%, rgba(15, 23, 42, 0.6) 100%);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(245, 158, 11, 0.12), inset 0 1px 0 rgba(245, 158, 11, 0.25);
+}
+
+.roadmap-phase-card.phase-completed-all {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.04) 0%, rgba(15, 23, 42, 0.55) 100%);
+}
+
+.roadmap-phase-card.phase-locked-upcoming {
+  opacity: 0.82;
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .phase-header {
@@ -7362,19 +7380,73 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
 }
 .phase-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .phase-badge {
   font-size: 16px;
   font-weight: 800;
   color: #fff;
   letter-spacing: 0.01em;
+}
+.phase-rename-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.phase-rename-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #38bdf8;
+  transform: scale(1.1);
+}
+.phase-state-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.02em;
+}
+.phase-state-badge.badge-active-sprint {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+.phase-state-badge.badge-completed-all {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+.phase-state-badge.badge-locked-phase {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.phase-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 8px #fbbf24;
+  animation: pulseAura 1.6s infinite ease-in-out;
 }
 .phase-count {
   font-size: 12px;
@@ -7384,6 +7456,11 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.phase-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .phase-progress-wrap {
   width: 140px;
@@ -7397,6 +7474,52 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   background: linear-gradient(90deg, #38bdf8 0%, #10b981 100%);
   border-radius: 999px;
   transition: width 0.4s ease;
+}
+
+/* Manage Phases Modal */
+.phases-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.phase-edit-item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+.phase-drag-handle {
+  color: #64748b;
+  font-size: 14px;
+}
+.phase-edit-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+  font-size: 13.5px !important;
+}
+.btn-phase-row-del {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+.btn-phase-row-del:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fff;
 }
 
 /* Phase Milestones Grid */

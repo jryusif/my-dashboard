@@ -7763,8 +7763,38 @@ async function openRoadmapPage() {
   await loadRoadmap();
 }
 
+let roadmapPhasesList = [
+  'Phase 1: Foundation (Now)',
+  'Phase 2: Acceleration (6-12M)',
+  'Phase 3: Mastery & Scale (1-3Y)',
+  'Phase 4: Freedom & Legacy (5Y+)'
+];
+
+async function loadRoadmapPhases() {
+  try {
+    const res = await fetch('/api/roadmap/phases');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.phases) && data.phases.length > 0) {
+        roadmapPhasesList = data.phases;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load custom roadmap phases:', err);
+  }
+  populateRoadmapPhaseSelectDropdown();
+}
+
+function populateRoadmapPhaseSelectDropdown(selectedPhase = null) {
+  if (!roadmapPhaseSelect) return;
+  roadmapPhaseSelect.innerHTML = roadmapPhasesList.map(p => `
+    <option value="${escapeHtml(p)}" ${p === selectedPhase ? 'selected' : ''}>${escapeHtml(p)}</option>
+  `).join('');
+}
+
 async function loadRoadmap() {
   try {
+    await loadRoadmapPhases();
     const res = await fetch('/api/roadmap');
     if (!res.ok) throw new Error('Failed to fetch roadmap');
     roadmapMilestones = await res.json();
@@ -7793,13 +7823,6 @@ function updateRoadmapScorecards() {
   if (rmGlobalProgressVal) rmGlobalProgressVal.textContent = `${avgProgress}%`;
 }
 
-const ROADMAP_PHASES_ORDER = [
-  'Phase 1: Foundation (Now)',
-  'Phase 2: Acceleration (6-12M)',
-  'Phase 3: Mastery & Scale (1-3Y)',
-  'Phase 4: Freedom & Legacy (5Y+)'
-];
-
 const PILLAR_COLOR_MAP = {
   'Dental Career': '#38bdf8',
   'Trading & Markets': '#f59e0b',
@@ -7827,38 +7850,86 @@ function renderRoadmapPhases() {
       <div class="empty-roadmap-state">
         <div class="empty-icon">🧭</div>
         <h3>No milestones found for ${escapeHtml(activeRoadmapPillar)}</h3>
-        <p>Set a new strategic target to begin mapping out your journey.</p>
-        <button type="button" class="btn-primary" onclick="openRoadmapModal('${activeRoadmapPillar !== 'All' ? activeRoadmapPillar : 'Dental Career'}')">
-          + Add First Milestone
-        </button>
+        <p>Set a new strategic target or customize your roadmap phases to begin mapping out your journey.</p>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap;">
+          <button type="button" class="btn-secondary" onclick="openManagePhasesModal()" style="border-radius:999px;">
+            <span>⚙️</span> Edit Roadmap Phases
+          </button>
+          <button type="button" class="btn-primary" onclick="openRoadmapModal('${activeRoadmapPillar !== 'All' ? activeRoadmapPillar : 'Dental Career'}')">
+            + Add First Milestone
+          </button>
+        </div>
       </div>
     `;
     return;
   }
 
-  // Group by Phase
-  const html = ROADMAP_PHASES_ORDER.map(phaseTitle => {
-    const phaseItems = filtered.filter(m => m.phase === phaseTitle);
-    if (phaseItems.length === 0) return '';
+  // 1. Calculate completion metrics for each phase in ordered sequence
+  const phaseStats = roadmapPhasesList.map(phaseTitle => {
+    const items = filtered.filter(m => m.phase === phaseTitle);
+    const totalItems = items.length;
+    // An item is completed if status === 'completed' or progressPct === 100
+    const completedItems = items.filter(m => m.status === 'completed' || m.progressPct === 100).length;
+    const isCompleted = totalItems > 0 && completedItems === totalItems;
+    const pct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+    return { phaseTitle, items, totalItems, completedItems, isCompleted, pct };
+  });
 
-    const phaseCompleted = phaseItems.filter(m => m.status === 'completed').length;
-    const phaseTotal = phaseItems.length;
-    const phasePct = Math.round((phaseCompleted / phaseTotal) * 100);
+  // 2. Determine Active Phase Index (the FIRST incomplete phase in the progression sequence)
+  // If an uncheck occurs in an earlier phase, isCompleted becomes false, automatically rolling back the active status!
+  let activePhaseIndex = phaseStats.findIndex(p => p.totalItems > 0 && !p.isCompleted);
+  if (activePhaseIndex === -1) {
+    // If no phase with milestones is incomplete, check first empty phase or all are done
+    activePhaseIndex = phaseStats.findIndex(p => !p.isCompleted);
+  }
+
+  // 3. Render each phase card
+  const html = phaseStats.map((pStat, index) => {
+    const { phaseTitle, items, totalItems, completedItems, isCompleted, pct } = pStat;
+
+    // In pillar-filtered views, skip phases that have no milestones for that pillar unless active
+    if (totalItems === 0 && activeRoadmapPillar !== 'All') return '';
+
+    let stateClass = 'phase-locked-upcoming';
+    let statusBadgeHtml = `<span class="phase-state-badge badge-locked-phase">🔒 Upcoming</span>`;
+
+    if (isCompleted) {
+      stateClass = 'phase-completed-all';
+      statusBadgeHtml = `<span class="phase-state-badge badge-completed-all">✓ Phase Completed</span>`;
+    } else if (index === activePhaseIndex) {
+      stateClass = 'phase-active-sprint';
+      statusBadgeHtml = `<span class="phase-state-badge badge-active-sprint"><span class="phase-pulse-dot"></span> Active Sprint (In Progress)</span>`;
+    } else if (activePhaseIndex !== -1 && index < activePhaseIndex) {
+      stateClass = 'phase-completed-all';
+      statusBadgeHtml = `<span class="phase-state-badge badge-completed-all">✓ Completed</span>`;
+    } else {
+      stateClass = 'phase-locked-upcoming';
+      statusBadgeHtml = `<span class="phase-state-badge badge-locked-phase">🔒 Upcoming</span>`;
+    }
 
     return `
-      <div class="roadmap-phase-card">
+      <div class="roadmap-phase-card ${stateClass}" data-phase="${escapeHtml(phaseTitle)}">
         <div class="phase-header">
           <div class="phase-header-left">
             <span class="phase-badge">${escapeHtml(phaseTitle)}</span>
-            <span class="phase-count">${phaseCompleted}/${phaseTotal} Completed</span>
+            <button type="button" class="phase-rename-btn" onclick="handlePromptRenamePhase('${escapeHtml(phaseTitle)}')" title="Rename this phase">✏️</button>
+            ${statusBadgeHtml}
+            <span class="phase-count">${completedItems}/${totalItems} Completed</span>
           </div>
-          <div class="phase-progress-wrap">
-            <div class="phase-progress-bar" style="width: ${phasePct}%;"></div>
+          <div class="phase-header-right">
+            <div class="phase-progress-wrap">
+              <div class="phase-progress-bar" style="width: ${pct}%;"></div>
+            </div>
           </div>
         </div>
 
         <div class="phase-milestones-grid">
-          ${phaseItems.map(m => renderMilestoneCard(m)).join('')}
+          ${totalItems > 0
+            ? items.map(m => renderMilestoneCard(m, index === activePhaseIndex, isCompleted)).join('')
+            : `<div style="grid-column: 1 / -1; padding: 22px; text-align: center; color: var(--ink-soft); font-size: 13px; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.08);">
+                 No milestones assigned to this phase yet. <a href="javascript:void(0)" onclick="openRoadmapModal('${activeRoadmapPillar !== 'All' ? activeRoadmapPillar : 'Dental Career'}', null, '${escapeHtml(phaseTitle)}')" style="color: #38bdf8; font-weight: 600; text-decoration: underline; margin-left: 4px;">+ Add Milestone</a>
+               </div>`
+          }
         </div>
       </div>
     `;
@@ -7867,11 +7938,12 @@ function renderRoadmapPhases() {
   roadmapPhasesContainer.innerHTML = html;
 }
 
-function renderMilestoneCard(m) {
+function renderMilestoneCard(m, isParentPhaseActive = true, isParentPhaseCompleted = false) {
   const pillarColor = PILLAR_COLOR_MAP[m.pillar] || '#38bdf8';
   const pillarIcon = PILLAR_ICON_MAP[m.pillar] || '🎯';
-  const statusLabel = m.status === 'completed' ? '✓ Achieved' : (m.status === 'in_progress' ? '● In Progress' : '🔒 Upcoming');
-  const statusClass = m.status === 'completed' ? 'status-completed' : (m.status === 'in_progress' ? 'status-progress' : 'status-upcoming');
+  const isMilestoneAchieved = m.status === 'completed' || m.progressPct === 100;
+  const statusLabel = isMilestoneAchieved ? '✓ Achieved' : (m.status === 'in_progress' ? '● In Progress' : '🔒 Upcoming');
+  const statusClass = isMilestoneAchieved ? 'status-completed' : (m.status === 'in_progress' ? 'status-progress' : 'status-upcoming');
 
   const keyResultsHtml = Array.isArray(m.keyResults) && m.keyResults.length > 0 ? `
     <div class="rm-key-results-list">
@@ -7892,7 +7964,7 @@ function renderMilestoneCard(m) {
   ` : '';
 
   return `
-    <div class="milestone-glass-card ${m.status === 'completed' ? 'milestone-completed' : ''}" style="--pillar-glow: ${pillarColor};">
+    <div class="milestone-glass-card ${isMilestoneAchieved ? 'milestone-completed' : ''}" style="--pillar-glow: ${pillarColor};">
       <div class="milestone-top-row">
         <span class="milestone-pillar-tag" style="background: color-mix(in srgb, ${pillarColor} 18%, transparent); color: ${pillarColor}; border-color: color-mix(in srgb, ${pillarColor} 40%, transparent);">
           <span>${pillarIcon}</span> ${escapeHtml(m.pillar)}
@@ -7951,7 +8023,194 @@ async function toggleRoadmapKeyResult(milestoneId, keyResultId) {
   }
 }
 
-function openRoadmapModal(defaultPillar = null, editMilestoneId = null) {
+async function handlePromptRenamePhase(oldPhaseName) {
+  const newName = prompt(`Enter a new name for "${oldPhaseName}":`, oldPhaseName);
+  if (!newName || !newName.trim() || newName.trim() === oldPhaseName) return;
+
+  const trimmed = newName.trim();
+  const updatedPhases = roadmapPhasesList.map(p => p === oldPhaseName ? trimmed : p);
+
+  try {
+    const res = await fetch('/api/roadmap/phases', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phases: updatedPhases,
+        oldPhaseName,
+        newPhaseName: trimmed
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to rename phase');
+
+    roadmapPhasesList = data.phases || updatedPhases;
+    showToast(`✨ Phase renamed to "${trimmed}"!`);
+    await loadRoadmap();
+    populateRoadmapPhaseSelectDropdown();
+  } catch (err) {
+    console.error('Error renaming phase:', err);
+    showToast(err.message || 'Could not rename phase.');
+  }
+}
+window.handlePromptRenamePhase = handlePromptRenamePhase;
+
+function openManagePhasesModal() {
+  renderPhasesEditList();
+  const backdrop = document.getElementById('roadmapPhasesModalBackdrop');
+  const input = document.getElementById('newPhaseNameInput');
+  if (input) input.value = '';
+  if (backdrop) {
+    backdrop.hidden = false;
+    backdrop.removeAttribute('hidden');
+    backdrop.style.setProperty('display', 'flex', 'important');
+  }
+}
+window.openManagePhasesModal = openManagePhasesModal;
+
+function closeManagePhasesModal() {
+  const backdrop = document.getElementById('roadmapPhasesModalBackdrop');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+    backdrop.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closeManagePhasesModal = closeManagePhasesModal;
+
+let localEditingPhases = [];
+
+function renderPhasesEditList() {
+  const container = document.getElementById('phasesEditList');
+  if (!container) return;
+  localEditingPhases = [...roadmapPhasesList];
+
+  container.innerHTML = localEditingPhases.map((phase, idx) => `
+    <div class="phase-edit-item-row" data-index="${idx}">
+      <span class="phase-drag-handle">☰ ${idx + 1}</span>
+      <input type="text" class="phase-edit-input" value="${escapeHtml(phase)}" oninput="handlePhaseInputChange(${idx}, this.value)" placeholder="Phase name..." />
+      <button type="button" class="btn-phase-row-del" onclick="handleRemovePhaseRow(${idx})" title="Remove phase">&times;</button>
+    </div>
+  `).join('');
+}
+
+function handlePhaseInputChange(idx, val) {
+  if (localEditingPhases[idx] !== undefined) {
+    localEditingPhases[idx] = val;
+  }
+}
+window.handlePhaseInputChange = handlePhaseInputChange;
+
+function handleRemovePhaseRow(idx) {
+  if (localEditingPhases.length <= 1) {
+    showToast('You must have at least one phase in your roadmap.');
+    return;
+  }
+  localEditingPhases.splice(idx, 1);
+  const container = document.getElementById('phasesEditList');
+  if (container) {
+    container.innerHTML = localEditingPhases.map((phase, i) => `
+      <div class="phase-edit-item-row" data-index="${i}">
+        <span class="phase-drag-handle">☰ ${i + 1}</span>
+        <input type="text" class="phase-edit-input" value="${escapeHtml(phase)}" oninput="handlePhaseInputChange(${i}, this.value)" placeholder="Phase name..." />
+        <button type="button" class="btn-phase-row-del" onclick="handleRemovePhaseRow(${i})" title="Remove phase">&times;</button>
+      </div>
+    `).join('');
+  }
+}
+window.handleRemovePhaseRow = handleRemovePhaseRow;
+
+function handleAddPhaseRow() {
+  const input = document.getElementById('newPhaseNameInput');
+  const name = input ? input.value.trim() : '';
+  if (!name) {
+    showToast('Please type a phase name.');
+    return;
+  }
+  if (localEditingPhases.includes(name)) {
+    showToast('This phase name already exists.');
+    return;
+  }
+  localEditingPhases.push(name);
+  if (input) input.value = '';
+  const container = document.getElementById('phasesEditList');
+  if (container) {
+    container.innerHTML = localEditingPhases.map((phase, i) => `
+      <div class="phase-edit-item-row" data-index="${i}">
+        <span class="phase-drag-handle">☰ ${i + 1}</span>
+        <input type="text" class="phase-edit-input" value="${escapeHtml(phase)}" oninput="handlePhaseInputChange(${i}, this.value)" placeholder="Phase name..." />
+        <button type="button" class="btn-phase-row-del" onclick="handleRemovePhaseRow(${i})" title="Remove phase">&times;</button>
+      </div>
+    `).join('');
+  }
+}
+window.handleAddPhaseRow = handleAddPhaseRow;
+
+async function handleResetDefaultPhases() {
+  localEditingPhases = [
+    'Phase 1: Foundation (Now)',
+    'Phase 2: Acceleration (6-12M)',
+    'Phase 3: Mastery & Scale (1-3Y)',
+    'Phase 4: Freedom & Legacy (5Y+)'
+  ];
+  const container = document.getElementById('phasesEditList');
+  if (container) {
+    container.innerHTML = localEditingPhases.map((phase, i) => `
+      <div class="phase-edit-item-row" data-index="${i}">
+        <span class="phase-drag-handle">☰ ${i + 1}</span>
+        <input type="text" class="phase-edit-input" value="${escapeHtml(phase)}" oninput="handlePhaseInputChange(${i}, this.value)" placeholder="Phase name..." />
+        <button type="button" class="btn-phase-row-del" onclick="handleRemovePhaseRow(${i})" title="Remove phase">&times;</button>
+      </div>
+    `).join('');
+  }
+  showToast('Phases reset to default template.');
+}
+window.handleResetDefaultPhases = handleResetDefaultPhases;
+
+async function handleSavePhasesList() {
+  const inputs = document.querySelectorAll('.phase-edit-input');
+  const cleanPhases = Array.from(inputs).map(inp => inp.value.trim()).filter(Boolean);
+
+  if (cleanPhases.length === 0) {
+    showToast('Please specify at least one phase.');
+    return;
+  }
+
+  const btnSave = document.getElementById('btnSavePhases');
+  try {
+    if (btnSave) {
+      btnSave.disabled = true;
+      btnSave.innerHTML = '<span>⏳</span> Saving...';
+    }
+
+    const res = await fetch('/api/roadmap/phases', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phases: cleanPhases })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save phases');
+
+    roadmapPhasesList = data.phases || cleanPhases;
+    closeManagePhasesModal();
+    showToast('✨ Roadmap phases updated!');
+    populateRoadmapPhaseSelectDropdown();
+    await loadRoadmap();
+  } catch (err) {
+    console.error('Error saving roadmap phases:', err);
+    showToast(err.message || 'Could not save phases.');
+  } finally {
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.innerHTML = '<span>💾</span> Save Phases';
+    }
+  }
+}
+window.handleSavePhasesList = handleSavePhasesList;
+
+function openRoadmapModal(defaultPillar = null, editMilestoneId = null, defaultPhase = null) {
+  populateRoadmapPhaseSelectDropdown(defaultPhase);
+
   if (editMilestoneId) {
     const m = roadmapMilestones.find(item => item.id === editMilestoneId);
     if (!m) return;
@@ -7971,7 +8230,7 @@ function openRoadmapModal(defaultPillar = null, editMilestoneId = null) {
     if (roadmapModalTitle) roadmapModalTitle.textContent = 'Add Life Milestone';
     if (roadmapMilestoneId) roadmapMilestoneId.value = '';
     if (roadmapPillarSelect) roadmapPillarSelect.value = defaultPillar || 'Dental Career';
-    if (roadmapPhaseSelect) roadmapPhaseSelect.value = 'Phase 1: Foundation (Now)';
+    if (roadmapPhaseSelect) roadmapPhaseSelect.value = defaultPhase || roadmapPhasesList[0] || 'Phase 1: Foundation (Now)';
     if (roadmapTitleInput) roadmapTitleInput.value = '';
     if (roadmapHorizonInput) roadmapHorizonInput.value = 'Q4 2026';
     if (roadmapStatusSelect) roadmapStatusSelect.value = 'in_progress';
@@ -7981,10 +8240,13 @@ function openRoadmapModal(defaultPillar = null, editMilestoneId = null) {
 
   if (roadmapModalBackdrop) roadmapModalBackdrop.hidden = false;
 }
+window.openRoadmapModal = openRoadmapModal;
 
 function closeRoadmapModal() {
-  if (roadmapModalBackdrop) roadmapModalBackdrop.hidden = true;
+  const backdrop = document.getElementById('roadmapModalBackdrop');
+  if (backdrop) backdrop.hidden = true;
 }
+window.closeRoadmapModal = closeRoadmapModal;
 
 async function handleSaveRoadmapMilestone(e) {
   e.preventDefault();
