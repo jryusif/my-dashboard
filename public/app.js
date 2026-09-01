@@ -793,8 +793,251 @@ const CATEGORY_SUBTITLE = {
 };
 
 // =============================================================================
-// DASHBOARD CARDS
+// 🪐 CUSTOM SPACES ENGINE & DASHBOARD CARDS
 // =============================================================================
+
+let currentEditingSpaceId = null;
+let spaceSelectedColor = 'cyan';
+let spaceSelectedColorHex = '#06b6d4';
+let spaceSelectedIcon = '🚀';
+
+function getUserCustomSpaces() {
+  if (currentUser && Array.isArray(currentUser.customCategories)) {
+    return currentUser.customCategories;
+  }
+  return [];
+}
+window.getUserCustomSpaces = getUserCustomSpaces;
+
+function openCustomSpaceModal(space = null) {
+  const backdrop = document.getElementById('customSpaceModalBackdrop');
+  const modalTitle = document.getElementById('customSpaceModalTitle');
+  const modalSubtitle = document.getElementById('customSpaceModalSubtitle');
+  const inputId = document.getElementById('customSpaceId');
+  const inputName = document.getElementById('customSpaceName');
+  const inputDesc = document.getElementById('customSpaceDesc');
+  const inputIcon = document.getElementById('customSpaceIconInput');
+  const inputSegments = document.getElementById('customSpaceSegments');
+  const btnDelete = document.getElementById('btnDeleteCustomSpace');
+  const btnSave = document.getElementById('btnSaveCustomSpace');
+
+  if (space) {
+    currentEditingSpaceId = space.id;
+    if (inputId) inputId.value = space.id;
+    if (modalTitle) modalTitle.textContent = `Edit "${space.name}" Space`;
+    if (modalSubtitle) modalSubtitle.textContent = 'Modify space name, icon, palette, or custom sub-segments.';
+    if (inputName) inputName.value = space.name || '';
+    if (inputDesc) inputDesc.value = space.desc || '';
+    if (inputIcon) inputIcon.value = space.icon || '🚀';
+    spaceSelectedIcon = space.icon || '🚀';
+    spaceSelectedColor = space.color || 'cyan';
+    spaceSelectedColorHex = space.colorHex || '#06b6d4';
+
+    // Segments
+    const userSegments = currentUser?.departmentSegments?.[space.name] || [];
+    if (inputSegments) inputSegments.value = Array.isArray(userSegments) ? userSegments.join(', ') : '';
+
+    if (btnDelete) btnDelete.style.display = 'inline-flex';
+    if (btnSave) btnSave.innerHTML = '<span>💾</span> Save Space Changes';
+  } else {
+    currentEditingSpaceId = null;
+    if (inputId) inputId.value = '';
+    if (modalTitle) modalTitle.textContent = 'Create a New Focus Space';
+    if (modalSubtitle) modalSubtitle.textContent = 'Craft a tailored category dashboard for your projects, skills, ventures, or hobbies.';
+    if (inputName) inputName.value = '';
+    if (inputDesc) inputDesc.value = '';
+    if (inputIcon) inputIcon.value = '🚀';
+    if (inputSegments) inputSegments.value = '';
+    spaceSelectedIcon = '🚀';
+    spaceSelectedColor = 'cyan';
+    spaceSelectedColorHex = '#06b6d4';
+
+    if (btnDelete) btnDelete.style.display = 'none';
+    if (btnSave) btnSave.innerHTML = '<span>✨</span> Create Space';
+  }
+
+  // Highlight color swatch
+  document.querySelectorAll('.color-swatch-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-color') === spaceSelectedColor);
+  });
+
+  updateSpacePreview();
+
+  if (backdrop) {
+    backdrop.hidden = false;
+    backdrop.removeAttribute('hidden');
+    backdrop.style.setProperty('display', 'flex', 'important');
+  }
+  if (inputName) setTimeout(() => inputName.focus(), 50);
+}
+window.openCustomSpaceModal = openCustomSpaceModal;
+
+function closeCustomSpaceModal() {
+  const backdrop = document.getElementById('customSpaceModalBackdrop');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+    backdrop.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closeCustomSpaceModal = closeCustomSpaceModal;
+
+function selectSpaceIcon(emoji) {
+  spaceSelectedIcon = emoji;
+  const input = document.getElementById('customSpaceIconInput');
+  if (input) input.value = emoji;
+  updateSpacePreview();
+}
+window.selectSpaceIcon = selectSpaceIcon;
+
+function selectSpaceColor(colorName, colorHex, btn) {
+  spaceSelectedColor = colorName;
+  spaceSelectedColorHex = colorHex;
+  document.querySelectorAll('.color-swatch-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  updateSpacePreview();
+}
+window.selectSpaceColor = selectSpaceColor;
+
+function updateSpacePreview() {
+  const inputName = document.getElementById('customSpaceName');
+  const inputDesc = document.getElementById('customSpaceDesc');
+  const inputIcon = document.getElementById('customSpaceIconInput');
+
+  const name = inputName?.value.trim() || 'My New Space';
+  const desc = inputDesc?.value.trim() || 'Custom focus workspace';
+  const icon = inputIcon?.value.trim() || spaceSelectedIcon || '🚀';
+
+  const prevCard = document.getElementById('spacePreviewCard');
+  const prevIcon = document.getElementById('spacePreviewIcon');
+  const prevIconSm = document.getElementById('spacePreviewIconSmall');
+  const prevTitle = document.getElementById('spacePreviewTitle');
+  const prevSub = document.getElementById('spacePreviewSub');
+
+  if (prevCard) prevCard.style.setProperty('--card-color', `var(--${spaceSelectedColor})`);
+  if (prevIcon) prevIcon.textContent = icon;
+  if (prevIconSm) prevIconSm.textContent = icon;
+  if (prevTitle) prevTitle.textContent = name;
+  if (prevSub) prevSub.textContent = desc;
+}
+window.updateSpacePreview = updateSpacePreview;
+
+async function handleSaveCustomSpaceSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById('customSpaceName')?.value.trim();
+  const desc = document.getElementById('customSpaceDesc')?.value.trim();
+  const icon = document.getElementById('customSpaceIconInput')?.value.trim() || spaceSelectedIcon || '🚀';
+  const segmentsRaw = document.getElementById('customSpaceSegments')?.value.trim();
+  const segments = segmentsRaw ? segmentsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  if (!name) {
+    showToast('Please enter a space name.');
+    return;
+  }
+
+  const btnSave = document.getElementById('btnSaveCustomSpace');
+  const isEditing = Boolean(currentEditingSpaceId);
+
+  try {
+    if (btnSave) {
+      btnSave.disabled = true;
+      btnSave.innerHTML = '<span>⏳</span> Saving Space...';
+    }
+
+    const url = isEditing ? `/api/user/spaces/${encodeURIComponent(currentEditingSpaceId)}` : '/api/user/spaces';
+    const method = isEditing ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        desc,
+        icon,
+        color: spaceSelectedColor,
+        colorHex: spaceSelectedColorHex,
+        segments
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save space');
+
+    if (currentUser) {
+      currentUser.customCategories = data.spaces;
+      if (segments.length > 0) {
+        currentUser.departmentSegments = {
+          ...(currentUser.departmentSegments || {}),
+          [name]: segments
+        };
+      }
+      localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+    }
+
+    closeCustomSpaceModal();
+    renderDashboard();
+    renderDynamicCategoryDropdowns();
+
+    showToast(isEditing ? `✨ Space "${name}" updated!` : `🎉 Space "${name}" created on your dashboard!`);
+  } catch (err) {
+    console.error('Error saving custom space:', err);
+    showToast(err.message || 'Could not save space.');
+  } finally {
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.innerHTML = isEditing ? '<span>💾</span> Save Space Changes' : '<span>✨</span> Create Space';
+    }
+  }
+}
+window.handleSaveCustomSpaceSubmit = handleSaveCustomSpaceSubmit;
+
+async function handleDeleteCustomSpace() {
+  if (!currentEditingSpaceId) return;
+  const space = (currentUser?.customCategories || []).find(s => s.id === currentEditingSpaceId);
+  const spaceName = space ? space.name : 'this space';
+
+  if (!confirm(`Are you sure you want to delete the space "${spaceName}"? Existing tasks will remain in your database.`)) return;
+
+  const btnDelete = document.getElementById('btnDeleteCustomSpace');
+  try {
+    if (btnDelete) btnDelete.disabled = true;
+
+    const res = await fetch(`/api/user/spaces/${encodeURIComponent(currentEditingSpaceId)}`, {
+      method: 'DELETE'
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete space');
+
+    if (currentUser) {
+      currentUser.customCategories = data.spaces;
+      localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+    }
+
+    closeCustomSpaceModal();
+    renderDashboard();
+    renderDynamicCategoryDropdowns();
+    if (currentCategoryPage === spaceName) {
+      navigateToSection('dashboard');
+    }
+
+    showToast(`Space "${spaceName}" removed.`);
+  } catch (err) {
+    console.error('Error deleting space:', err);
+    showToast(err.message || 'Could not delete space.');
+  } finally {
+    if (btnDelete) btnDelete.disabled = false;
+  }
+}
+window.handleDeleteCustomSpace = handleDeleteCustomSpace;
+
+function openEditSpaceModal(spaceId) {
+  const space = (currentUser?.customCategories || []).find(s => s.id === spaceId || s.name === spaceId);
+  if (space) {
+    openCustomSpaceModal(space);
+  }
+}
+window.openEditSpaceModal = openEditSpaceModal;
 
 function renderDashboard() {
   const isAdmin = currentUser && currentUser.role === 'ADMIN';
@@ -808,18 +1051,38 @@ function renderDashboard() {
     return true;
   });
 
+  // Append user's custom spaces
+  const customSpaces = getUserCustomSpaces();
+  customSpaces.forEach(space => {
+    CATEGORY_ICON[space.name] = space.icon || '🪐';
+    CATEGORY_COLOR[space.name] = space.color || 'cyan';
+    CATEGORY_SUBTITLE[space.name] = space.desc || 'Custom focus workspace';
+    if (!TASK_CATEGORY_PAGES.includes(space.name)) {
+      TASK_CATEGORY_PAGES.push(space.name);
+    }
+    visibleCards.push({
+      category: space.name,
+      desc: space.desc || 'Custom focus workspace',
+      isCustomSpace: true,
+      spaceId: space.id
+    });
+  });
+
   dashboardGrid.innerHTML = visibleCards.map(c => {
-    const colorVar = CATEGORY_COLOR[c.category] || 'work';
+    const colorVar = CATEGORY_COLOR[c.category] || 'cyan';
     const icon = CATEGORY_ICON[c.category] || '•';
     const illustrationSvg = CATEGORY_ILLUSTRATION_SVG[c.category] || '';
     const subtitle = CATEGORY_SUBTITLE[c.category] || c.desc || 'Area of focus';
-    const badgeId = `badge-${c.category.replace(/[^a-z]/gi,'_')}`;
+    const badgeId = `badge-${c.category.replace(/[^a-z0-9]/gi,'_')}`;
 
     return `
-    <button type="button" class="dashboard-card"
+    <button type="button" class="dashboard-card ${c.isCustomSpace ? 'custom-space-card' : ''}"
             data-category="${escapeHtml(c.category)}"
             style="--card-color: var(--${colorVar})">
       <div class="card-shimmer-sweep"></div>
+      ${c.isCustomSpace ? `
+        <span class="space-card-menu-btn" onclick="event.stopPropagation(); openEditSpaceModal('${c.spaceId}')" title="Configure Space">⚙️</span>
+      ` : ''}
       <div class="card-visual">
         <div class="card-aura-glow"></div>
         <div class="card-emblem-orb">
@@ -849,9 +1112,11 @@ function renderDashboard() {
   dashboardGrid.querySelectorAll('.dashboard-card[data-category]').forEach(btn => {
     btn.addEventListener('click', () => openPage(btn.dataset.category));
   });
-  document.getElementById('newPageCard').addEventListener('click', () => {
-    showToast('Custom spaces coming soon.');
-  });
+  
+  const newPageBtn = document.getElementById('newPageCard');
+  if (newPageBtn) {
+    newPageBtn.addEventListener('click', () => openCustomSpaceModal());
+  }
 
   // Load task counts for each badge asynchronously
   loadCardBadges();
@@ -947,12 +1212,23 @@ function openPage(category) {
 
 async function openCategoryPage(category) {
   currentCategoryPage = category;
-  const color = CATEGORY_COLOR[category] || 'ink-soft';
+  const color = CATEGORY_COLOR[category] || 'cyan';
+  const customSpaces = getUserCustomSpaces();
+  const matchingCustomSpace = customSpaces.find(s => s.name === category);
 
   categoryPageIcon.textContent = CATEGORY_ICON[category] || '•';
   categoryPageIcon.style.setProperty('--card-color', `var(--${color})`);
-  categoryPageEyebrow.textContent = 'Category';
+  categoryPageEyebrow.textContent = matchingCustomSpace ? 'Custom Focus Space' : 'Category';
   categoryPageTitle.textContent   = category;
+
+  const btnManage = document.getElementById('btnManageCurrentSpace');
+  if (btnManage) {
+    if (matchingCustomSpace) {
+      btnManage.style.display = 'inline-flex';
+    } else {
+      btnManage.style.display = 'none';
+    }
+  }
 
   // Reset view switcher to active tasks
   switchCategoryView('tasks', false);
@@ -973,6 +1249,16 @@ async function openCategoryPage(category) {
 
   await loadCategoryPage(category);
 }
+
+function handleManageCurrentSpaceClick() {
+  if (!currentCategoryPage) return;
+  const customSpaces = getUserCustomSpaces();
+  const space = customSpaces.find(s => s.name === currentCategoryPage);
+  if (space) {
+    openCustomSpaceModal(space);
+  }
+}
+window.handleManageCurrentSpaceClick = handleManageCurrentSpaceClick;
 
 function getSegmentsForCategory(category) {
   const norm = (category || '').toLowerCase().trim();
@@ -8766,6 +9052,7 @@ function renderDynamicCategoryDropdowns() {
   // Dynamic Work & Study options for task category select
   const taskCategorySelect = document.getElementById('taskCategorySelect');
   if (taskCategorySelect) {
+    const customSpaces = getUserCustomSpaces();
     const defaultCategories = [
       ...(canAccessDental ? [{ val: 'Dental Cases', label: '🦷 Dental Cases' }] : []),
       { val: 'Work', label: '💼 Work / Clinical' },
@@ -8775,7 +9062,8 @@ function renderDynamicCategoryDropdowns() {
       { val: 'Religion', label: '🕌 Religion & Mindfulness' },
       { val: 'Finance', label: '💰 Finance & Wealth' },
       { val: 'Routine', label: '🧴 Daily Routine' },
-      { val: 'Roadmaps & Master Plan', label: '🧭 Roadmaps' }
+      { val: 'Roadmaps & Master Plan', label: '🧭 Roadmaps' },
+      ...customSpaces.map(s => ({ val: s.name, label: `${s.icon || '🪐'} ${s.name}` }))
     ];
 
     taskCategorySelect.innerHTML = defaultCategories.map(c => `

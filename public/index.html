@@ -420,12 +420,17 @@
            ---------------------------------------------------------------- -->
       <section class="page-section category-page" id="categoryPageSection" hidden>
         <button type="button" class="back-link" id="backToDashboardFromCategory">&larr; Back to Dashboard</button>
-        <header class="page-header">
-          <span class="page-icon" id="categoryPageIcon">&bull;</span>
-          <div>
-            <p class="eyebrow" id="categoryPageEyebrow">Category</p>
-            <h1 id="categoryPageTitle">&nbsp;</h1>
+        <header class="page-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:16px;">
+            <span class="page-icon" id="categoryPageIcon">&bull;</span>
+            <div>
+              <p class="eyebrow" id="categoryPageEyebrow">Category</p>
+              <h1 id="categoryPageTitle">&nbsp;</h1>
+            </div>
           </div>
+          <button type="button" class="btn-secondary" id="btnManageCurrentSpace" style="display:none; border-radius:999px; padding:7px 16px; font-size:12.5px;" onclick="handleManageCurrentSpaceClick()">
+            <span>⚙️</span> Space Settings
+          </button>
         </header>
 
         <!-- Category View Switcher Tabs -->
@@ -2696,6 +2701,116 @@
         <button type="button" class="btn-secondary" id="btnAdminConfirmCancel" onclick="closeAdminConfirmModal()">Cancel</button>
         <button type="button" class="btn-primary" id="btnAdminConfirmExecute">Confirm</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       🪐 CREATE / EDIT CUSTOM SPACE MODAL (GLASSMORPHIC & INTERACTIVE)
+       =================================================================== -->
+  <div class="modal-backdrop" id="customSpaceModalBackdrop" hidden>
+    <div class="modal custom-space-modal" role="dialog" aria-modal="true" aria-labelledby="customSpaceModalTitle">
+      <button type="button" class="modal-close-btn" onclick="closeCustomSpaceModal()" title="Close modal">✕</button>
+      
+      <div class="modal-header">
+        <div class="space-modal-badge">🪐 CUSTOM WORKSPACE ENGINE</div>
+        <h2 id="customSpaceModalTitle">Create a New Focus Space</h2>
+        <p class="subtitle" id="customSpaceModalSubtitle">Craft a tailored category dashboard for your projects, skills, ventures, or hobbies.</p>
+      </div>
+
+      <!-- Live Dashboard Card Preview -->
+      <div class="space-live-preview-wrap">
+        <span class="preview-label">Live Dashboard Card Preview</span>
+        <div class="dashboard-card preview-card" id="spacePreviewCard" style="--card-color: var(--cyan);">
+          <div class="card-shimmer-sweep"></div>
+          <div class="card-visual">
+            <div class="card-aura-glow"></div>
+            <div class="card-emblem-orb">
+              <span class="card-icon-main" id="spacePreviewIcon">🚀</span>
+            </div>
+            <span class="card-badge">0 tasks</span>
+          </div>
+          <div class="card-label">
+            <div class="card-text-group">
+              <div class="card-label-top">
+                <span class="card-label-icon" id="spacePreviewIconSmall">🚀</span>
+                <span class="card-label-title" id="spacePreviewTitle">My New Space</span>
+              </div>
+              <span class="card-label-sub" id="spacePreviewSub">Custom focus workspace</span>
+            </div>
+            <span class="card-arrow-indicator">➔</span>
+          </div>
+        </div>
+      </div>
+
+      <form id="customSpaceForm" onsubmit="handleSaveCustomSpaceSubmit(event)">
+        <input type="hidden" id="customSpaceId" value="" />
+        
+        <div class="form-group">
+          <label for="customSpaceName">Space Name *</label>
+          <input type="text" id="customSpaceName" required placeholder="e.g. AI Research & Agent Lab, Real Estate, Side Hustle..." oninput="updateSpacePreview()" />
+        </div>
+
+        <div class="form-group">
+          <label for="customSpaceDesc">Focus Subtitle / Description</label>
+          <input type="text" id="customSpaceDesc" placeholder="e.g. LLM fine-tuning, autonomous agents & prompt evals" oninput="updateSpacePreview()" />
+        </div>
+
+        <div class="form-grid-2">
+          <!-- Icon Picker -->
+          <div class="form-group">
+            <label for="customSpaceIconInput">Space Icon Emoji</label>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="customSpaceIconInput" value="🚀" style="max-width:70px; text-align:center; font-size:20px;" oninput="updateSpacePreview()" />
+              <div class="space-icon-quick-pills" id="spaceIconQuickPills">
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('🚀')">🚀</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('🤖')">🤖</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('💡')">💡</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('🎨')">🎨</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('🔬')">🔬</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('🏠')">🏠</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('🎵')">🎵</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('🌍')">🌍</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('⚡')">⚡</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('🛡️')">🛡️</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('💎')">💎</button>
+                <button type="button" class="space-icon-btn" onclick="selectSpaceIcon('🔥')">🔥</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Color Accent Picker -->
+          <div class="form-group">
+            <label>Theme Accent Palette</label>
+            <div class="space-color-palette-grid">
+              <button type="button" class="color-swatch-btn active" data-color="cyan" data-hex="#06b6d4" onclick="selectSpaceColor('cyan', '#06b6d4', this)" style="--swatch-color: #06b6d4;" title="Electric Cyan"></button>
+              <button type="button" class="color-swatch-btn" data-color="indigo" data-hex="#6366f1" onclick="selectSpaceColor('indigo', '#6366f1', this)" style="--swatch-color: #6366f1;" title="Neon Indigo"></button>
+              <button type="button" class="color-swatch-btn" data-color="workouts" data-hex="#10b981" onclick="selectSpaceColor('workouts', '#10b981', this)" style="--swatch-color: #10b981;" title="Emerald Green"></button>
+              <button type="button" class="color-swatch-btn" data-color="gold" data-hex="#f59e0b" onclick="selectSpaceColor('gold', '#f59e0b', this)" style="--swatch-color: #f59e0b;" title="Amber Gold"></button>
+              <button type="button" class="color-swatch-btn" data-color="rose" data-hex="#f43f5e" onclick="selectSpaceColor('rose', '#f43f5e', this)" style="--swatch-color: #f43f5e;" title="Rose Pink"></button>
+              <button type="button" class="color-swatch-btn" data-color="studies" data-hex="#a855f7" onclick="selectSpaceColor('studies', '#a855f7', this)" style="--swatch-color: #a855f7;" title="Purple Violet"></button>
+              <button type="button" class="color-swatch-btn" data-color="analytics" data-hex="#38bdf8" onclick="selectSpaceColor('analytics', '#38bdf8', this)" style="--swatch-color: #38bdf8;" title="Sky Blue"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="customSpaceSegments">Custom Dropdown Sub-Segments (Comma Separated)</label>
+          <input type="text" id="customSpaceSegments" placeholder="e.g. Model Training, Dataset Prep, Evaluation Benchmarks, Deployments" />
+          <span style="font-size:11.5px; color:var(--ink-soft); margin-top:4px; display:block;">These tags will automatically populate dropdown menus when creating tasks in this space.</span>
+        </div>
+
+        <div class="modal-actions" style="margin-top:24px; display:flex; justify-content:space-between; align-items:center;">
+          <button type="button" class="btn-secondary" id="btnDeleteCustomSpace" style="display:none; color:#f87171; border-color:rgba(239,68,68,0.3);" onclick="handleDeleteCustomSpace()">
+            <span>🗑️</span> Delete Space
+          </button>
+          <div style="display:flex; gap:10px; margin-left:auto;">
+            <button type="button" class="btn-secondary" onclick="closeCustomSpaceModal()">Cancel</button>
+            <button type="submit" class="btn-primary" id="btnSaveCustomSpace">
+              <span>✨</span> Create Space
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 
