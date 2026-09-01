@@ -137,6 +137,8 @@ body {
   will-change: transform;
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease;
   box-shadow: 10px 0 30px rgba(0, 0, 0, 0.35);
+}
+
 body.sidebar-is-collapsed .sidebar {
   transform: translateX(-100%);
   box-shadow: none;
@@ -8625,13 +8627,6 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
     margin-right: auto !important;
   }
 
-  /* Always show sidebar toggle button on tablet */
-  .btn-sidebar-toggle {
-    display: inline-flex !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    transform: none !important;
-    animation: none !important;
   /* Always show sidebar toggle button on tablet */
   .btn-sidebar-toggle {
     display: inline-flex !important;
