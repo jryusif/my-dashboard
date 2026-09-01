@@ -76,33 +76,38 @@
 /* =====================================================================
    CUSTOM LUXURY FROSTED GLASS SCROLLBARS
    ===================================================================== */
-* {
+*, *::before, *::after, html, body {
   scrollbar-width: thin;
-  scrollbar-color: rgba(56, 189, 248, 0.35) rgba(10, 14, 26, 0.4);
+  scrollbar-color: rgba(56, 189, 248, 0.4) rgba(10, 14, 26, 0.4);
 }
 
+*::-webkit-scrollbar,
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
+*::-webkit-scrollbar-track,
 ::-webkit-scrollbar-track {
   background: rgba(10, 14, 26, 0.45);
   border-radius: 999px;
 }
 
+*::-webkit-scrollbar-thumb,
 ::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.32);
+  background: rgba(56, 189, 248, 0.35);
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
 }
 
+*::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 189, 248, 0.65);
+  background: rgba(56, 189, 248, 0.7);
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
 }
 
+*::-webkit-scrollbar-corner,
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
@@ -11196,10 +11201,36 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 }
 
 /* Tag Chips */
-.tag-chips-container {
+.tag-chips-container,
+#segmentModalActiveChips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.4) rgba(0, 0, 0, 0.25);
+}
+
+.tag-chips-container::-webkit-scrollbar,
+#segmentModalActiveChips::-webkit-scrollbar {
+  width: 5px;
+}
+
+.tag-chips-container::-webkit-scrollbar-track,
+#segmentModalActiveChips::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+}
+
+.tag-chips-container::-webkit-scrollbar-thumb,
+#segmentModalActiveChips::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.4);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tag-chips-container::-webkit-scrollbar-thumb:hover,
+#segmentModalActiveChips::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.75);
 }
 
 .tag-chip {
