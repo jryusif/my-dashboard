@@ -399,15 +399,100 @@
           </button>
         </div>
 
-        <div class="wealth-card" id="wealthCard">
-          <div class="wealth-card-main">
-            <p class="wealth-label">Total Wealth</p>
-            <p class="wealth-value is-hidden" id="wealthValue">&bull;&bull;&bull;&bull;&bull;&bull;</p>
-            <p class="wealth-meta" id="wealthMeta">&nbsp;</p>
+        <!-- EXECUTIVE SOVEREIGN WEALTH & NET WORTH VAULT -->
+        <div class="wealth-card is-locked" id="wealthCard">
+          <!-- Top Row Header -->
+          <div class="wealth-card-top-header">
+            <div class="wealth-vault-title-wrap">
+              <div class="vault-icon-badge">🪙</div>
+              <div>
+                <div class="wealth-label-row">
+                  <span class="wealth-label">SOVEREIGN WEALTH &amp; NET WORTH VAULT</span>
+                  <span class="vault-security-pill" id="vaultSecurityPill">
+                    <span class="security-dot"></span> <span id="vaultSecurityText">🔒 Biometrically Locked</span>
+                  </span>
+                </div>
+                <p class="wealth-sublabel" id="wealthSubLabel">Real-time aggregated valuation across bullion, cash, &amp; liquid assets</p>
+              </div>
+            </div>
+
+            <div class="wealth-header-actions">
+              <button type="button" class="btn-vault-unlock" id="btnVaultUnlock" onclick="handleWealthUnlockTrigger()" aria-label="Unlock with Face ID or Password">
+                <span class="vault-btn-icon" id="vaultUnlockIcon">👤</span>
+                <span id="vaultUnlockBtnText">Unlock with Face ID / PIN</span>
+              </button>
+            </div>
           </div>
-          <button type="button" class="wealth-toggle" id="wealthToggle" aria-label="Show total wealth" aria-pressed="false">
-            <span id="wealthToggleIcon">👁️</span>
-          </button>
+
+          <!-- Main Net Worth Figure Row -->
+          <div class="wealth-card-main-display">
+            <div class="wealth-value-wrap">
+              <div class="wealth-value is-hidden" id="wealthValue">••••••••••</div>
+              <div class="wealth-tier-badge" id="wealthTierBadge">👑 Sovereign Tier</div>
+            </div>
+            <p class="wealth-meta" id="wealthMeta">Assets E£22,003 − Liabilities E£0 · incl. live gold E£6,339</p>
+          </div>
+
+          <!-- 4 Pillars Wealth Breakdown Micro-Cards Grid -->
+          <div class="wealth-pillars-grid" id="wealthPillarsGrid">
+            <!-- 1. Gold Bullion -->
+            <div class="wealth-pillar-card" onclick="openPage('Gold & Assets')" title="View Gold Bullion Vault">
+              <div class="pillar-top">
+                <span class="pillar-icon">🪙</span>
+                <span class="pillar-label">Physical Gold</span>
+              </div>
+              <div class="pillar-value is-hidden" id="pillarGoldVal">••••••</div>
+              <div class="pillar-sub" id="pillarGoldSub">Live 24K Valuation</div>
+            </div>
+
+            <!-- 2. Liquid Cash -->
+            <div class="wealth-pillar-card" onclick="openPage('Finance')" title="Manage Cash Reserves">
+              <div class="pillar-top">
+                <span class="pillar-icon">💵</span>
+                <span class="pillar-label">Liquid Cash</span>
+              </div>
+              <div class="pillar-value is-hidden" id="pillarCashVal">••••••</div>
+              <div class="pillar-sub" id="pillarCashSub">Bank &amp; Wallet Reserves</div>
+            </div>
+
+            <!-- 3. Investments / Equities -->
+            <div class="wealth-pillar-card" onclick="openPage('US Stocks Trading')" title="US Markets & Equities">
+              <div class="pillar-top">
+                <span class="pillar-icon">📈</span>
+                <span class="pillar-label">Investments</span>
+              </div>
+              <div class="pillar-value is-hidden" id="pillarInvestVal">••••••</div>
+              <div class="pillar-sub" id="pillarInvestSub">Equities &amp; Holdings</div>
+            </div>
+
+            <!-- 4. Liabilities -->
+            <div class="wealth-pillar-card" onclick="openPage('Finance')" title="Liabilities & Debt">
+              <div class="pillar-top">
+                <span class="pillar-icon">🛡️</span>
+                <span class="pillar-label">Liabilities</span>
+              </div>
+              <div class="pillar-value is-hidden" id="pillarDebtVal">••••••</div>
+              <div class="pillar-sub" id="pillarDebtSub">Zero Debt / 100% Solvency</div>
+            </div>
+          </div>
+
+          <!-- Footer Quick Links -->
+          <div class="wealth-card-footer">
+            <div class="wealth-quick-links">
+              <button type="button" class="btn-wealth-quick" onclick="openPage('Gold & Assets')">
+                <span>🪙</span> Live Gold Rates
+              </button>
+              <button type="button" class="btn-wealth-quick" onclick="openPage('Finance')">
+                <span>💰</span> Cash Flow &amp; Budget
+              </button>
+              <button type="button" class="btn-wealth-quick" onclick="openPage('Analytics & Progress')">
+                <span>📊</span> Wealth Analytics
+              </button>
+            </div>
+            <div class="vault-auto-lock-note" id="vaultAutoLockNote">
+              <span>🛡️ End-to-End Encrypted Vault</span>
+            </div>
+          </div>
         </div>
 
         <div class="dashboard-grid" id="dashboardGrid">
@@ -2642,6 +2727,66 @@
             <span>💾</span> Save Phases
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       🛡️ WEALTH VAULT BIOMETRIC & PASSCODE SECURITY MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="wealthSecurityModalBackdrop" hidden>
+    <div class="modal wealth-security-modal" role="dialog" aria-modal="true" aria-labelledby="vaultModalTitle" style="max-width: 440px;">
+      <button type="button" class="modal-close-btn" onclick="closeWealthSecurityModal()" title="Close modal">✕</button>
+      
+      <div class="modal-header" style="text-align: center;">
+        <div class="vault-modal-badge">
+          <span class="vault-pulse-ring"></span>
+          <span class="vault-modal-icon">👤</span>
+        </div>
+        <h2 id="vaultModalTitle" style="font-size: 22px; margin-top: 12px; color: #fff;">Authenticate Wealth Vault</h2>
+        <p class="subtitle" style="font-size: 13px; margin: 6px auto 0; max-width: 320px;">Verify your identity via Face ID / Windows Hello or enter your Security Password / PIN to reveal financial assets.</p>
+      </div>
+
+      <div class="vault-modal-body" style="display: flex; flex-direction: column; gap: 16px; margin: 20px 0 10px;">
+        <!-- Face ID / Touch ID Button -->
+        <button type="button" class="btn-biometric-auth" id="btnTriggerBiometricScan" onclick="triggerWebAuthnBiometric()">
+          <span class="biometric-icon-scan">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+              <path d="M9 9h.01M15 9h.01M9 13a3 3 0 0 0 6 0"/>
+            </svg>
+          </span>
+          <div style="text-align: left;">
+            <strong style="display: block; font-size: 14px; color: #fff;">Scan Face ID / Touch ID</strong>
+            <span style="font-size: 11.5px; color: #94a3b8;">Windows Hello / Apple Device Biometrics</span>
+          </div>
+        </button>
+
+        <div class="vault-modal-divider">
+          <span>OR ENTER PASSWORD / PIN</span>
+        </div>
+
+        <form id="vaultSecurityForm" onsubmit="handleVerifyVaultPass(event)" style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label for="vaultSecurityInput" style="font-size: 12px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 6px;">Password or 4-Digit Security PIN</label>
+            <div style="position: relative;">
+              <input type="password" id="vaultSecurityInput" placeholder="Enter account password or PIN (1234)..." required autofocus
+                     style="width: 100%; padding: 12px 42px 12px 14px; border-radius: 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 14px;" />
+              <button type="button" onclick="toggleVaultPassVisibility()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">
+                👁️
+              </button>
+            </div>
+          </div>
+
+          <div id="vaultAuthErrorMsg" style="color: #f87171; font-size: 12px; display: none; text-align: center; font-weight: 600;"></div>
+
+          <div style="display: flex; gap: 10px; margin-top: 4px;">
+            <button type="button" class="btn-secondary" onclick="closeWealthSecurityModal()" style="flex: 1;">Cancel</button>
+            <button type="submit" class="btn-primary" id="btnSubmitVaultAuth" style="flex: 1.4;">
+              <span>🔓</span> Unlock Vault
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

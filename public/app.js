@@ -2918,23 +2918,81 @@ document.getElementById('backToDashboardFromCategory').addEventListener('click',
 });
 
 // =============================================================================
-// TOTAL WEALTH CARD
+// EXECUTIVE SOVEREIGN WEALTH & NET WORTH VAULT (Biometric & Privacy Shield)
 // =============================================================================
 
-const wealthValueEl     = document.getElementById('wealthValue');
-const wealthMetaEl      = document.getElementById('wealthMeta');
-const wealthToggleEl    = document.getElementById('wealthToggle');
-const wealthToggleIconEl= document.getElementById('wealthToggleIcon');
+const wealthCardEl        = document.getElementById('wealthCard');
+const wealthValueEl       = document.getElementById('wealthValue');
+const wealthMetaEl        = document.getElementById('wealthMeta');
+const btnVaultUnlock      = document.getElementById('btnVaultUnlock');
+const vaultUnlockIcon     = document.getElementById('vaultUnlockIcon');
+const vaultUnlockBtnText  = document.getElementById('vaultUnlockBtnText');
+const vaultSecurityPill   = document.getElementById('vaultSecurityPill');
+const vaultSecurityText   = document.getElementById('vaultSecurityText');
+const wealthTierBadge     = document.getElementById('wealthTierBadge');
+
+const pillarGoldVal       = document.getElementById('pillarGoldVal');
+const pillarCashVal       = document.getElementById('pillarCashVal');
+const pillarInvestVal     = document.getElementById('pillarInvestVal');
+const pillarDebtVal       = document.getElementById('pillarDebtVal');
 
 let wealthRevealed = false;
 let lastNetWorth   = null;
+let vaultAutoLockTimer = null;
 
 function renderWealthValue() {
-  if (!lastNetWorth) {
-    wealthValueEl.textContent = wealthRevealed ? '—' : '••••••';
-    return;
+  const isHidden = !wealthRevealed;
+
+  if (wealthCardEl) {
+    wealthCardEl.classList.toggle('is-locked', isHidden);
   }
-  wealthValueEl.textContent = wealthRevealed ? fmtMoney(lastNetWorth.netWorth) : '••••••';
+
+  // Main Net Worth Value
+  if (wealthValueEl) {
+    wealthValueEl.classList.toggle('is-hidden', isHidden);
+    if (!lastNetWorth) {
+      wealthValueEl.textContent = isHidden ? '••••••••••' : '—';
+    } else {
+      wealthValueEl.textContent = isHidden ? '••••••••••' : fmtMoney(lastNetWorth.netWorth);
+    }
+  }
+
+  // 4 Pillars Breakdown
+  if (pillarGoldVal) {
+    pillarGoldVal.classList.toggle('is-hidden', isHidden);
+    pillarGoldVal.textContent = isHidden ? '••••••' : (lastNetWorth?.liveGoldValue > 0 ? fmtMoney(lastNetWorth.liveGoldValue) : fmtMoney(0));
+  }
+  if (pillarCashVal) {
+    pillarCashVal.classList.toggle('is-hidden', isHidden);
+    const cash = lastNetWorth?.breakdown?.cash != null ? lastNetWorth.breakdown.cash : (lastNetWorth?.totalAssets || 0);
+    pillarCashVal.textContent = isHidden ? '••••••' : fmtMoney(cash);
+  }
+  if (pillarInvestVal) {
+    pillarInvestVal.classList.toggle('is-hidden', isHidden);
+    const invest = lastNetWorth?.breakdown?.investments || 0;
+    pillarInvestVal.textContent = isHidden ? '••••••' : fmtMoney(invest);
+  }
+  if (pillarDebtVal) {
+    pillarDebtVal.classList.toggle('is-hidden', isHidden);
+    pillarDebtVal.textContent = isHidden ? '••••••' : fmtMoney(lastNetWorth?.totalLiabilities || 0);
+  }
+
+  // Security status pills & buttons
+  if (btnVaultUnlock) {
+    btnVaultUnlock.classList.toggle('is-unlocked-state', wealthRevealed);
+  }
+  if (vaultUnlockIcon) {
+    vaultUnlockIcon.textContent = wealthRevealed ? '🔒' : '👤';
+  }
+  if (vaultUnlockBtnText) {
+    vaultUnlockBtnText.textContent = wealthRevealed ? 'Lock Vault' : 'Unlock with Face ID / PIN';
+  }
+  if (vaultSecurityPill) {
+    vaultSecurityPill.classList.toggle('is-unlocked', wealthRevealed);
+  }
+  if (vaultSecurityText) {
+    vaultSecurityText.textContent = wealthRevealed ? '✓ Vault Unlocked' : '🔒 Biometrically Locked';
+  }
 }
 
 async function loadWealthCard() {
@@ -2944,27 +3002,187 @@ async function loadWealthCard() {
     const overview = await res.json();
     lastNetWorth = overview.netWorth;
     renderWealthValue();
-    if (lastNetWorth) {
+    if (lastNetWorth && wealthMetaEl) {
       const goldNote = lastNetWorth.liveGoldValue > 0
         ? ` · incl. live gold ${fmtMoney(lastNetWorth.liveGoldValue)}`
         : '';
       wealthMetaEl.textContent = `Assets ${fmtMoney(lastNetWorth.totalAssets)} − Liabilities ${fmtMoney(lastNetWorth.totalLiabilities)}${goldNote}`;
-    } else {
+    } else if (wealthMetaEl) {
       wealthMetaEl.textContent = 'No Net Worth snapshot yet — open Finances to add one.';
     }
   } catch {
-    wealthMetaEl.textContent = 'Could not load your net worth right now.';
+    if (wealthMetaEl) wealthMetaEl.textContent = 'Could not load your net worth right now.';
   }
 }
 
-wealthToggleEl.addEventListener('click', () => {
-  wealthRevealed = !wealthRevealed;
-  wealthValueEl.classList.toggle('is-hidden', !wealthRevealed);
-  wealthToggleEl.setAttribute('aria-pressed', String(wealthRevealed));
-  wealthToggleEl.setAttribute('aria-label', wealthRevealed ? 'Hide total wealth' : 'Show total wealth');
-  wealthToggleIconEl.textContent = wealthRevealed ? '🙈' : '👁️';
+function unlockWealthVault(method = 'biometric') {
+  wealthRevealed = true;
   renderWealthValue();
-});
+  closeWealthSecurityModal();
+  showToast(method === 'biometric' ? '👤 Face ID verified! Wealth vault unlocked.' : '🔓 Vault unlocked with security passcode.');
+
+  // Reset auto-lock timer (90 seconds)
+  clearTimeout(vaultAutoLockTimer);
+  vaultAutoLockTimer = setTimeout(() => {
+    lockWealthVault();
+    showToast('⏱️ Wealth vault auto-locked for privacy.');
+  }, 90 * 1000);
+}
+
+function lockWealthVault() {
+  wealthRevealed = false;
+  renderWealthValue();
+  clearTimeout(vaultAutoLockTimer);
+}
+
+async function handleWealthUnlockTrigger() {
+  if (wealthRevealed) {
+    lockWealthVault();
+    showToast('🔒 Wealth Vault locked.');
+    return;
+  }
+
+  // Attempt WebAuthn Platform Biometrics (Face ID / Windows Hello) if available
+  if (window.PublicKeyCredential && typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+    try {
+      const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      if (available) {
+        await triggerWebAuthnBiometric();
+        return;
+      }
+    } catch (_) {}
+  }
+
+  // Otherwise, open the Security Modal
+  openWealthSecurityModal();
+}
+window.handleWealthUnlockTrigger = handleWealthUnlockTrigger;
+
+async function triggerWebAuthnBiometric() {
+  try {
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+
+    // WebAuthn request to invoke Windows Hello / Apple Face ID prompt
+    if (navigator.credentials && navigator.credentials.get) {
+      showToast('👤 Scanning Face ID / Windows Hello...');
+      
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          timeout: 60000,
+          userVerification: 'required',
+          rpId: window.location.hostname || 'localhost',
+          allowCredentials: []
+        }
+      }).catch(() => null);
+
+      if (credential) {
+        // Biometric passed!
+        const res = await fetch('/api/auth/verify-vault', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ biometric: true })
+        });
+        if (res.ok) {
+          unlockWealthVault('biometric');
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Biometric scan cancelled or skipped:', err);
+  }
+
+  // If biometric was cancelled or unsupported, fallback to password modal
+  openWealthSecurityModal();
+}
+window.triggerWebAuthnBiometric = triggerWebAuthnBiometric;
+
+function openWealthSecurityModal() {
+  const backdrop = document.getElementById('wealthSecurityModalBackdrop');
+  const input = document.getElementById('vaultSecurityInput');
+  const errorEl = document.getElementById('vaultAuthErrorMsg');
+  if (errorEl) errorEl.style.display = 'none';
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 80);
+  }
+  if (backdrop) {
+    backdrop.hidden = false;
+    backdrop.removeAttribute('hidden');
+    backdrop.style.setProperty('display', 'flex', 'important');
+  }
+}
+window.openWealthSecurityModal = openWealthSecurityModal;
+
+function closeWealthSecurityModal() {
+  const backdrop = document.getElementById('wealthSecurityModalBackdrop');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+    backdrop.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closeWealthSecurityModal = closeWealthSecurityModal;
+
+function toggleVaultPassVisibility() {
+  const input = document.getElementById('vaultSecurityInput');
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+window.toggleVaultPassVisibility = toggleVaultPassVisibility;
+
+async function handleVerifyVaultPass(e) {
+  e.preventDefault();
+  const input = document.getElementById('vaultSecurityInput');
+  const errorEl = document.getElementById('vaultAuthErrorMsg');
+  const btnSubmit = document.getElementById('btnSubmitVaultAuth');
+  const val = input?.value.trim();
+
+  if (!val) {
+    if (errorEl) {
+      errorEl.textContent = 'Please enter your password or PIN.';
+      errorEl.style.display = 'block';
+    }
+    return;
+  }
+
+  try {
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<span>⏳</span> Verifying...';
+    }
+    if (errorEl) errorEl.style.display = 'none';
+
+    const res = await fetch('/api/auth/verify-vault', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password: val,
+        pin: val
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Incorrect password or PIN.');
+    }
+
+    unlockWealthVault(data.method || 'password');
+  } catch (err) {
+    if (errorEl) {
+      errorEl.textContent = err.message || 'Incorrect password or PIN. Please try again.';
+      errorEl.style.display = 'block';
+    }
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = '<span>🔓</span> Unlock Vault';
+    }
+  }
+}
+window.handleVerifyVaultPass = handleVerifyVaultPass;
 
 // =============================================================================
 // FINANCE PAGE
