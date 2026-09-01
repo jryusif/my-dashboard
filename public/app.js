@@ -348,8 +348,41 @@ function showToast(msg, duration = 3000) {
   toastTimer = setTimeout(() => { toast.hidden = true; }, duration);
 }
 
-function fmtMoney(n) {
-  if (n === null || n === undefined) return '—';
+const CURRENCY_SYMBOLS = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  EGP: 'E£',
+  SAR: '﷼',
+  AED: 'د.إ',
+  KWD: 'KD',
+  QAR: 'QR',
+  KSH: 'KSh',
+  CAD: 'CA$',
+  AUD: 'AU$',
+  TRY: '₺',
+  JPY: '¥',
+  CHF: 'CHF'
+};
+
+function getUserCurrency() {
+  if (currentUser && currentUser.currency) return currentUser.currency.toUpperCase();
+  return 'USD';
+}
+
+function getUserCurrencySymbol() {
+  const code = getUserCurrency();
+  return CURRENCY_SYMBOLS[code] || (code + ' ');
+}
+
+function fmtMoney(n, customCurrency = null) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  const sym = customCurrency ? (CURRENCY_SYMBOLS[customCurrency.toUpperCase()] || customCurrency + ' ') : getUserCurrencySymbol();
+  return sym + Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function fmtGoldEgp(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
   return 'E£' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 function fmtPct(n) {
@@ -2932,7 +2965,7 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
       </div>
       <form class="cash-update-form" id="cashUpdateForm" novalidate>
         <div class="amount-input-wrap">
-          <span class="amount-prefix">E£</span>
+          <span class="amount-prefix">${getUserCurrencySymbol()}</span>
           <input type="number" id="cashUpdateInput" step="0.01" min="0" inputmode="decimal" placeholder="0.00"
                  value="${netWorth && netWorth.breakdown?.cash != null ? netWorth.breakdown.cash : ''}" />
         </div>
@@ -2988,7 +3021,7 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
           <div class="field-group span-2">
             <label class="field-label" for="incomeAmountInput">Amount</label>
             <div class="amount-input-wrap">
-              <span class="amount-prefix">E£</span>
+              <span class="amount-prefix">${getUserCurrencySymbol()}</span>
               <input type="number" id="incomeAmountInput" step="0.01" min="0" inputmode="decimal" placeholder="0.00" required />
             </div>
             <p class="amount-preview" id="incomeAmountPreview">&nbsp;</p>
@@ -3020,7 +3053,7 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
           <select id="expenseCategoryInput"></select>
           <select id="expensePaymentInput"></select>
           <div class="amount-input-wrap span-2">
-            <span class="amount-prefix">E£</span>
+            <span class="amount-prefix">${getUserCurrencySymbol()}</span>
             <input type="number" id="expenseAmountInput" step="0.01" min="0" placeholder="0.00" required />
           </div>
           <div class="date-input-row span-2">
@@ -3359,7 +3392,7 @@ function renderGoldTicker() {
         ${karatRows.map(r => `
           <div class="gold-karat-tile">
             <span class="gold-karat-label">${r.label}</span>
-            <span class="gold-karat-value">${fmtMoney(r.value)}<span class="gold-karat-unit">/g</span></span>
+            <span class="gold-karat-value">${fmtGoldEgp(r.value)}<span class="gold-karat-unit">/g</span></span>
           </div>
         `).join('')}
       </div>
@@ -3537,7 +3570,7 @@ function renderPortfolioPage() {
           <div class="field-group span-2">
             <label class="field-label">Total Cost / Price Paid</label>
             <div class="amount-input-wrap">
-              <span class="amount-prefix">E£</span>
+              <span class="amount-prefix">${getUserCurrencySymbol()}</span>
               <input type="number" id="portPrice" step="0.01" min="0" placeholder="0.00" />
             </div>
           </div>
@@ -3749,6 +3782,9 @@ function openEditHoldingModal(item) {
   document.getElementById('editHoldingPrice').value     = item.purchasePrice ?? '';
   document.getElementById('editHoldingDate').value      = item.date || toISODate(new Date());
   document.getElementById('editHoldingStatus').value    = item.status || 'Owned';
+
+  const prefix = document.getElementById('editHoldingPricePrefix');
+  if (prefix) prefix.textContent = getUserCurrencySymbol();
 
   const karatField = document.getElementById('editHoldingKaratField');
   if (item.assetType === 'Gold') {
@@ -6480,7 +6516,7 @@ function renderFinFlowTrajectoryChart() {
       datasets: [
         {
           type: 'line',
-          label: 'Net Surplus (E£)',
+          label: `Net Surplus (${getUserCurrencySymbol()})`,
           data: netData,
           borderColor: '#38bdf8',
           borderWidth: 2.5,
@@ -6491,7 +6527,7 @@ function renderFinFlowTrajectoryChart() {
           yAxisID: 'y'
         },
         {
-          label: 'Income (E£)',
+          label: `Income (${getUserCurrencySymbol()})`,
           data: incomeData,
           backgroundColor: gradInc,
           borderColor: '#22c55e',
@@ -6501,7 +6537,7 @@ function renderFinFlowTrajectoryChart() {
           yAxisID: 'y'
         },
         {
-          label: 'Expenses (E£)',
+          label: `Expenses (${getUserCurrencySymbol()})`,
           data: expenseData,
           backgroundColor: gradExp,
           borderColor: '#ef4444',
@@ -6537,7 +6573,7 @@ function renderFinFlowTrajectoryChart() {
           grid: { color: 'rgba(255, 255, 255, 0.06)' },
           ticks: {
             color: '#94a3b8',
-            callback: (v) => 'E£' + Number(v).toLocaleString()
+            callback: (v) => fmtMoney(v)
           }
         }
       }
@@ -6708,7 +6744,7 @@ function renderFinCumulativeSpline() {
     data: {
       labels,
       datasets: [{
-        label: 'Cumulative Net Savings Trajectory (E£)',
+        label: `Cumulative Net Savings Trajectory (${getUserCurrencySymbol()})`,
         data,
         borderColor: '#38bdf8',
         borderWidth: 2.5,
@@ -6734,7 +6770,7 @@ function renderFinCumulativeSpline() {
           grid: { color: 'rgba(255, 255, 255, 0.06)' },
           ticks: {
             color: '#94a3b8',
-            callback: (v) => 'E£' + Number(v).toLocaleString()
+            callback: (v) => fmtMoney(v)
           }
         }
       },
@@ -8703,6 +8739,18 @@ function initProfileFormEvents() {
 
   if (profilePersonaForm) {
     profilePersonaForm.addEventListener('submit', handleSavePersonaSegments);
+  }
+
+  const profileSelectCurrency = document.getElementById('profileSelectCurrency');
+  if (profileSelectCurrency) {
+    profileSelectCurrency.addEventListener('change', (e) => {
+      const val = e.target.value;
+      const sym = CURRENCY_SYMBOLS[val] || '$';
+      const tag = document.getElementById('profileBudgetCurrencySymbol');
+      const pfx = document.getElementById('profileBudgetCurrencyPrefix');
+      if (tag) tag.textContent = `${val} ${sym}`;
+      if (pfx) pfx.textContent = sym;
+    });
   }
 }
 

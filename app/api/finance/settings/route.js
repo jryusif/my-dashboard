@@ -48,6 +48,13 @@ export async function PATCH(req) {
       { name: 'Flexible Cash', pct: 30 }
     ];
 
+    if (currency) {
+      await prisma.user.update({
+        where: { id: auth.userId },
+        data: { currency }
+      }).catch(err => console.warn('Could not sync user currency:', err));
+    }
+
     const updated = await prisma.financialSetting.upsert({
       where: { userId: auth.userId },
       update: {
