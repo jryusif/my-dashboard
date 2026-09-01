@@ -90,6 +90,33 @@ export async function GET(req) {
 
     const monthlyBudget = setting?.monthlyBudget || 3000;
 
+    // Dynamic User-Customizable Allocation Buckets & Percentages
+    const defaultAllocations = [
+      { name: 'Construction', pct: 25 },
+      { name: 'Emergency', pct: 15 },
+      { name: 'Investment', pct: 20 },
+      { name: 'Other Goals', pct: 10 },
+      { name: 'Flexible Cash', pct: 30 }
+    ];
+
+    let userAllocations = setting?.allocations;
+    if (typeof userAllocations === 'string') {
+      try { userAllocations = JSON.parse(userAllocations); } catch {}
+    }
+    if (!Array.isArray(userAllocations) || userAllocations.length === 0) {
+      userAllocations = defaultAllocations;
+    }
+
+    const calculatedAllocations = userAllocations.map(a => {
+      const pct = parseFloat(a.pct) || 0;
+      const amount = Math.round(totalIncome * (pct / 100));
+      return {
+        name: a.name,
+        pct: pct,
+        amount: amount
+      };
+    });
+
     const budget = {
       month,
       monthlyBudget,
@@ -98,13 +125,7 @@ export async function GET(req) {
       netIncome,
       savingsRatePct,
       expenseRatePct,
-      allocations: {
-        construction: { amount: Math.round(totalIncome * 0.25), pct: 25 },
-        emergency: { amount: Math.round(totalIncome * 0.15), pct: 15 },
-        investment: { amount: Math.round(totalIncome * 0.20), pct: 20 },
-        otherGoals: { amount: Math.round(totalIncome * 0.10), pct: 10 },
-        flexible: { amount: Math.round(totalIncome * 0.30), pct: 30 }
-      }
+      allocations: calculatedAllocations
     };
 
     const formattedGoals = goals.map(g => ({

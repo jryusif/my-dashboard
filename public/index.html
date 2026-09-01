@@ -1209,6 +1209,24 @@
               </div>
             </div>
 
+            <!-- Income Allocation Buckets & Variable Percentages -->
+            <div class="segments-editor-section" style="margin-top: 24px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;">
+                <div>
+                  <h3 class="segment-editor-title" style="margin: 0;">📊 Income Allocation Percentages &amp; Target Buckets</h3>
+                  <p class="segment-editor-desc" style="margin: 4px 0 0 0;">Customize the percentage breakdown of your monthly income across your custom reserve tiles (e.g. Construction, Emergency, Investment, Flexible Cash).</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span class="alloc-total-badge" id="allocTotalBadge">Total: 100%</span>
+                  <button type="button" class="btn-secondary btn-sm" onclick="promptAddAllocationBucket()">➕ Add Bucket</button>
+                </div>
+              </div>
+
+              <div id="profileAllocationsList" class="profile-allocations-grid">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
             <!-- Financial Goals & Target Prices Manager -->
             <div class="segments-editor-section" style="margin-top: 24px;">
               <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">

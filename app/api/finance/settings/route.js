@@ -6,6 +6,14 @@ export async function GET(req) {
     const auth = getAuthUser(req);
     if (!auth || !auth.authenticated) return errorResponse('Unauthorized', 401);
 
+    const defaultAllocations = [
+      { name: 'Construction', pct: 25 },
+      { name: 'Emergency', pct: 15 },
+      { name: 'Investment', pct: 20 },
+      { name: 'Other Goals', pct: 10 },
+      { name: 'Flexible Cash', pct: 30 }
+    ];
+
     const setting = await prisma.financialSetting.findUnique({
       where: { userId: auth.userId }
     });
@@ -14,7 +22,8 @@ export async function GET(req) {
       setting: setting || {
         currency: 'USD',
         monthlyBudget: 3000,
-        savingsTargetPct: 25
+        savingsTargetPct: 25,
+        allocations: defaultAllocations
       }
     });
   } catch (err) {
@@ -29,20 +38,30 @@ export async function PATCH(req) {
     if (!auth || !auth.authenticated) return errorResponse('Unauthorized', 401);
 
     const body = await req.json();
-    const { monthlyBudget, savingsTargetPct, currency } = body;
+    const { monthlyBudget, savingsTargetPct, currency, allocations } = body;
+
+    const defaultAllocations = [
+      { name: 'Construction', pct: 25 },
+      { name: 'Emergency', pct: 15 },
+      { name: 'Investment', pct: 20 },
+      { name: 'Other Goals', pct: 10 },
+      { name: 'Flexible Cash', pct: 30 }
+    ];
 
     const updated = await prisma.financialSetting.upsert({
       where: { userId: auth.userId },
       update: {
         monthlyBudget: monthlyBudget !== undefined ? parseFloat(monthlyBudget) : undefined,
         savingsTargetPct: savingsTargetPct !== undefined ? parseFloat(savingsTargetPct) : undefined,
-        currency: currency || undefined
+        currency: currency || undefined,
+        allocations: allocations !== undefined ? allocations : undefined
       },
       create: {
         userId: auth.userId,
         monthlyBudget: parseFloat(monthlyBudget) || 3000,
         savingsTargetPct: parseFloat(savingsTargetPct) || 25,
-        currency: currency || 'USD'
+        currency: currency || 'USD',
+        allocations: allocations || defaultAllocations
       }
     });
 

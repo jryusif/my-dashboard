@@ -249,6 +249,7 @@ model FinancialSetting {
   currency         String   @default("USD")
   monthlyBudget    Float    @default(3000) @map("monthly_budget")
   savingsTargetPct Float    @default(20) @map("savings_target_pct")
+  allocations      Json?    // Custom allocation buckets: [{ name: "Construction", pct: 25 }, ...]
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)

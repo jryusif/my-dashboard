@@ -2880,6 +2880,10 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
     }
   }
 
+  const allocTilesHtml = (budget && Array.isArray(budget.allocations) && budget.allocations.length)
+    ? budget.allocations.map(a => allocTile(a.name, a)).join('')
+    : (budget ? Object.keys(budget.allocations || {}).map(k => allocTile(k, budget.allocations[k])).join('') : '');
+
   const overviewHtml = budget ? `
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-label">Total Income</div><div class="stat-value positive">${fmtMoney(budget.totalIncome)}</div></div>
@@ -2889,11 +2893,7 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
       <div class="stat-card"><div class="stat-label">Expense Rate</div><div class="stat-value">${fmtPct(budget.expenseRatePct)}</div></div>
     </div>
     <div class="alloc-grid" style="margin-top:12px">
-      ${allocTile('Construction', budget.allocations.construction)}
-      ${allocTile('Emergency',    budget.allocations.emergency)}
-      ${allocTile('Investment',   budget.allocations.investment)}
-      ${allocTile('Other Goals',  budget.allocations.otherGoals)}
-      ${allocTile('Flexible Cash',budget.allocations.flexible)}
+      ${allocTilesHtml}
     </div>
     ${renderPaceCard(budget)}
   ` : `<p class="finance-empty">No Monthly Budget row for ${escapeHtml(currentFinanceMonth)} yet.</p>`;
@@ -8819,6 +8819,14 @@ async function loadProfileData() {
   }
 }
 
+let profileAllocationsState = [
+  { name: 'Construction', pct: 25 },
+  { name: 'Emergency', pct: 15 },
+  { name: 'Investment', pct: 20 },
+  { name: 'Other Goals', pct: 10 },
+  { name: 'Flexible Cash', pct: 30 }
+];
+
 async function loadProfileFinanceSettings() {
   try {
     const res = await fetch('/api/finance/settings');
@@ -8831,9 +8839,90 @@ async function loadProfileFinanceSettings() {
       if (budgetInput) budgetInput.value = setting.monthlyBudget || 3000;
       if (targetPctInput) targetPctInput.value = setting.savingsTargetPct || 25;
       if (targetRangeInput) targetRangeInput.value = setting.savingsTargetPct || 25;
+
+      if (setting.allocations && Array.isArray(setting.allocations) && setting.allocations.length > 0) {
+        profileAllocationsState = setting.allocations;
+      }
+      renderProfileAllocations();
     }
   } catch (err) {
     console.warn('Could not load finance settings:', err);
+  }
+}
+
+function renderProfileAllocations() {
+  const container = document.getElementById('profileAllocationsList');
+  if (!container) return;
+
+  if (!profileAllocationsState || profileAllocationsState.length === 0) {
+    profileAllocationsState = [
+      { name: 'Construction', pct: 25 },
+      { name: 'Emergency', pct: 15 },
+      { name: 'Investment', pct: 20 },
+      { name: 'Other Goals', pct: 10 },
+      { name: 'Flexible Cash', pct: 30 }
+    ];
+  }
+
+  container.innerHTML = profileAllocationsState.map((a, idx) => `
+    <div class="profile-alloc-card">
+      <div class="profile-alloc-header">
+        <strong class="profile-alloc-name">${escapeHtml(a.name)}</strong>
+        <button type="button" class="btn-goal-del" onclick="removeAllocationBucket(${idx})" title="Remove this bucket">&times;</button>
+      </div>
+      <div class="profile-alloc-row">
+        <input type="range" min="0" max="100" step="5" value="${a.pct}" style="flex: 1;" oninput="updateAllocationBucketPct(${idx}, this.value)" />
+        <input type="number" min="0" max="100" class="profile-alloc-input" value="${a.pct}" oninput="updateAllocationBucketPct(${idx}, this.value)" />
+        <span style="font-weight:700; color:#38bdf8;">%</span>
+      </div>
+    </div>
+  `).join('');
+
+  updateAllocTotalBadge();
+}
+window.renderProfileAllocations = renderProfileAllocations;
+
+function updateAllocationBucketPct(idx, val) {
+  if (profileAllocationsState && profileAllocationsState[idx]) {
+    profileAllocationsState[idx].pct = Math.max(0, Math.min(100, parseFloat(val) || 0));
+    renderProfileAllocations();
+  }
+}
+window.updateAllocationBucketPct = updateAllocationBucketPct;
+
+function promptAddAllocationBucket() {
+  const name = prompt('➕ Enter Allocation Bucket Name (e.g. Real Estate, Family Buffer, Gold Savings, Education):');
+  if (!name || !name.trim()) return;
+
+  const pctStr = prompt(`Enter Percentage for "${name.trim()}" (0-100%):`, '10');
+  const pct = Math.max(0, Math.min(100, parseFloat(pctStr) || 10));
+
+  if (!profileAllocationsState) profileAllocationsState = [];
+  profileAllocationsState.push({ name: name.trim(), pct });
+  renderProfileAllocations();
+}
+window.promptAddAllocationBucket = promptAddAllocationBucket;
+
+function removeAllocationBucket(idx) {
+  if (profileAllocationsState && profileAllocationsState.length > 1) {
+    profileAllocationsState.splice(idx, 1);
+    renderProfileAllocations();
+  } else {
+    alert('You need at least one allocation bucket.');
+  }
+}
+window.removeAllocationBucket = removeAllocationBucket;
+
+function updateAllocTotalBadge() {
+  const badge = document.getElementById('allocTotalBadge');
+  if (!badge || !profileAllocationsState) return;
+
+  const total = profileAllocationsState.reduce((sum, a) => sum + (parseFloat(a.pct) || 0), 0);
+  badge.textContent = `Total: ${total}%`;
+  if (total === 100) {
+    badge.className = 'alloc-total-badge';
+  } else {
+    badge.className = 'alloc-total-badge warn';
   }
 }
 
@@ -9094,18 +9183,17 @@ async function handleSavePersonaSegments(e) {
     const dataSegments = await resSegments.json();
     if (!resSegments.ok) throw new Error(dataSegments.error || 'Failed to update segments');
 
-    // 2. Save Financial Setting (Budget & Savings %)
-    if (monthlyBudget !== undefined || savingsTargetPct !== undefined) {
-      await fetch('/api/finance/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          monthlyBudget: parseFloat(monthlyBudget) || 3000,
-          savingsTargetPct: parseFloat(savingsTargetPct) || 25,
-          currency
-        })
-      });
-    }
+    // 2. Save Financial Setting (Budget, Savings %, and Allocations)
+    await fetch('/api/finance/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        monthlyBudget: parseFloat(monthlyBudget) || 3000,
+        savingsTargetPct: parseFloat(savingsTargetPct) || 25,
+        currency,
+        allocations: profileAllocationsState
+      })
+    });
 
     currentUser = { ...currentUser, ...dataSegments.user };
     localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
