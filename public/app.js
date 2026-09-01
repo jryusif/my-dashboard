@@ -8880,6 +8880,11 @@ function updateUserUi() {
   const ddAdminItem = document.getElementById('ddAdminItem');
   const sidebarAdminBtn = document.getElementById('sidebarAdminBtn');
   const profileGoToAdminBtn = document.getElementById('profileGoToAdminBtn');
+  const sidebarUserName = document.getElementById('sidebarUserName');
+  const sidebarUserEmail = document.getElementById('sidebarUserEmail');
+  const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
+  const sidebarUserRoleBadge = document.getElementById('sidebarUserRoleBadge');
+  const sidebarLogoutBtn = document.getElementById('sidebarLogoutBtn');
 
   if (currentUser && authToken) {
     const displayName = currentUser.name || currentUser.email.split('@')[0];
@@ -8908,6 +8913,16 @@ function updateUserUi() {
       ddAvatarWrap.innerHTML = renderAvatarHtml(currentUser.avatar, defaultAvatar);
     }
 
+    // Update Sidebar User Capsule
+    if (sidebarUserName) sidebarUserName.textContent = displayName;
+    if (sidebarUserEmail) sidebarUserEmail.textContent = currentUser.email;
+    if (sidebarUserAvatar) sidebarUserAvatar.innerHTML = renderAvatarHtml(currentUser.avatar, defaultAvatar);
+    if (sidebarUserRoleBadge) {
+      sidebarUserRoleBadge.textContent = currentUser.role || 'USER';
+      sidebarUserRoleBadge.className = currentUser.role === 'ADMIN' ? 'sidebar-user-role-badge role-admin' : 'sidebar-user-role-badge';
+    }
+    if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'inline-flex';
+
     // Admin Controls
     const isAdmin = currentUser.role === 'ADMIN';
     if (btnDockAdminQuick) btnDockAdminQuick.style.display = isAdmin ? 'inline-flex' : 'none';
@@ -8928,6 +8943,13 @@ function updateUserUi() {
     if (sidebarAdminBtn) sidebarAdminBtn.style.display = 'none';
     if (profileGoToAdminBtn) profileGoToAdminBtn.style.display = 'none';
     if (btnAuthProfile) btnAuthProfile.title = 'Sign In to Workspace';
+
+    // Reset Sidebar User Capsule
+    if (sidebarUserName) sidebarUserName.textContent = 'Sign In';
+    if (sidebarUserEmail) sidebarUserEmail.textContent = 'Tap to sign in';
+    if (sidebarUserAvatar) sidebarUserAvatar.innerHTML = '👤';
+    if (sidebarUserRoleBadge) sidebarUserRoleBadge.textContent = 'GUEST';
+    if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'none';
   }
 }
 window.updateUserUi = updateUserUi;

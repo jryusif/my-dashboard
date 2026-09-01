@@ -53,6 +53,30 @@
             <span>⚙️</span>
           </button>
         </div>
+
+        <!-- Sidebar User Account Capsule (Active on Mobile/Tablet & Desktop) -->
+        <div class="sidebar-user-capsule" id="sidebarUserCapsule">
+          <div class="sidebar-user-info" onclick="openProfileSection()" title="Open Profile & Settings">
+            <div class="sidebar-user-avatar" id="sidebarUserAvatar">👤</div>
+            <div class="sidebar-user-details">
+              <strong id="sidebarUserName">Sign In</strong>
+              <span id="sidebarUserEmail">Tap to sign in</span>
+            </div>
+            <span class="sidebar-user-role-badge" id="sidebarUserRoleBadge">USER</span>
+          </div>
+          <div class="sidebar-user-actions">
+            <button type="button" class="btn-sidebar-user-act" id="sidebarProfileBtn" onclick="openProfileSection()" title="My Profile & Settings">
+              <span>👤</span> Profile
+            </button>
+            <button type="button" class="btn-sidebar-user-act admin-act" id="sidebarAdminBtn" style="display: none;" onclick="openAdminSection()" title="Admin Control Center">
+              <span>👑</span> Admin
+              <span class="dock-admin-badge" id="sidebarAdminPendingBadge" style="display: none;">0</span>
+            </button>
+            <button type="button" class="btn-sidebar-user-act logout-act" id="sidebarLogoutBtn" style="display: none;" onclick="handleSignOut(true)" title="Sign Out">
+              <span>🚪</span> Logout
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="sidebar-scroll">
