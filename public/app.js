@@ -9858,17 +9858,31 @@ async function handleGatewayAuthSubmit(e) {
 
     document.documentElement.classList.remove('is-unauthenticated');
     document.body.classList.remove('is-unauthenticated');
+    document.documentElement.classList.add('is-authenticated');
+    document.body.classList.add('is-authenticated');
+
+    const gatewayScreen = document.getElementById('authGatewayScreen');
+    if (gatewayScreen) {
+      gatewayScreen.style.setProperty('display', 'none', 'important');
+    }
+
     updateUserUi();
     closePendingApprovalModal();
-    renderDynamicCategoryDropdowns();
-    showToast(`Welcome back, ${currentUser.name || currentUser.email}!`);
+    showDashboard();
 
-    renderDashboard();
-    loadMeta();
-    loadTasks();
-    loadWeeklyProgress();
-    loadWealthCard();
-    initRoadmapEvents();
+    try {
+      renderDashboard();
+      loadMeta();
+      loadTasks();
+      loadWeeklyProgress();
+      loadWealthCard();
+      initRoadmapEvents();
+      renderDynamicCategoryDropdowns();
+    } catch (loadErr) {
+      console.warn('Initial data load warning:', loadErr);
+    }
+
+    showToast(`Welcome back, ${currentUser.name || currentUser.email}!`);
 
     if (data.onboardingNeeded || !currentUser.onboardingCompleted) {
       setTimeout(() => openOnboardingWizard(currentUser), 400);
@@ -9879,6 +9893,7 @@ async function handleGatewayAuthSubmit(e) {
       errEl.textContent = 'Network error connecting to authentication server.';
       errEl.style.display = 'block';
     }
+    showToast('Authentication failed. Please check your credentials.');
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -10357,7 +10372,55 @@ async function handleOAuthModalSubmit(e) {
 }
 window.handleOAuthModalSubmit = handleOAuthModalSubmit;
 
+function initGoogleIdentityServices() {
+  if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+    try {
+      google.accounts.id.initialize({
+        client_id: window.GOOGLE_CLIENT_ID || '1088498877522-dashboard-client.apps.googleusercontent.com',
+        callback: handleGoogleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+    } catch (gErr) {
+      console.warn('[Google Identity Services] initialization note:', gErr);
+    }
+  }
+}
+
+async function handleGoogleCredentialResponse(response) {
+  if (!response || !response.credential) return;
+  try {
+    showToast('Verifying Google Account with Secure OAuth...', 3000);
+    await executeOAuthSignIn({
+      credential: response.credential,
+      provider: 'google'
+    });
+  } catch (err) {
+    console.error('Google Credential Error:', err);
+    showToast('Google Sign-In failed.');
+  }
+}
+window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
+
 function handleGoogleAuth() {
+  if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+    try {
+      google.accounts.id.initialize({
+        client_id: window.GOOGLE_CLIENT_ID || '1088498877522-dashboard-client.apps.googleusercontent.com',
+        callback: handleGoogleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+      google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          openOAuthProviderModal('google');
+        }
+      });
+      return;
+    } catch (err) {
+      console.warn('Google GSI prompt fallback:', err);
+    }
+  }
   openOAuthProviderModal('google');
 }
 window.handleGoogleAuth = handleGoogleAuth;
@@ -10368,7 +10431,7 @@ function handleAppleAuth() {
 window.handleAppleAuth = handleAppleAuth;
 
 async function executeOAuthSignIn(oauthPayload) {
-  const errorMsg = document.getElementById('pageAuthErrorMsg');
+  const errorMsg = document.getElementById('gatewayErrorMsg') || document.getElementById('oauthErrorMsg');
   if (errorMsg) errorMsg.style.display = 'none';
 
   try {
@@ -10382,7 +10445,7 @@ async function executeOAuthSignIn(oauthPayload) {
     const data = await res.json();
 
     if ((res.status === 403 && data.status === 'PENDING') || (res.status === 201 && data.pending)) {
-      openPendingApprovalModal(oauthPayload.email);
+      openPendingApprovalModal(oauthPayload.email || '');
       showToast('Registration submitted! Awaiting administrator approval.', 6000);
       return;
     }
@@ -10407,24 +10470,38 @@ async function executeOAuthSignIn(oauthPayload) {
     localStorage.setItem('antigravity_token', authToken);
     localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
 
+    document.documentElement.classList.remove('is-unauthenticated');
+    document.body.classList.remove('is-unauthenticated');
+    document.documentElement.classList.add('is-authenticated');
+    document.body.classList.add('is-authenticated');
+
+    const gatewayScreen = document.getElementById('authGatewayScreen');
+    if (gatewayScreen) {
+      gatewayScreen.style.setProperty('display', 'none', 'important');
+    }
+
     updateUserUi();
-    closeAuthModal();
     closePendingApprovalModal();
-    renderDynamicCategoryDropdowns();
+    showDashboard();
 
-    showToast(`🎉 Signed in with ${oauthPayload.provider.toUpperCase()} as ${currentUser.name || currentUser.email}!`);
-
-    // Check if user needs persona onboarding
-    if (data.onboardingNeeded || !currentUser.onboardingCompleted) {
-      showDashboard();
-      setTimeout(() => openOnboardingWizard(currentUser), 400);
-    } else {
-      showDashboard();
+    try {
+      renderDashboard();
       loadMeta();
       loadTasks();
       loadWeeklyProgress();
       loadWealthCard();
+      initRoadmapEvents();
+      renderDynamicCategoryDropdowns();
       if (currentUser.role === 'ADMIN') fetchAdminBadgeCounts();
+    } catch (loadErr) {
+      console.warn('Initial data load warning:', loadErr);
+    }
+
+    showToast(`🎉 Signed in with ${oauthPayload.provider ? oauthPayload.provider.toUpperCase() : 'Google'} as ${currentUser.name || currentUser.email}!`);
+
+    // Check if user needs persona onboarding
+    if (data.onboardingNeeded || !currentUser.onboardingCompleted) {
+      setTimeout(() => openOnboardingWizard(currentUser), 400);
     }
   } catch (err) {
     console.error('OAuth execution error:', err);

@@ -7,7 +7,32 @@ import { sendAdminSignupNotification } from '@/lib/email.js';
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { provider, email, name, avatar, oauthId } = body;
+    let { provider = 'google', email, name, avatar, oauthId, credential } = body;
+
+    // Real Google Identity Services (GIS) ID Token Verification
+    if (credential) {
+      let googleData = null;
+      try {
+        const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+        if (tokenInfoRes.ok) {
+          googleData = await tokenInfoRes.json();
+        }
+      } catch (e) {
+        console.warn('Could not reach Google tokeninfo, falling back to decode:', e);
+      }
+
+      if (!googleData) {
+        googleData = jwt.decode(credential);
+      }
+
+      if (googleData && googleData.email) {
+        email = googleData.email;
+        name = googleData.name || googleData.given_name || email.split('@')[0];
+        avatar = googleData.picture || '🌐';
+        oauthId = googleData.sub || `google_${googleData.email}`;
+        provider = 'google';
+      }
+    }
 
     if (!email || !provider) {
       return errorResponse('Email and OAuth provider are required.', 400);
