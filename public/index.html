@@ -546,6 +546,34 @@
         <div class="dashboard-grid" id="dashboardGrid">
           <!-- dashboard cards rendered by app.js -->
         </div>
+
+        <!-- Weekly Planner (Dashboard Overview) -->
+        <section class="weekly" id="weeklySection">
+          <div class="weekly-header">
+            <div class="weekly-header-text">
+              <h2>Weekly Planner</h2>
+              <p class="subtitle">Saturday &rarr; Friday &middot; same Main Database, one task list</p>
+            </div>
+            <div class="mini-glass-progress weekly-progress" id="weeklyGlassProgress">
+              <div class="mini-progress-info">
+                <span class="mini-progress-label">Weekly Completion</span>
+                <span class="mini-progress-val" id="weeklyProgressVal">0% (0/0 done)</span>
+              </div>
+              <div class="mini-progress-track">
+                <div class="mini-progress-fill" id="weeklyProgressFill" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <nav class="week-tabs" id="weekTabs" role="tablist" aria-label="Select a day">
+            <div class="indicator" id="weekIndicator" aria-hidden="true"></div>
+            <!-- day buttons rendered by app.js -->
+          </nav>
+
+          <div id="weeklyBoard" class="board weekly-board" aria-live="polite">
+            <!-- selected day's tasks rendered here -->
+          </div>
+        </section>
       </section>
 
       <!-- ----------------------------------------------------------------
@@ -1632,33 +1660,6 @@
         </div>
       </section>
 
-      <!-- Weekly Planner -->
-      <section class="weekly">
-        <div class="weekly-header">
-          <div class="weekly-header-text">
-            <h2>Weekly Planner</h2>
-            <p class="subtitle">Saturday &rarr; Friday &middot; same Main Database, one task list</p>
-          </div>
-          <div class="mini-glass-progress weekly-progress" id="weeklyGlassProgress">
-            <div class="mini-progress-info">
-              <span class="mini-progress-label">Weekly Completion</span>
-              <span class="mini-progress-val" id="weeklyProgressVal">0% (0/0 done)</span>
-            </div>
-            <div class="mini-progress-track">
-              <div class="mini-progress-fill" id="weeklyProgressFill" style="width: 0%;"></div>
-            </div>
-          </div>
-        </div>
-
-        <nav class="week-tabs" id="weekTabs" role="tablist" aria-label="Select a day">
-          <div class="indicator" id="weekIndicator" aria-hidden="true"></div>
-          <!-- day buttons rendered by app.js -->
-        </nav>
-
-        <div id="weeklyBoard" class="board weekly-board" aria-live="polite">
-          <!-- selected day's tasks rendered here -->
-        </div>
-      </section>
 
     </main>
   </div>

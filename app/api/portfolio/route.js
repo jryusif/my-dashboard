@@ -11,7 +11,9 @@ async function resolveUserId(req) {
 }
 
 export async function GET(req) {
-  const userId = await resolveUserId(req);
+  const auth = getAuthUser(req);
+  const userId = auth && auth.authenticated ? auth.userId : null;
+  const user = auth && auth.authenticated ? auth.user : null;
 
   let assets = [];
   let goldLots = [];
@@ -27,7 +29,6 @@ export async function GET(req) {
     });
   }
 
-  const user = auth.authenticated ? auth.user : null;
   const userCurrency = user?.currency || 'USD';
   const liveGoldPrice = await getLiveGoldPrice(userCurrency);
 
