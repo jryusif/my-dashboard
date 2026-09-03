@@ -10,6 +10,22 @@ try {
   currentUser = null;
 }
 
+// Load OAuth client IDs from server config (non-secret, safe to expose)
+(async function loadOAuthConfig() {
+  try {
+    const res = await fetch('/api/config');
+    if (res.ok) {
+      const cfg = await res.json();
+      if (cfg.googleClientId) window.GOOGLE_CLIENT_ID = cfg.googleClientId;
+      if (cfg.appleClientId)  window.APPLE_CLIENT_ID  = cfg.appleClientId;
+    }
+  } catch (e) {
+    // Non-critical — buttons fall back to email-modal if IDs not loaded
+    console.warn('[Config] Could not load OAuth client IDs:', e);
+  }
+})();
+
+
 function userCanAccessDental() {
   if (!currentUser) return false;
   if (currentUser.role === 'ADMIN') return true;
@@ -10403,30 +10419,54 @@ async function handleGoogleCredentialResponse(response) {
 window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
 
 function handleGoogleAuth() {
-  if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-    try {
-      google.accounts.id.initialize({
-        client_id: window.GOOGLE_CLIENT_ID || '1088498877522-dashboard-client.apps.googleusercontent.com',
-        callback: handleGoogleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true
-      });
-      google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          openOAuthProviderModal('google');
-        }
-      });
-      return;
-    } catch (err) {
-      console.warn('Google GSI prompt fallback:', err);
-    }
+  // Build the real Google OAuth 2.0 redirect URL → opens the native account chooser
+  const clientId   = window.GOOGLE_CLIENT_ID || '';
+  const appUrl     = window.location.origin;
+  const redirectUri = encodeURIComponent(`${appUrl}/api/auth/oauth/callback`);
+  const scope       = encodeURIComponent('openid email profile');
+
+  if (!clientId) {
+    // Fallback: email-based modal when no client ID is configured
+    openOAuthProviderModal('google');
+    return;
   }
-  openOAuthProviderModal('google');
+
+  const googleAuthUrl =
+    `https://accounts.google.com/o/oauth2/v2/auth` +
+    `?client_id=${encodeURIComponent(clientId)}` +
+    `&redirect_uri=${redirectUri}` +
+    `&response_type=code` +
+    `&scope=${scope}` +
+    `&state=google` +
+    `&access_type=offline` +
+    `&prompt=select_account`;   // forces account chooser every time
+
+  window.location.href = googleAuthUrl;
 }
 window.handleGoogleAuth = handleGoogleAuth;
 
 function handleAppleAuth() {
-  openOAuthProviderModal('apple');
+  // Build the real Apple Sign In redirect URL
+  const clientId    = window.APPLE_CLIENT_ID || '';
+  const appUrl      = window.location.origin;
+  const redirectUri = encodeURIComponent(`${appUrl}/api/auth/oauth/callback`);
+
+  if (!clientId) {
+    // Fallback: email-based modal when no client ID is configured
+    openOAuthProviderModal('apple');
+    return;
+  }
+
+  const appleAuthUrl =
+    `https://appleid.apple.com/auth/authorize` +
+    `?client_id=${encodeURIComponent(clientId)}` +
+    `&redirect_uri=${redirectUri}` +
+    `&response_type=code` +
+    `&scope=name%20email` +
+    `&state=apple` +
+    `&response_mode=query`;
+
+  window.location.href = appleAuthUrl;
 }
 window.handleAppleAuth = handleAppleAuth;
 
@@ -12516,6 +12556,72 @@ function initTopNavScroll() {
 }
 
 // =============================================================================
+// OAUTH REDIRECT RETURN HANDLER
+// Handles ?oauth_token=, ?oauth_user=, ?oauth_pending=, ?oauth_error= params
+// that are set by /api/auth/oauth/callback after Google/Apple sign-in redirect.
+// =============================================================================
+
+(function handleOAuthReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const oauthToken   = params.get('oauth_token');
+  const oauthUser    = params.get('oauth_user');
+  const oauthPending = params.get('oauth_pending');
+  const oauthError   = params.get('oauth_error');
+  const onboardingNeeded = params.get('onboarding_needed') === 'true';
+
+  // Clean URL immediately regardless of outcome
+  if (oauthToken || oauthPending || oauthError) {
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, '', cleanUrl);
+  }
+
+  if (oauthToken) {
+    try {
+      authToken = oauthToken;
+      localStorage.setItem('antigravity_token', authToken);
+
+      if (oauthUser) {
+        const userObj = JSON.parse(decodeURIComponent(oauthUser));
+        currentUser = userObj;
+        localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+      }
+
+      // Signal auth state immediately before full init runs
+      document.documentElement.classList.remove('is-unauthenticated');
+      document.documentElement.classList.add('is-authenticated');
+      document.body.classList.remove('is-unauthenticated');
+      document.body.classList.add('is-authenticated');
+
+      // Hide the auth gateway screen
+      const gateway = document.getElementById('authGatewayScreen');
+      if (gateway) gateway.style.setProperty('display', 'none', 'important');
+
+      // Will be booted properly in the INIT block below
+      // Flag so initApp knows onboarding may be needed
+      window.__oauthOnboardingNeeded = onboardingNeeded;
+    } catch (e) {
+      console.error('[OAuth return] Failed to parse oauth_user:', e);
+    }
+  } else if (oauthPending) {
+    // Show pending approval modal once DOM is ready
+    window.addEventListener('load', () => {
+      openPendingApprovalModal('');
+      showToast('Registration submitted! Awaiting administrator approval.', 6000);
+    });
+  } else if (oauthError) {
+    // Show error on the gateway
+    window.addEventListener('load', () => {
+      const errEl = document.getElementById('gatewayErrorMsg');
+      if (errEl) {
+        errEl.textContent = decodeURIComponent(oauthError);
+        errEl.style.display = 'block';
+      }
+      showToast(`Sign-in failed: ${decodeURIComponent(oauthError)}`, 5000);
+    });
+  }
+})();
+
+// =============================================================================
 // INIT
 // =============================================================================
 
@@ -12534,6 +12640,11 @@ if (authToken && currentUser) {
   loadWealthCard();
   initRoadmapEvents();
   checkAuthSession();
+
+  // If returned from OAuth redirect and onboarding is needed, show wizard
+  if (window.__oauthOnboardingNeeded) {
+    setTimeout(() => openOnboardingWizard(currentUser), 600);
+  }
 } else {
   document.body.classList.add('is-unauthenticated');
   setGatewayAuthMode('login');
