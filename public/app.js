@@ -7674,6 +7674,30 @@ if (btnFinViewAnalytics) {
   btnFinViewAnalytics.addEventListener('click', () => switchFinanceView('analytics'));
 }
 
+// Wire up the time-horizon switcher tabs (Complete Overview / Weekly / Monthly / Yearly)
+if (finHorizonTabs) {
+  finHorizonTabs.addEventListener('click', (e) => {
+    const tab = e.target.closest('.horizon-tab');
+    if (!tab) return;
+    const horizon = tab.dataset.horizon;
+    if (!horizon || horizon === activeFinHorizon) return;
+
+    // Update active state
+    activeFinHorizon = horizon;
+    finHorizonTabs.querySelectorAll('.horizon-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.horizon === horizon);
+    });
+
+    // Re-render KPIs and charts with new horizon
+    if (financeAnalyticsData) {
+      renderFinanceKpiScorecards();
+      destroyAllFinCharts();
+      renderFinanceCharts();
+      renderFinanceStreamsMatrix();
+    }
+  });
+}
+
 async function loadFinanceAnalytics() {
   if (finKpiGrid) {
     finKpiGrid.innerHTML = `
