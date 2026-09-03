@@ -415,9 +415,9 @@ function fmtMoney(n, customCurrency = null) {
 }
 
 function fmtGoldEgp(n) {
+  // Always format in EGP — gold ticker always shows Egyptian pound prices
   if (n === null || n === undefined || isNaN(n)) return '—';
-  const sym = getUserCurrencySymbol();
-  return sym + ' ' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return 'E£ ' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 function fmtPct(n) {
   if (n === null || n === undefined) return '—';
@@ -4554,12 +4554,11 @@ async function openAssetsPage() {
 
 async function fetchGoldPrice() {
   try {
-    const curr = getUserCurrency();
-    const res = await fetch(`/api/gold/price?currency=${encodeURIComponent(curr)}`);
+    // Always fetch with EGP so the gold ticker always shows correct Egyptian pound prices
+    const res = await fetch('/api/gold/price?currency=EGP');
     if (!res.ok) return null;
     const data = await res.json();
-    const currentPrice24 = data.pricePerGram24 != null ? data.pricePerGram24 : data.pricePerGramEgp24;
-    prevGoldPricePerGram24 = latestGoldPrice ? (latestGoldPrice.pricePerGram24 != null ? latestGoldPrice.pricePerGram24 : latestGoldPrice.pricePerGramEgp24) : null;
+    prevGoldPricePerGram24 = latestGoldPrice ? latestGoldPrice.pricePerGramEgp24 : null;
     latestGoldPrice = data;
     return latestGoldPrice;
   } catch { return null; }
@@ -4567,7 +4566,7 @@ async function fetchGoldPrice() {
 
 function goldPriceDirection() {
   if (!latestGoldPrice) return null;
-  const currentPrice24 = latestGoldPrice.pricePerGram24 != null ? latestGoldPrice.pricePerGram24 : latestGoldPrice.pricePerGramEgp24;
+  const currentPrice24 = latestGoldPrice.pricePerGramEgp24;
   if (prevGoldPricePerGram24 == null || currentPrice24 == null) return null;
   if (currentPrice24 > prevGoldPricePerGram24) return 'up';
   if (currentPrice24 < prevGoldPricePerGram24) return 'down';
@@ -4591,7 +4590,7 @@ async function fetchPortfolioQuietly() {
     const res = await fetch('/api/portfolio');
     if (!res.ok) return;
     const data = await res.json();
-    prevGoldPricePerGram24 = latestGoldPrice ? (latestGoldPrice.pricePerGram24 != null ? latestGoldPrice.pricePerGram24 : latestGoldPrice.pricePerGramEgp24) : null;
+    prevGoldPricePerGram24 = latestGoldPrice ? latestGoldPrice.pricePerGramEgp24 : null;
     portfolioData = data;
     latestGoldPrice = data.goldPrice;
     updatePortfolioInPlace();
@@ -4606,14 +4605,15 @@ function fmtGoldUpdated(price) {
 }
 
 function renderGoldTicker() {
-  if (!latestGoldPrice || (latestGoldPrice.pricePerGram24 == null && latestGoldPrice.pricePerGramEgp24 == null)) {
+  if (!latestGoldPrice || latestGoldPrice.pricePerGramEgp24 == null) {
     return `<div class="gold-ticker" id="goldTicker"><span class="finance-empty" style="padding:0;">Live gold price unavailable right now.</span></div>`;
   }
   const p = latestGoldPrice;
   const direction = goldPriceDirection();
-  const val24 = p.pricePerGram24 != null ? p.pricePerGram24 : p.pricePerGramEgp24;
-  const val21 = p.pricePerGram21 != null ? p.pricePerGram21 : p.pricePerGramEgp21;
-  const val18 = p.pricePerGram18 != null ? p.pricePerGram18 : p.pricePerGramEgp18;
+  // Always use EGP-specific fields for the gold ticker (Egyptian market)
+  const val24 = p.pricePerGramEgp24;
+  const val21 = p.pricePerGramEgp21;
+  const val18 = p.pricePerGramEgp18;
 
   const karatRows = [
     { label: '24K', value: val24 },
