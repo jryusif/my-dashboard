@@ -13,7 +13,6 @@ export async function POST(req, { params }) {
 
   try {
     const body = await req.json();
-    const day = body.day || 'Saturday';
     const task = (body.task || body.title || '').trim();
     const time = (body.time || '').trim() || null;
     const priority = body.priority || 'Medium';
@@ -25,26 +24,42 @@ export async function POST(req, { params }) {
     }
 
     const currentDays = await getUserWeeklyTemplate(auth.userId, category);
-    const newItem = {
-      id: `tpl_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-      task,
-      title: task,
-      segment,
-      priority,
-      time,
-      isOff
-    };
 
-    if (!Array.isArray(currentDays[day])) {
-      currentDays[day] = [];
+    // Support both multiple days (body.days = [...]) and single day (body.day = "Saturday")
+    let targetDays = [];
+    if (Array.isArray(body.days) && body.days.length > 0) {
+      targetDays = body.days;
+    } else if (body.day) {
+      targetDays = [body.day];
+    } else {
+      targetDays = ['Saturday'];
     }
-    currentDays[day].push(newItem);
+
+    const createdItems = [];
+    targetDays.forEach((day, idx) => {
+      const newItem = {
+        id: `tpl_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 5)}`,
+        task,
+        title: task,
+        segment,
+        priority,
+        time,
+        isOff
+      };
+
+      if (!Array.isArray(currentDays[day])) {
+        currentDays[day] = [];
+      }
+      currentDays[day].push(newItem);
+      createdItems.push(newItem);
+    });
 
     const savedDays = await saveUserWeeklyTemplate(auth.userId, category, currentDays);
 
     return NextResponse.json({
       success: true,
-      item: newItem,
+      items: createdItems,
+      item: createdItems[0] || null,
       template: {
         category,
         days: savedDays

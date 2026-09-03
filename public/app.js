@@ -1625,16 +1625,232 @@ function renderCategoryTemplateHub(category, tpl) {
 // Modal and CRUD logic for Weekly Repeating Templates
 const weeklyTemplateModalBackdrop = document.getElementById('weeklyTemplateModalBackdrop');
 const weeklyTemplateForm          = document.getElementById('weeklyTemplateForm');
-const weeklyTemplateModalTitle     = document.getElementById('weeklyTemplateModalTitle');
+const weeklyTemplateModalTitle    = document.getElementById('weeklyTemplateModalTitle');
 const tplFormCategory             = document.getElementById('tplFormCategory');
 const tplFormItemId               = document.getElementById('tplFormItemId');
 const tplFormDay                  = document.getElementById('tplFormDay');
 const tplFormTask                 = document.getElementById('tplFormTask');
-const tplFormTime                 = document.getElementById('tplFormTime');
 const tplFormPriority             = document.getElementById('tplFormPriority');
 const tplFormSegment              = document.getElementById('tplFormSegment');
 const tplFormIsOff                = document.getElementById('tplFormIsOff');
 const weeklyTemplateCancelBtn     = document.getElementById('weeklyTemplateCancelBtn');
+
+// Multi-day & Time picker elements
+const tplFormTimeStart            = document.getElementById('tplFormTimeStart');
+const tplFormTimeEnd              = document.getElementById('tplFormTimeEnd');
+const tplTimePreview              = document.getElementById('tplTimePreview');
+const tplClearTimeBtn             = document.getElementById('tplClearTimeBtn');
+const tplTimePresets              = document.getElementById('tplTimePresets');
+const tplDayPills                 = document.getElementById('tplDayPills');
+const tplDayCountBadge            = document.getElementById('tplDayCountBadge');
+const tplSelectAllDays            = document.getElementById('tplSelectAllDays');
+const tplSelectWorkdays           = document.getElementById('tplSelectWorkdays');
+const tplDayError                 = document.getElementById('tplDayError');
+
+let selectedTplDays = new Set(['Saturday']);
+
+function updateTplDayPillsUI() {
+  const pills = document.querySelectorAll('.tpl-day-pill');
+  pills.forEach(pill => {
+    const day = pill.dataset.day;
+    if (selectedTplDays.has(day)) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+  });
+
+  const count = selectedTplDays.size;
+  if (tplDayCountBadge) {
+    tplDayCountBadge.textContent = count === 1 ? '1 Day' : `${count} Days`;
+  }
+  if (tplDayError) {
+    tplDayError.style.display = count === 0 ? 'block' : 'none';
+  }
+
+  // Update modal title dynamically when in creation mode
+  if (!tplFormItemId.value && weeklyTemplateModalTitle) {
+    if (count === 0) {
+      weeklyTemplateModalTitle.textContent = `Add Repeating Task (Select Days)`;
+    } else if (count === 1) {
+      const singleDay = Array.from(selectedTplDays)[0];
+      weeklyTemplateModalTitle.textContent = `Add Repeating Task for ${singleDay}`;
+    } else if (count === 7) {
+      weeklyTemplateModalTitle.textContent = `Add Repeating Task for All Week`;
+    } else {
+      weeklyTemplateModalTitle.textContent = `Add Repeating Task (${count} Days)`;
+    }
+  }
+}
+
+function setTplSelectedDays(daysArray) {
+  selectedTplDays.clear();
+  (daysArray || []).forEach(d => selectedTplDays.add(d));
+  updateTplDayPillsUI();
+}
+
+if (tplDayPills) {
+  tplDayPills.addEventListener('click', e => {
+    const pill = e.target.closest('.tpl-day-pill');
+    if (!pill) return;
+    const day = pill.dataset.day;
+    if (selectedTplDays.has(day)) {
+      selectedTplDays.delete(day);
+    } else {
+      selectedTplDays.add(day);
+    }
+    updateTplDayPillsUI();
+  });
+}
+
+if (tplSelectAllDays) {
+  tplSelectAllDays.addEventListener('click', () => {
+    const allDays = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    if (selectedTplDays.size === 7) {
+      selectedTplDays.clear();
+    } else {
+      allDays.forEach(d => selectedTplDays.add(d));
+    }
+    updateTplDayPillsUI();
+  });
+}
+
+if (tplSelectWorkdays) {
+  tplSelectWorkdays.addEventListener('click', () => {
+    const workdays = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+    selectedTplDays.clear();
+    workdays.forEach(d => selectedTplDays.add(d));
+    updateTplDayPillsUI();
+  });
+}
+
+// Time helpers: 24-hour to 12-hour format and string parsing
+function time24To12(time24) {
+  if (!time24) return '';
+  const [hStr, mStr] = time24.split(':');
+  let h = parseInt(hStr, 10);
+  if (isNaN(h)) return '';
+  const m = mStr || '00';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+}
+
+function time12To24(timeStr) {
+  if (!timeStr) return '';
+  const s = timeStr.trim();
+  const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (m12) {
+    let h = parseInt(m12[1], 10);
+    const min = m12[2];
+    const ampm = m12[3] ? m12[3].toUpperCase() : null;
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${min}`;
+  }
+  return '';
+}
+
+function parseTimeToRange(timeStr) {
+  if (!timeStr) return { start: '', end: '' };
+  const parts = timeStr.split(/\s*[-–—]\s*|\s+to\s+/i);
+  if (parts.length >= 2) {
+    return {
+      start: time12To24(parts[0]),
+      end: time12To24(parts[1])
+    };
+  } else if (parts.length === 1) {
+    return {
+      start: time12To24(parts[0]),
+      end: ''
+    };
+  }
+  return { start: '', end: '' };
+}
+
+function getFormattedTimeString() {
+  const start = tplFormTimeStart ? tplFormTimeStart.value : '';
+  const end = tplFormTimeEnd ? tplFormTimeEnd.value : '';
+  if (!start && !end) return '';
+  if (start && end) {
+    return `${time24To12(start)} - ${time24To12(end)}`;
+  }
+  if (start) {
+    return time24To12(start);
+  }
+  return time24To12(end);
+}
+
+function updateTplTimePreview() {
+  if (!tplTimePreview) return;
+  const start = tplFormTimeStart ? tplFormTimeStart.value : '';
+  const end = tplFormTimeEnd ? tplFormTimeEnd.value : '';
+
+  if (!start && !end) {
+    tplTimePreview.textContent = '🕒 No time set (flexible / all day)';
+    tplTimePreview.classList.remove('has-time');
+    updatePresetHighlight('', '');
+    return;
+  }
+
+  let durationText = '';
+  if (start && end) {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em)) {
+      let startMin = sh * 60 + sm;
+      let endMin = eh * 60 + em;
+      if (endMin < startMin) endMin += 24 * 60; // overnight shift
+      const diff = endMin - startMin;
+      const hrs = Math.floor(diff / 60);
+      const mins = diff % 60;
+      durationText = mins > 0 ? ` (${hrs}h ${mins}m)` : ` (${hrs} hrs)`;
+    }
+  }
+
+  const str = getFormattedTimeString();
+  tplTimePreview.textContent = `🕒 ${str}${durationText}`;
+  tplTimePreview.classList.add('has-time');
+
+  updatePresetHighlight(start, end);
+}
+
+function updatePresetHighlight(start, end) {
+  const presets = document.querySelectorAll('.tpl-preset-btn');
+  presets.forEach(btn => {
+    if (btn.dataset.start === start && btn.dataset.end === end) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+if (tplFormTimeStart) {
+  tplFormTimeStart.addEventListener('input', updateTplTimePreview);
+}
+if (tplFormTimeEnd) {
+  tplFormTimeEnd.addEventListener('input', updateTplTimePreview);
+}
+if (tplClearTimeBtn) {
+  tplClearTimeBtn.addEventListener('click', () => {
+    if (tplFormTimeStart) tplFormTimeStart.value = '';
+    if (tplFormTimeEnd) tplFormTimeEnd.value = '';
+    updateTplTimePreview();
+  });
+}
+if (tplTimePresets) {
+  tplTimePresets.addEventListener('click', e => {
+    const btn = e.target.closest('.tpl-preset-btn');
+    if (!btn) return;
+    const start = btn.dataset.start || '';
+    const end = btn.dataset.end || '';
+    if (tplFormTimeStart) tplFormTimeStart.value = start;
+    if (tplFormTimeEnd) tplFormTimeEnd.value = end;
+    updateTplTimePreview();
+  });
+}
 
 window.openWeeklyTemplateModal = function(category, defaultDay = 'Saturday', item = null) {
   if (!weeklyTemplateModalBackdrop) return;
@@ -1644,10 +1860,27 @@ window.openWeeklyTemplateModal = function(category, defaultDay = 'Saturday', ite
   tplFormItemId.value   = item ? item.id : '';
   tplFormDay.value      = item ? (item.day || defaultDay) : defaultDay;
   tplFormTask.value     = item ? item.task : '';
-  tplFormTime.value     = item ? (item.time || '') : '';
   tplFormPriority.value = item ? (item.priority || 'Medium') : 'Medium';
   tplFormSegment.value  = item ? (item.segment || '') : '';
   tplFormIsOff.checked  = item ? Boolean(item.isOff) : false;
+
+  // Set selected days
+  if (item && item.day) {
+    setTplSelectedDays([item.day]);
+  } else {
+    setTplSelectedDays([defaultDay || 'Saturday']);
+  }
+
+  // Parse time for time inputs
+  if (item && item.time) {
+    const parsed = parseTimeToRange(item.time);
+    if (tplFormTimeStart) tplFormTimeStart.value = parsed.start;
+    if (tplFormTimeEnd) tplFormTimeEnd.value = parsed.end;
+  } else {
+    if (tplFormTimeStart) tplFormTimeStart.value = '';
+    if (tplFormTimeEnd) tplFormTimeEnd.value = '';
+  }
+  updateTplTimePreview();
 
   weeklyTemplateModalTitle.textContent = item
     ? `Edit Repeating Task (${targetCategory})`
@@ -1725,12 +1958,20 @@ if (weeklyTemplateForm) {
     e.preventDefault();
     const category = tplFormCategory.value;
     const itemId   = tplFormItemId.value;
-    const day      = tplFormDay.value;
     const task     = tplFormTask.value.trim();
-    const time     = tplFormTime.value.trim();
+    const time     = getFormattedTimeString();
     const priority = tplFormPriority.value;
     const segment  = tplFormSegment.value.trim();
     const isOff    = tplFormIsOff.checked;
+
+    if (selectedTplDays.size === 0) {
+      if (tplDayError) tplDayError.style.display = 'block';
+      return showToast('Please select at least one day.');
+    }
+
+    const days = Array.from(selectedTplDays);
+    const day = days[0];
+    tplFormDay.value = day;
 
     if (!task) return showToast('Please enter a task title.');
 
@@ -1744,14 +1985,14 @@ if (weeklyTemplateForm) {
         res = await fetch(`/api/weekly-templates/${encodeURIComponent(category)}/item/${encodeURIComponent(itemId)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ day, task, time, priority, segment, isOff })
+          body: JSON.stringify({ day, days, task, time, priority, segment, isOff })
         });
       } else {
-        // Create new item
+        // Create new item (supporting multi-day selection!)
         res = await fetch(`/api/weekly-templates/${encodeURIComponent(category)}/item`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ day, task, time, priority, segment, isOff })
+          body: JSON.stringify({ day, days, task, time, priority, segment, isOff })
         });
       }
 
@@ -1767,7 +2008,7 @@ if (weeklyTemplateForm) {
       } else {
         await loadCategoryTemplate(category);
       }
-      showToast('Weekly repeating schedule updated.');
+      showToast(days.length > 1 ? `Repeating task added to ${days.length} days!` : 'Weekly repeating schedule updated.');
     } catch (err) {
       console.error('Error saving weekly template item:', err);
       showToast(err.message || 'Could not save repeating task.');

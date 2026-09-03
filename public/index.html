@@ -2383,34 +2383,70 @@
       <input type="hidden" id="tplFormCategory" value="" />
       <input type="hidden" id="tplFormItemId" value="" />
 
-      <label for="tplFormDay">Day of the Week *</label>
-      <select id="tplFormDay" required>
-        <option value="Saturday">Saturday</option>
-        <option value="Sunday">Sunday</option>
-        <option value="Monday">Monday</option>
-        <option value="Tuesday">Tuesday</option>
-        <option value="Wednesday">Wednesday</option>
-        <option value="Thursday">Thursday</option>
-        <option value="Friday">Friday</option>
-      </select>
+      <!-- Hidden single day field kept for backward compatibility -->
+      <input type="hidden" id="tplFormDay" value="Saturday" />
 
-      <label for="tplFormTask">Task Title / Activity *</label>
+      <div class="form-group-day-select">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label style="margin:0;">Days of the Week *</label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="tplDayCountBadge" class="tpl-count-badge">1 Day</span>
+            <button type="button" id="tplSelectAllDays" class="tpl-quick-link">All Week</button>
+            <button type="button" id="tplSelectWorkdays" class="tpl-quick-link">Workdays</button>
+          </div>
+        </div>
+        <div id="tplDayPills" class="tpl-day-pills-row">
+          <button type="button" class="tpl-day-pill" data-day="Saturday"><span class="pill-check">✓</span>Sat</button>
+          <button type="button" class="tpl-day-pill" data-day="Sunday"><span class="pill-check">✓</span>Sun</button>
+          <button type="button" class="tpl-day-pill" data-day="Monday"><span class="pill-check">✓</span>Mon</button>
+          <button type="button" class="tpl-day-pill" data-day="Tuesday"><span class="pill-check">✓</span>Tue</button>
+          <button type="button" class="tpl-day-pill" data-day="Wednesday"><span class="pill-check">✓</span>Wed</button>
+          <button type="button" class="tpl-day-pill" data-day="Thursday"><span class="pill-check">✓</span>Thu</button>
+          <button type="button" class="tpl-day-pill" data-day="Friday"><span class="pill-check">✓</span>Fri</button>
+        </div>
+        <p id="tplDayError" class="tpl-day-error" style="display:none;">⚠️ Please select at least one day.</p>
+      </div>
+
+      <label for="tplFormTask" style="margin-top:12px;">Task Title / Activity *</label>
       <input type="text" id="tplFormTask" placeholder="e.g. Crystal Clinic, White Plus Clinic, Chest Hypertrophy, etc." required />
 
-      <div class="form-row-2col">
-        <div>
-          <label for="tplFormTime">Time / Shift Window (Optional)</label>
-          <input type="text" id="tplFormTime" placeholder="e.g. 09:00 AM - 05:00 PM, 06:00 PM, etc." />
+      <div class="form-row-2col" style="margin-top:10px;">
+        <div class="tpl-time-picker-block">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label style="margin:0;">Time / Shift Window</label>
+            <button type="button" id="tplClearTimeBtn" class="tpl-quick-link" title="Remove time">Clear</button>
+          </div>
+          <div class="tpl-time-inputs-wrap">
+            <div class="tpl-time-field">
+              <span class="tpl-time-field-label">From</span>
+              <input type="time" id="tplFormTimeStart" class="tpl-time-input" aria-label="Start Time" />
+            </div>
+            <span class="tpl-time-sep">→</span>
+            <div class="tpl-time-field">
+              <span class="tpl-time-field-label">To</span>
+              <input type="time" id="tplFormTimeEnd" class="tpl-time-input" aria-label="End Time" />
+            </div>
+          </div>
+          <!-- Quick Preset Shifts -->
+          <div class="tpl-time-presets" id="tplTimePresets">
+            <button type="button" class="tpl-preset-btn" data-start="08:00" data-end="14:00" title="08:00 AM – 02:00 PM">🌅 Morning</button>
+            <button type="button" class="tpl-preset-btn" data-start="12:00" data-end="18:00" title="12:00 PM – 06:00 PM">☀️ Afternoon</button>
+            <button type="button" class="tpl-preset-btn" data-start="16:00" data-end="22:00" title="04:00 PM – 10:00 PM">🌆 Evening</button>
+            <button type="button" class="tpl-preset-btn" data-start="09:00" data-end="17:00" title="09:00 AM – 05:00 PM">🏢 Full Day</button>
+            <button type="button" class="tpl-preset-btn" data-start="07:00" data-end="08:30" title="07:00 AM – 08:30 AM">🏋️ Workout</button>
+          </div>
+          <div id="tplTimePreview" class="tpl-time-preview">🕒 No time set (flexible / all day)</div>
         </div>
         <div>
-          <label for="tplFormPriority">Priority</label>
-          <select id="tplFormPriority">
+          <label for="tplFormPriority" style="margin:0 0 6px;">Priority</label>
+          <select id="tplFormPriority" style="margin-top:2px;">
             <option value="High">🔴 High Priority</option>
             <option value="Medium" selected>🟡 Medium Priority</option>
             <option value="Low">🟢 Low Priority</option>
           </select>
         </div>
       </div>
+
 
       <label for="tplFormSegment">Segment / Venue Tag (Optional)</label>
       <input type="text" id="tplFormSegment" placeholder="e.g. Clinic, Hospital, Gym, Research, Library" />

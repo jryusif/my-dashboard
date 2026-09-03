@@ -6762,6 +6762,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   display: block;
 }
 .weekly-template-modal input[type="text"],
+.weekly-template-modal input[type="time"],
 .weekly-template-modal select {
   width: 100%;
   background: rgba(0, 0, 0, 0.45);
@@ -6769,16 +6770,190 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   border-radius: var(--radius-sm);
   padding: 9px 12px;
   color: #fff;
+  color-scheme: dark;
   font-family: var(--font-body);
   font-size: 13px;
   transition: all var(--transition-fast);
   box-sizing: border-box;
 }
 .weekly-template-modal input[type="text"]:focus,
+.weekly-template-modal input[type="time"]:focus,
 .weekly-template-modal select:focus {
   border-color: #38bdf8;
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
   outline: none;
+}
+
+/* Day Selection & Multi-Day Pills */
+.form-group-day-select {
+  margin-top: 8px;
+}
+.tpl-count-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.tpl-quick-link {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+}
+.tpl-quick-link:hover {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+}
+.tpl-day-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.tpl-day-pill {
+  appearance: none;
+  flex: 1 1 calc(14% - 6px);
+  min-width: 50px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  color: var(--ink-mid);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+.tpl-day-pill .pill-check {
+  display: none;
+  font-size: 10px;
+  font-weight: 800;
+}
+.tpl-day-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.tpl-day-pill.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.26) 0%, rgba(14, 165, 233, 0.16) 100%);
+  border-color: #38bdf8;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.tpl-day-pill.active .pill-check {
+  display: inline-block;
+  color: #38bdf8;
+}
+.tpl-day-error {
+  color: #f87171;
+  font-size: 11.5px;
+  font-weight: 600;
+  margin: 6px 0 0;
+}
+
+/* Time Picker, Inputs & Presets */
+.tpl-time-picker-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tpl-time-inputs-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.tpl-time-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tpl-time-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.tpl-time-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  color: #fff;
+  color-scheme: dark;
+  font-family: var(--font-body);
+  font-size: 13px;
+  box-sizing: border-box;
+  transition: all var(--transition-fast);
+}
+.tpl-time-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+  outline: none;
+}
+.tpl-time-sep {
+  color: var(--ink-soft);
+  font-size: 14px;
+  padding-top: 14px;
+}
+.tpl-time-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+.tpl-preset-btn {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 7px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+.tpl-preset-btn:hover {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #e0f2fe;
+}
+.tpl-preset-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+.tpl-time-preview {
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  margin-top: 2px;
+  transition: color var(--transition-fast);
+}
+.tpl-time-preview.has-time {
+  color: #38bdf8;
 }
 
 /* =====================================================================

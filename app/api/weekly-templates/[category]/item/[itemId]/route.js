@@ -69,21 +69,33 @@ export async function PATCH(req, { params }) {
       }
     });
 
-    // Add updated item to target day
-    const updatedItem = {
-      id: itemId,
-      task,
-      title: task,
-      segment,
-      priority,
-      time,
-      isOff
-    };
-
-    if (!Array.isArray(currentDays[day])) {
-      currentDays[day] = [];
+    let targetDays = [];
+    if (Array.isArray(body.days) && body.days.length > 0) {
+      targetDays = body.days;
+    } else if (body.day) {
+      targetDays = [body.day];
+    } else {
+      targetDays = ['Saturday'];
     }
-    currentDays[day].push(updatedItem);
+
+    let updatedItem = null;
+    targetDays.forEach((targetDay, idx) => {
+      const itemToSave = {
+        id: idx === 0 ? itemId : `tpl_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 5)}`,
+        task,
+        title: task,
+        segment,
+        priority,
+        time,
+        isOff
+      };
+      if (idx === 0) updatedItem = itemToSave;
+
+      if (!Array.isArray(currentDays[targetDay])) {
+        currentDays[targetDay] = [];
+      }
+      currentDays[targetDay].push(itemToSave);
+    });
 
     const savedDays = await saveUserWeeklyTemplate(auth.userId, category, currentDays);
 
