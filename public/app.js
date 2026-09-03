@@ -5336,6 +5336,14 @@ const dentalFormModalTitle      = document.getElementById('dentalFormModalTitle'
 const dentalFormCaseId          = document.getElementById('dentalFormCaseId');
 const dentalFormTitle           = document.getElementById('dentalFormTitle');
 const dentalFormPatientCode     = document.getElementById('dentalFormPatientCode');
+
+// Generates a unique patient code like PT-2026-4831
+function generatePatientCode() {
+  const year = new Date().getFullYear();
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `PT-${year}-${rand}`;
+}
+window.generatePatientCode = generatePatientCode;
 const dentalFormDate            = document.getElementById('dentalFormDate');
 const dentalFormSpecialty       = document.getElementById('dentalFormSpecialty');
 const dentalFormTeeth           = document.getElementById('dentalFormTeeth');
@@ -6225,6 +6233,8 @@ function openDentalCaseFormModal(caseToEdit = null) {
     dentalFormModalTitle.textContent = 'New Clinical Case';
     dentalFormCaseId.value = '';
     dentalFormDate.value = toISODate(new Date());
+    // Auto-generate a fresh patient code for every new case
+    dentalFormPatientCode.value = generatePatientCode();
     beforeImgPreview.hidden = true;
     beforeEmptyPlaceholder.hidden = false;
     afterImgPreview.hidden = true;
