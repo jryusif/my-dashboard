@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma.js';
 import { getAuthUser, errorResponse, successResponse } from '@/lib/auth.js';
 
 async function resolveAndCheckDentalUser(req) {
-  const auth = getAuthUser(req);
+  const auth = await getAuthUser(req);  // ← was missing await
   if (!auth || !auth.authenticated || !auth.userId) return { error: 'Unauthorized', status: 401 };
   const user = await prisma.user.findUnique({
     where: { id: auth.userId },
@@ -17,7 +17,7 @@ async function resolveAndCheckDentalUser(req) {
   return { userId: user.id };
 }
 
-export async function PUT(req, { params }) {
+async function handleUpdate(req, params) {
   try {
     const authCheck = await resolveAndCheckDentalUser(req);
     if (authCheck.error) return errorResponse(authCheck.error, authCheck.status);
@@ -42,6 +42,15 @@ export async function PUT(req, { params }) {
     console.error('Error updating dental case:', err);
     return errorResponse('Could not update dental case.');
   }
+}
+
+// Support both PUT and PATCH (frontend submits PATCH)
+export async function PUT(req, { params }) {
+  return handleUpdate(req, params);
+}
+
+export async function PATCH(req, { params }) {
+  return handleUpdate(req, params);
 }
 
 export async function DELETE(req, { params }) {

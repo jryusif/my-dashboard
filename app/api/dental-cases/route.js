@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma.js';
 import { getAuthUser, errorResponse, successResponse } from '@/lib/auth.js';
 
 async function resolveAndCheckDentalUser(req) {
-  const auth = getAuthUser(req);
+  const auth = await getAuthUser(req);
   if (!auth || !auth.authenticated || !auth.userId) return { error: 'Unauthorized', status: 401 };
   const user = await prisma.user.findUnique({
     where: { id: auth.userId },
