@@ -339,34 +339,40 @@
            =================================================================== -->
       <header class="main-top-navbar" id="mainTopNavbar">
 
-        <!-- Dedicated Pro Sidebar Toggle (Aligned with Navbar Dock) -->
-        <button type="button" class="btn-sidebar-toggle" id="btnSidebarToggle" title="Toggle Tasks &amp; Routines Sidebar (Ctrl+\)" aria-label="Toggle Tasks &amp; Routines Sidebar">
-          <div class="toggle-icon-wrap">
-            <span class="toggle-bar bar-1"></span>
-            <span class="toggle-bar bar-2"></span>
-            <span class="toggle-bar bar-3"></span>
-          </div>
-        </button>
+        <!-- ZONE 1: LEFT WING — Sidebar Toggle & Fast Quick-Capture Launcher -->
+        <div class="nav-left-zone">
+          <button type="button" class="btn-sidebar-toggle" id="btnSidebarToggle" title="Toggle Tasks &amp; Routines Sidebar (Ctrl+\)" aria-label="Toggle Tasks &amp; Routines Sidebar">
+            <div class="toggle-icon-wrap">
+              <span class="toggle-bar bar-1"></span>
+              <span class="toggle-bar bar-2"></span>
+              <span class="toggle-bar bar-3"></span>
+            </div>
+          </button>
+          <button type="button" class="nav-quick-jump-btn" onclick="openBrainDumpPalette()" title="Universal Brain Dump Quick-Capture (Ctrl + Space)">
+            <span class="jump-spark-icon">⚡</span>
+            <span class="jump-label">Quick Capture</span>
+            <kbd class="jump-kbd">Ctrl+Space</kbd>
+          </button>
+        </div>
 
-        <!-- MASTER LIVE STATION DOCK (When sidebar is hidden) -->
+        <!-- ZONE 2: CENTERPIECE — 3D Mechanical Split-Flap Clock & Live Date Station -->
         <div class="header-flip-clock-wrap" id="headerFlipClockWrap">
-          <div class="header-live-dock">
-            
-            <!-- 1. Live Indicator & Calendar Badge -->
+          <div class="header-chrono-dock" id="headerChronoDock">
+            <!-- Live Indicator & Interactive Calendar Pin -->
             <div class="dock-meta-group">
               <div class="flip-clock-live-badge">
                 <span class="live-pulse-dot"></span>
                 <span>LIVE</span>
               </div>
-              <div class="flip-paper-calendar" id="flipPaperCalendar" onclick="openCalendarModal()" title="Current Live Date — Click to Open Smart Calendar" style="cursor: pointer;">
+              <div class="flip-paper-calendar" id="flipPaperCalendar" onclick="openCalendarModal()" title="Current Live Date — Click to Open Smart Calendar OS" style="cursor: pointer;">
                 <span class="calendar-flip-pin">📅</span>
                 <span class="calendar-flip-text" id="headerFlipDateText">Monday, August 31</span>
               </div>
             </div>
 
-            <div class="dock-divider"></div>
+            <div class="chrono-seam-divider"></div>
 
-            <!-- 2. Centerpiece 3D Mechanical Flip Clock -->
+            <!-- Centerpiece 3D Mechanical Flip Clock -->
             <div class="mechanical-flip-clock" id="mechanicalFlipClock" title="Real-Time 3D Mechanical Flip Clock">
               <!-- Hours -->
               <div class="flip-digit-tile" id="flipTileHours">
@@ -387,10 +393,38 @@
               </div>
               <div class="flip-ampm-tag" id="flipAmpmTag">PM</div>
             </div>
+          </div>
+        </div>
 
-            <div class="dock-divider"></div>
+        <!-- ZONE 3: RIGHT WING — Productivity Suite Dock & System/User Control Center -->
+        <div class="nav-right-zone">
+          <!-- Sub-Island A: Productivity Suite Dock (Brain Dump, Habits, Calendar, Triage) -->
+          <div class="nav-apps-dock" id="navAppsDock" role="toolbar" aria-label="Productivity Apps">
+            <button type="button" class="btn-app-dock app-dock-braindump" id="btnHeaderBrainDump" onclick="openBrainDumpPalette()" title="Universal Brain Dump Quick-Capture (Ctrl + Space)">
+              <span class="app-dock-icon">⚡</span>
+              <span class="app-dock-label">Brain Dump</span>
+              <span class="app-dock-badge" id="headerBrainDumpBadge">0</span>
+            </button>
 
-            <!-- 3. Notification & Settings Quick Bar -->
+            <button type="button" class="btn-app-dock app-dock-habits" id="btnHeaderHabitTracker" onclick="openHabitTrackerModal()" title="HabitOS Behavioral Habit Tracker &amp; Streaks">
+              <span class="app-dock-icon">🔥</span>
+              <span class="app-dock-label">Habits</span>
+              <span class="app-dock-badge badge-orange" id="headerHabitBadge">0/0</span>
+            </button>
+
+            <button type="button" class="btn-app-dock app-dock-calendar" id="btnHeaderCalendar" onclick="openCalendarModal()" title="Smart Calendar OS &amp; Task Timeline">
+              <span class="app-dock-icon">📅</span>
+              <span class="app-dock-label">Calendar</span>
+              <span class="app-dock-badge badge-indigo" id="headerCalendarBadge">0</span>
+            </button>
+
+            <button type="button" class="btn-app-dock-triage" id="btnHeaderTriage" onclick="openEveningTriageModal()" title="Nightly Triage Ritual (8 PM)">
+              <span class="app-triage-icon">🌙</span>
+            </button>
+          </div>
+
+          <!-- Sub-Island B: Alerts & User Account Control Capsule -->
+          <div class="nav-system-dock" id="navSystemDock">
             <div class="dock-notification-group">
               <button type="button" class="btn-dock-notification" id="btnHeaderNotificationBell" title="Reminders &amp; Notifications" aria-haspopup="dialog">
                 <span class="dock-bell-icon">🔔</span>
@@ -401,54 +435,15 @@
               </button>
             </div>
 
-            <div class="dock-divider"></div>
-
-            <!-- Brain Dump Quick Capture & Triage Dock Capsule -->
-            <div class="dock-braindump-group">
-              <button type="button" class="btn-dock-braindump" id="btnHeaderBrainDump" onclick="openBrainDumpPalette()" title="Universal Brain Dump Quick-Capture (Ctrl + Space)">
-                <span class="dock-braindump-icon">⚡</span>
-                <span class="dock-braindump-label">Brain Dump</span>
-                <span class="dock-braindump-badge" id="headerBrainDumpBadge">0</span>
-              </button>
-              <button type="button" class="btn-dock-triage" id="btnHeaderTriage" onclick="openEveningTriageModal()" title="2-Minute Nightly Triage Ritual (8 PM)">
-                <span class="dock-triage-icon">🌙</span>
-              </button>
-            </div>
-
-            <div class="dock-divider"></div>
-
-            <!-- HabitOS Behavioral Habit Tracker Dock Capsule -->
-            <div class="dock-habit-group">
-              <button type="button" class="btn-dock-habit" id="btnHeaderHabitTracker" onclick="openHabitTrackerModal()" title="HabitOS Behavioral Habit Tracker & Streaks">
-                <span class="dock-habit-icon">🔥</span>
-                <span class="dock-habit-label">Habits</span>
-                <span class="dock-habit-badge" id="headerHabitBadge">0/0</span>
-              </button>
-            </div>
-
-            <div class="dock-divider"></div>
-
-            <!-- Smart Calendar OS Dock Capsule -->
-            <div class="dock-calendar-group">
-              <button type="button" class="btn-dock-calendar" id="btnHeaderCalendar" onclick="openCalendarModal()" title="Smart Calendar OS &amp; Task Timeline">
-                <span class="dock-calendar-icon">📅</span>
-                <span class="dock-calendar-label">Calendar</span>
-                <span class="dock-calendar-badge" id="headerCalendarBadge">0</span>
-              </button>
-            </div>
-
-            <div class="dock-divider"></div>
-
-            <!-- 4. User Account Capsule & Dropdown -->
             <div class="dock-user-capsule" id="userAuthCapsule">
               <!-- Admin Command Center Pill (Visible for Admins) -->
               <button type="button" class="btn-dock-admin-pill" id="btnDockAdminQuick" style="display: none;" title="Admin Command Center" onclick="openAdminSection()">
                 <span class="admin-crown-icon">👑</span>
-                <span class="admin-pill-text">Admin Panel</span>
+                <span class="admin-pill-text">Admin</span>
                 <span class="dock-admin-badge" id="dockAdminPendingBadge" style="display: none;">0</span>
               </button>
 
-              <button type="button" class="btn-dock-user" id="btnAuthProfile" onclick="handleUserCapsuleClick()" title="Account & Profile">
+              <button type="button" class="btn-dock-user" id="btnAuthProfile" onclick="handleUserCapsuleClick()" title="Account &amp; Profile">
                 <span class="user-avatar-icon" id="dockUserAvatar">👤</span>
                 <span class="user-email-text" id="userEmailLabel">Sign In</span>
                 <span class="user-capsule-arrow">▾</span>
@@ -485,7 +480,6 @@
                 <span>🚪</span>
               </button>
             </div>
-
           </div>
         </div>
       </header>
