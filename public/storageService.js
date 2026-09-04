@@ -217,7 +217,7 @@
         created_at: now,
         updated_at: now,
         deleted_at: null,
-        sync_status: 'pending_sync',
+        sync_status: taskData.sync_status || 'pending_sync',
       });
 
       const current = readRaw(STORAGE_KEYS.TASKS, []);
@@ -226,6 +226,58 @@
 
       notifyChange('tasks', 'create', newTask);
       return newTask;
+    },
+
+    bulkUpsert(tasksList) {
+      if (!Array.isArray(tasksList) || tasksList.length === 0) return [];
+      const current = readRaw(STORAGE_KEYS.TASKS, []);
+      const map = new Map(current.map(t => [String(t.id), t]));
+      const now = new Date().toISOString();
+
+      tasksList.forEach(incoming => {
+        const id = String(incoming.id || generateUUID());
+        const existing = map.get(id);
+        if (!existing) {
+          const newTask = normalizeRecord({
+            id,
+            title: (incoming.title || incoming.task || '').trim() || 'Untitled Task',
+            description: incoming.description !== undefined ? incoming.description : (incoming.segment ? `Segment: ${incoming.segment}` : ''),
+            date: incoming.date || incoming.dueDate || now.split('T')[0],
+            time: incoming.time || incoming.timeBlock || '10:00',
+            category: incoming.category || 'Work',
+            priority: (incoming.priority || 'medium').toLowerCase(),
+            completed: Boolean(incoming.completed),
+            completed_at: incoming.completed ? (incoming.completed_at || now) : null,
+            recurrence: incoming.recurrence || 'none',
+            subtasks: Array.isArray(incoming.subtasks) ? incoming.subtasks : [],
+            created_at: incoming.created_at || incoming.createdAt || now,
+            updated_at: incoming.updated_at || incoming.updatedAt || now,
+            deleted_at: incoming.deleted_at !== undefined ? incoming.deleted_at : null,
+            sync_status: incoming.sync_status || 'synced',
+          });
+          map.set(id, newTask);
+        } else if (existing.sync_status !== 'pending_sync') {
+          const updated = normalizeRecord({
+            ...existing,
+            title: incoming.title || incoming.task || existing.title,
+            description: incoming.description !== undefined ? incoming.description : (incoming.segment ? `Segment: ${incoming.segment}` : existing.description),
+            date: incoming.date || incoming.dueDate || existing.date,
+            time: incoming.time || incoming.timeBlock || existing.time,
+            category: incoming.category || existing.category,
+            priority: (incoming.priority || existing.priority || 'medium').toLowerCase(),
+            completed: Boolean(incoming.completed),
+            completed_at: incoming.completed ? (existing.completed_at || now) : null,
+            updated_at: incoming.updated_at || now,
+            sync_status: incoming.sync_status || 'synced',
+          });
+          map.set(id, updated);
+        }
+      });
+
+      const merged = Array.from(map.values());
+      writeRaw(STORAGE_KEYS.TASKS, merged);
+      notifyChange('tasks', 'bulk', merged);
+      return merged;
     },
 
     update(id, partialUpdates) {
@@ -239,7 +291,7 @@
             ...item,
             ...partialUpdates,
             updated_at: now,
-            sync_status: 'pending_sync',
+            sync_status: partialUpdates.sync_status !== undefined ? partialUpdates.sync_status : (item.sync_status || 'pending_sync'),
           });
           return updatedItem;
         }

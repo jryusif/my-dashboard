@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=26.0" />
+<link rel="stylesheet" href="style.css?v=27.0" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -4414,11 +4414,13 @@
         <div class="cal-filter-categories" id="calCategoryFilters">
           <button type="button" class="cal-filter-chip active" data-cat="all" onclick="setCalCategoryFilter('all')">All Categories</button>
           <button type="button" class="cal-filter-chip" data-cat="Work" onclick="setCalCategoryFilter('Work')"><span class="cal-cat-dot dot-work"></span>Work</button>
-          <button type="button" class="cal-filter-chip" data-cat="Personal" onclick="setCalCategoryFilter('Personal')"><span class="cal-cat-dot dot-personal"></span>Personal</button>
-          <button type="button" class="cal-filter-chip" data-cat="Health" onclick="setCalCategoryFilter('Health')"><span class="cal-cat-dot dot-health"></span>Health</button>
           <button type="button" class="cal-filter-chip" data-cat="Study" onclick="setCalCategoryFilter('Study')"><span class="cal-cat-dot dot-study"></span>Study</button>
+          <button type="button" class="cal-filter-chip" data-cat="Trading" onclick="setCalCategoryFilter('Trading')"><span class="cal-cat-dot dot-trading"></span>Trading</button>
+          <button type="button" class="cal-filter-chip" data-cat="Religion" onclick="setCalCategoryFilter('Religion')"><span class="cal-cat-dot dot-religion"></span>Religion</button>
           <button type="button" class="cal-filter-chip" data-cat="Finance" onclick="setCalCategoryFilter('Finance')"><span class="cal-cat-dot dot-finance"></span>Finance</button>
           <button type="button" class="cal-filter-chip" data-cat="Dental Cases" onclick="setCalCategoryFilter('Dental Cases')"><span class="cal-cat-dot dot-dental"></span>🦷 Dental</button>
+          <button type="button" class="cal-filter-chip" data-cat="Health" onclick="setCalCategoryFilter('Health')"><span class="cal-cat-dot dot-health"></span>Health</button>
+          <button type="button" class="cal-filter-chip" data-cat="Personal" onclick="setCalCategoryFilter('Personal')"><span class="cal-cat-dot dot-personal"></span>Personal</button>
         </div>
 
         <!-- Priority & Status Dropdowns -->
@@ -4610,11 +4612,14 @@
           <div class="cal-form-group flex-1">
             <label for="calTaskCategorySelect">Category / Workspace</label>
             <select id="calTaskCategorySelect" class="cal-select">
-              <option value="Work">💼 Work</option>
+              <option value="Work">💼 Work &amp; Clinic</option>
+              <option value="Studies">📚 Studies &amp; Learning</option>
+              <option value="Us stocks trading">📈 US Stocks Trading</option>
+              <option value="Religion">🕌 Religion &amp; Reflection</option>
+              <option value="Finance">💰 Finance &amp; Wealth</option>
+              <option value="Dental Cases">🦷 Dental Cases &amp; Clinical Tasks</option>
+              <option value="Health">💪 Health &amp; Workouts</option>
               <option value="Personal">🏡 Personal</option>
-              <option value="Health">💪 Health &amp; Fitness</option>
-              <option value="Study">📚 Study &amp; Learning</option>
-              <option value="Finance">💰 Finance &amp; Trading</option>
               <option value="General">📌 General</option>
             </select>
           </div>
@@ -4762,7 +4767,7 @@
   <!-- Chart.js Engine -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
-  <script src="storageService.js?v=26.0"></script>
-  <script src="app.js?v=26.0"></script>
+  <script src="storageService.js?v=27.0"></script>
+  <script src="app.js?v=27.0"></script>
 </body>
 </html>

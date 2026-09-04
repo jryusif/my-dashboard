@@ -15777,108 +15777,113 @@ function isCalTaskOverdue(task) {
 // ── Category Styles Mapping ──
 const CAL_CATEGORY_MAP = {
   work: { name: 'Work', pillClass: 'cal-pill-work', dotClass: 'dot-work' },
-  personal: { name: 'Personal', pillClass: 'cal-pill-personal', dotClass: 'dot-personal' },
-  health: { name: 'Health', pillClass: 'cal-pill-health', dotClass: 'dot-health' },
   study: { name: 'Study', pillClass: 'cal-pill-study', dotClass: 'dot-study' },
+  trading: { name: 'Trading', pillClass: 'cal-pill-trading', dotClass: 'dot-trading' },
+  religion: { name: 'Religion', pillClass: 'cal-pill-religion', dotClass: 'dot-religion' },
   finance: { name: 'Finance', pillClass: 'cal-pill-finance', dotClass: 'dot-finance' },
+  health: { name: 'Health', pillClass: 'cal-pill-health', dotClass: 'dot-health' },
+  dental: { name: 'Dental Cases', pillClass: 'cal-pill-dental', dotClass: 'dot-dental' },
   habits: { name: 'Habits', pillClass: 'cal-pill-habits', dotClass: 'dot-habits' },
   routines: { name: 'Routines', pillClass: 'cal-pill-routines', dotClass: 'dot-routines' },
-  dental: { name: 'Dental Cases', pillClass: 'cal-pill-dental', dotClass: 'dot-dental' },
+  personal: { name: 'Personal', pillClass: 'cal-pill-personal', dotClass: 'dot-personal' },
   general: { name: 'General', pillClass: 'cal-pill-general', dotClass: 'dot-general' },
 };
 
+function normalizeCalCategory(cat) {
+  const c = String(cat || '').toLowerCase().trim();
+  if (!c) return 'general';
+  if (c.includes('trad') || c.includes('stock')) return 'trading';
+  if (c.includes('relig') || c.includes('quran') || c.includes('prayer')) return 'religion';
+  if (c.includes('stud') || c.includes('learn') || c.includes('exam')) return 'study';
+  if (c.includes('dent') || c.includes('teeth') || c.includes('clinic') || c.includes('patient')) return 'dental';
+  if (c.includes('finan') || c.includes('money') || c.includes('wealth')) return 'finance';
+  if (c.includes('workout') || c.includes('gym') || c.includes('health') || c.includes('fitness')) return 'health';
+  if (c.includes('work')) return 'work';
+  if (c.includes('habit')) return 'habits';
+  if (c.includes('routine')) return 'routines';
+  if (c.includes('person')) return 'personal';
+  return c;
+}
+
 function getCalCategoryMeta(catName = '') {
-  const key = (catName || '').toLowerCase();
-  for (const [k, v] of Object.entries(CAL_CATEGORY_MAP)) {
-    if (key.includes(k)) return v;
-  }
-  return CAL_CATEGORY_MAP.general;
+  const norm = normalizeCalCategory(catName);
+  return CAL_CATEGORY_MAP[norm] || CAL_CATEGORY_MAP.general;
+}
+
+function isCalCategoryMatch(taskCat, filterCat) {
+  if (!filterCat || filterCat.toLowerCase() === 'all') return true;
+  const normFilter = normalizeCalCategory(filterCat);
+  const normTask = normalizeCalCategory(taskCat);
+  return normTask === normFilter;
 }
 
 // ── Universal Multi-Day Task Synchronizer (Database <-> Local-First Storage) ──
 async function syncAllWebsiteTasksWithCalendar() {
   if (!currentUser || !authToken) return;
   try {
-    const res = await fetch('/api/tasks');
-    if (!res.ok) return;
-    const data = await res.json();
-    const serverTasks = data.tasks || [];
+    const authHeaders = {
+      'Authorization': `Bearer ${authToken}`,
+      'Content-Type': 'application/json'
+    };
 
-    if (window.StorageService && Array.isArray(serverTasks)) {
-      const localTasks = window.StorageService.tasks.getAll(true);
-      const localMap = new Map(localTasks.map(t => [String(t.id), t]));
+    // 1. Fetch all user tasks from the database (all categories: Work, Studies, Us stocks trading, Religion, Finance, Dental Cases, etc.)
+    const res = await fetch('/api/tasks', { headers: { 'Authorization': `Bearer ${authToken}` } });
+    if (res.ok) {
+      const data = await res.json();
+      const serverTasks = data.tasks || [];
 
-      // 1. Reconcile server tasks into StorageService
-      serverTasks.forEach(apiTask => {
-        const taskId = String(apiTask.id);
-        const match = localMap.get(taskId);
-        if (!match) {
-          window.StorageService.tasks.create({
-            id: taskId,
-            title: apiTask.title || apiTask.task || 'Untitled Task',
-            description: apiTask.segment ? `Segment: ${apiTask.segment}` : '',
-            date: apiTask.date || apiTask.dueDate || toISODate(new Date()),
-            time: apiTask.timeBlock || '10:00',
-            category: apiTask.category || 'Work',
-            priority: (apiTask.priority || 'medium').toLowerCase(),
-            completed: Boolean(apiTask.completed),
-            sync_status: 'synced',
-          });
-        } else if (match.sync_status !== 'pending_sync') {
-          if (
-            match.completed !== Boolean(apiTask.completed) ||
-            match.title !== (apiTask.title || apiTask.task) ||
-            match.date !== (apiTask.date || apiTask.dueDate) ||
-            match.category !== (apiTask.category || 'Work')
-          ) {
-            window.StorageService.tasks.update(match.id, {
-              completed: Boolean(apiTask.completed),
-              title: apiTask.title || apiTask.task || match.title,
-              date: apiTask.date || apiTask.dueDate || match.date,
-              time: apiTask.timeBlock || match.time,
-              category: apiTask.category || match.category,
-              priority: (apiTask.priority || match.priority || 'medium').toLowerCase(),
-              sync_status: 'synced',
-            });
+      if (window.StorageService && Array.isArray(serverTasks)) {
+        const mappedServerTasks = serverTasks.map(apiTask => ({
+          id: String(apiTask.id),
+          title: apiTask.title || apiTask.task || 'Untitled Task',
+          description: apiTask.segment ? `Segment: ${apiTask.segment}` : '',
+          date: apiTask.date || apiTask.dueDate || toISODate(new Date()),
+          time: apiTask.timeBlock || '10:00',
+          category: apiTask.category || 'Work',
+          priority: (apiTask.priority || 'medium').toLowerCase(),
+          completed: Boolean(apiTask.completed),
+          sync_status: 'synced',
+        }));
+
+        window.StorageService.tasks.bulkUpsert(mappedServerTasks);
+
+        // Opportunistically push any pending local tasks to server
+        const localTasks = window.StorageService.tasks.getAll(true);
+        const pending = localTasks.filter(t => t.sync_status === 'pending_sync');
+        for (const p of pending) {
+          if (p.deleted_at) {
+            try {
+              await fetch(`/api/tasks/${p.id}`, { method: 'DELETE', headers: authHeaders });
+              window.StorageService.tasks.delete(p.id, true);
+            } catch (_) {}
+          } else {
+            try {
+              const createRes = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: authHeaders,
+                body: JSON.stringify({
+                  id: p.id,
+                  title: p.title,
+                  date: p.date,
+                  timeBlock: p.time,
+                  category: p.category,
+                  priority: p.priority === 'high' ? 'High' : p.priority === 'low' ? 'Low' : 'Medium',
+                  completed: p.completed,
+                })
+              });
+              if (createRes.ok) {
+                window.StorageService.tasks.update(p.id, { sync_status: 'synced' });
+              }
+            } catch (_) {}
           }
-        }
-      });
-
-      // 2. Opportunistically push any pending local tasks to server
-      const pending = localTasks.filter(t => t.sync_status === 'pending_sync');
-      for (const p of pending) {
-        if (p.deleted_at) {
-          try {
-            await fetch(`/api/tasks/${p.id}`, { method: 'DELETE' });
-            window.StorageService.tasks.delete(p.id, true);
-          } catch (_) {}
-        } else {
-          try {
-            const createRes = await fetch('/api/tasks', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                id: p.id,
-                title: p.title,
-                date: p.date,
-                timeBlock: p.time,
-                category: p.category,
-                priority: p.priority === 'high' ? 'High' : p.priority === 'low' ? 'Low' : 'Medium',
-                completed: p.completed,
-              })
-            });
-            if (createRes.ok) {
-              window.StorageService.tasks.update(p.id, { sync_status: 'synced' });
-            }
-          } catch (_) {}
         }
       }
     }
 
-    // Opportunistically load dental cases into memory if accessible
-    if (typeof userCanAccessDental === 'function' && userCanAccessDental() && (!loadedDentalCases || loadedDentalCases.length === 0)) {
+    // 2. Fetch and synchronize Dental Clinical Cases (if user has access)
+    if (typeof userCanAccessDental === 'function' && userCanAccessDental()) {
       try {
-        const dentalRes = await fetch('/api/dental-cases');
+        const dentalRes = await fetch('/api/dental-cases', { headers: { 'Authorization': `Bearer ${authToken}` } });
         if (dentalRes.ok) {
           const dentalData = await dentalRes.json();
           loadedDentalCases = dentalData.cases || [];
@@ -15897,33 +15902,57 @@ async function syncAllWebsiteTasksWithCalendar() {
 }
 window.syncAllWebsiteTasksWithCalendar = syncAllWebsiteTasksWithCalendar;
 
-// ── Filtered Tasks Query (Includes Database Tasks and Dental Cases) ──
+// ── Filtered Tasks Query (Includes Database Tasks, Dental Cases, and Dental Procedure Step Tasks) ──
 function getCalFilteredTasks() {
   const repo = window.StorageService ? window.StorageService.tasks : null;
   const allTasks = repo ? repo.getAll(false) : [];
   const allEvents = [...allTasks];
 
-  // Inject Dental Clinical Cases (if user has access)
+  // Inject Dental Clinical Cases & Dental Procedure Step Tasks (if user has access)
   if (typeof userCanAccessDental === 'function' && userCanAccessDental() && Array.isArray(loadedDentalCases)) {
     loadedDentalCases.forEach(c => {
       if (!c.date) return;
+      const patientLabel = c.patientCode || 'Case';
+
+      // 1. Parent Dental Case Event
       allEvents.push({
         id: `dental_${c.id}`,
         isDentalCase: true,
         caseId: c.id,
-        title: `🦷 [${c.patientCode || 'Case'}] ${c.specialty}: ${c.diagnosis || 'Clinical Review'}`,
+        title: `🦷 [${patientLabel}] ${c.specialty || 'Clinical'}: ${c.diagnosis || c.title || 'Review'}`,
         description: c.clinicalNotes || c.treatmentPlan || '',
         date: c.date,
         time: '11:00',
         category: 'Dental Cases',
         priority: 'high',
-        completed: false,
-        subtasks: (c.steps || []).map(s => ({
-          id: s.id || (window.StorageService ? window.StorageService.generateUUID() : 'st_' + Date.now()),
-          title: s.title || `Phase ${s.phase || ''}`,
+        completed: (c.status || '').toLowerCase() === 'completed',
+        subtasks: (c.steps || []).map((s, sIdx) => ({
+          id: s.id || `st_${c.id}_${sIdx}`,
+          title: s.title || `Step ${s.stepNum || sIdx + 1}: ${s.desc || ''}`,
           completed: Boolean(s.completed),
         })),
       });
+
+      // 2. Individual Dental Procedure Step Tasks
+      if (Array.isArray(c.steps) && c.steps.length > 0) {
+        c.steps.forEach((s, idx) => {
+          const stepTitle = s.title || `Step ${s.stepNum || idx + 1}`;
+          const stepDate = s.date || c.date;
+          allEvents.push({
+            id: `dental_step_${c.id}_${s.id || s.stepNum || idx}`,
+            isDentalStep: true,
+            caseId: c.id,
+            stepIndex: idx,
+            title: `🦷 [${patientLabel}] Step ${s.stepNum || idx + 1}: ${stepTitle}`,
+            description: s.desc || s.details || `Dental procedure step for ${patientLabel}`,
+            date: stepDate,
+            time: s.time || (idx === 0 ? '11:30' : idx === 1 ? '14:00' : '16:00'),
+            category: 'Dental Cases',
+            priority: 'high',
+            completed: Boolean(s.completed),
+          });
+        });
+      }
     });
   }
 
@@ -15938,11 +15967,9 @@ function getCalFilteredTasks() {
       if (!matchTitle && !matchDesc && !matchSub) return false;
     }
 
-    // 2. Category Filter
+    // 2. Category Filter (uses unified normalizer)
     if (calState.selectedCategory !== 'all') {
-      const taskCat = (t.category || '').toLowerCase();
-      const filterCat = calState.selectedCategory.toLowerCase();
-      if (!taskCat.includes(filterCat)) return false;
+      if (!isCalCategoryMatch(t.category, calState.selectedCategory)) return false;
     }
 
     // 3. Priority Filter
@@ -16070,6 +16097,9 @@ function openCalendarModal(targetDateKey = '') {
   if (modal) {
     modal.hidden = false;
     renderCalendar();
+  }
+  if (typeof syncAllWebsiteTasksWithCalendar === 'function') {
+    syncAllWebsiteTasksWithCalendar();
   }
 }
 window.openCalendarModal = openCalendarModal;
@@ -16667,9 +16697,15 @@ window.handleSelectBrainDumpIntoCal = handleSelectBrainDumpIntoCal;
 function openCalEditTaskModal(taskId) {
   if (!taskId) return;
 
-  // 1. Virtual dental clinical case -> open dental drawer
+  // 1. Virtual dental clinical case or procedure step -> open dental drawer
   if (String(taskId).startsWith('dental_')) {
-    const caseId = String(taskId).replace('dental_', '');
+    let caseId = '';
+    if (String(taskId).startsWith('dental_step_')) {
+      const parts = String(taskId).split('_');
+      caseId = parts[2];
+    } else {
+      caseId = String(taskId).replace('dental_', '');
+    }
     closeCalendarModal();
     if (typeof openDentalCasesPage === 'function') openDentalCasesPage();
     setTimeout(() => {
@@ -16882,7 +16918,51 @@ function handleCalDeleteTask() {
 window.handleCalDeleteTask = handleCalDeleteTask;
 
 function toggleCalTaskComplete(taskId) {
-  if (!taskId || !window.StorageService) return;
+  if (!taskId) return;
+
+  // Handle Dental Cases and Dental Step tasks
+  if (String(taskId).startsWith('dental_')) {
+    if (String(taskId).startsWith('dental_step_')) {
+      const parts = String(taskId).split('_');
+      const caseId = parts[2];
+      const stepKey = parts.slice(3).join('_');
+      const c = (loadedDentalCases || []).find(item => String(item.id) === String(caseId));
+      if (c && Array.isArray(c.steps)) {
+        const step = c.steps.find((s, i) => String(s.id || s.stepNum || i) === String(stepKey)) || c.steps[parseInt(stepKey, 10)];
+        if (step) {
+          step.completed = !step.completed;
+          showToast(step.completed ? '🦷 Dental step marked complete!' : '🦷 Dental step reopened.');
+          if (authToken) {
+            fetch(`/api/dental-cases/${caseId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+              body: JSON.stringify({ steps: c.steps })
+            }).catch(() => {});
+          }
+          renderCalendar();
+          return;
+        }
+      }
+    }
+    const caseId = String(taskId).replace('dental_', '');
+    const c = (loadedDentalCases || []).find(item => String(item.id) === String(caseId));
+    if (c) {
+      const newStatus = (c.status || '').toLowerCase() === 'completed' ? 'In Progress' : 'Completed';
+      c.status = newStatus;
+      showToast(`🦷 Dental Case status set to ${newStatus}`);
+      if (authToken) {
+        fetch(`/api/dental-cases/${caseId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ status: newStatus })
+        }).catch(() => {});
+      }
+      renderCalendar();
+      return;
+    }
+  }
+
+  if (!window.StorageService) return;
   const updated = window.StorageService.tasks.toggleComplete(taskId);
   if (!updated) return;
 

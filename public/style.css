@@ -15855,6 +15855,8 @@ body.is-unauthenticated .btn-floating-braindump {
 .dot-health { background: #f43f5e; }
 .dot-study { background: #f59e0b; }
 .dot-finance { background: #06b6d4; }
+.dot-trading { background: #a855f7; }
+.dot-religion { background: #14b8a6; }
 .dot-habits { background: #f97316; }
 .dot-routines { background: #8b5cf6; }
 .dot-dental { background: #0ea5e9; }
@@ -16334,6 +16336,16 @@ body.is-unauthenticated .btn-floating-braindump {
   background: rgba(14, 165, 233, 0.2);
   color: #bae6fd;
   border: 1px solid rgba(14, 165, 233, 0.35);
+}
+.cal-pill-trading {
+  background: rgba(168, 85, 247, 0.2);
+  color: #e9d5ff;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+.cal-pill-religion {
+  background: rgba(20, 184, 166, 0.2);
+  color: #99f6e4;
+  border: 1px solid rgba(20, 184, 166, 0.35);
 }
 
 .cal-more-events-badge {
