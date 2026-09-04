@@ -312,6 +312,9 @@
           <button type="button" class="routine-btn braindump-quick-btn" id="sidebarBrainDumpBtn" onclick="openBrainDumpPalette()" style="grid-column: 1 / -1; background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.35);" title="Universal Brain Dump (Ctrl+Space)">
             <span class="routine-btn-icon">⚡</span> Quick Brain Dump <span style="margin-left:auto; font-size:10.5px; opacity:0.75; font-family:monospace; background:rgba(0,0,0,0.3); padding:1px 6px; border-radius:4px;">Ctrl+Space</span>
           </button>
+          <button type="button" class="routine-btn calendar-quick-btn" id="sidebarCalendarBtn" onclick="openCalendarModal()" style="grid-column: 1 / -1; background: rgba(99, 102, 241, 0.12); border-color: rgba(99, 102, 241, 0.35);" title="Smart Calendar OS &amp; Task Timeline">
+            <span class="routine-btn-icon">📅</span> Calendar OS Hub <span class="sidebar-cal-badge" id="sidebarCalendarBadge" style="margin-left:auto; font-size:10.5px; color:#a5b4fc; font-family:monospace; background:rgba(0,0,0,0.3); padding:1px 6px; border-radius:4px;">📅 0 today</span>
+          </button>
           <button type="button" class="routine-btn analytics-quick-btn" id="sidebarAnalyticsBtn" style="grid-column: 1 / -1; background: rgba(56, 189, 248, 0.08); border-color: rgba(56, 189, 248, 0.3);">
             <span class="routine-btn-icon">📊</span> Progress &amp; Charts Hub
           </button>
@@ -355,7 +358,7 @@
                 <span class="live-pulse-dot"></span>
                 <span>LIVE</span>
               </div>
-              <div class="flip-paper-calendar" id="flipPaperCalendar" title="Current Live Date">
+              <div class="flip-paper-calendar" id="flipPaperCalendar" onclick="openCalendarModal()" title="Current Live Date — Click to Open Smart Calendar" style="cursor: pointer;">
                 <span class="calendar-flip-pin">📅</span>
                 <span class="calendar-flip-text" id="headerFlipDateText">Monday, August 31</span>
               </div>
@@ -420,6 +423,17 @@
                 <span class="dock-habit-icon">🔥</span>
                 <span class="dock-habit-label">Habits</span>
                 <span class="dock-habit-badge" id="headerHabitBadge">0/0</span>
+              </button>
+            </div>
+
+            <div class="dock-divider"></div>
+
+            <!-- Smart Calendar OS Dock Capsule -->
+            <div class="dock-calendar-group">
+              <button type="button" class="btn-dock-calendar" id="btnHeaderCalendar" onclick="openCalendarModal()" title="Smart Calendar OS &amp; Task Timeline">
+                <span class="dock-calendar-icon">📅</span>
+                <span class="dock-calendar-label">Calendar</span>
+                <span class="dock-calendar-badge" id="headerCalendarBadge">0</span>
               </button>
             </div>
 
@@ -4342,6 +4356,380 @@
   </div>
 
   <!-- ===================================================================
+       SMART CALENDAR OS COMMAND CENTER MODAL
+       =================================================================== -->
+  <div class="calendar-modal-backdrop" id="calendarModal" hidden>
+    <div class="calendar-modal-container" id="calendarModalContainer">
+      
+      <!-- Top Navigation & Brand Bar -->
+      <header class="cal-header">
+        <div class="cal-header-brand">
+          <div class="cal-brand-badge">📅</div>
+          <div class="cal-brand-meta">
+            <div class="cal-brand-title-row">
+              <h2 class="cal-brand-title">Smart Calendar OS</h2>
+              <span class="cal-brand-pill">Unified Engine</span>
+            </div>
+            <p class="cal-brand-subtitle">Time blocking, multi-view schedules &amp; bi-directional task sync</p>
+          </div>
+        </div>
+
+        <!-- Center: Date Controls & Active Period -->
+        <div class="cal-header-nav">
+          <button type="button" class="cal-nav-btn" id="calNavPrev" onclick="calPrevPeriod()" title="Previous Period (P / ←)">
+            <span>‹</span>
+          </button>
+          <button type="button" class="cal-btn-today" id="calNavToday" onclick="calGoToToday()" title="Jump to Today (T)">
+            Today
+          </button>
+          <button type="button" class="cal-nav-btn" id="calNavNext" onclick="calNextPeriod()" title="Next Period (N / →)">
+            <span>›</span>
+          </button>
+          <div class="cal-current-label" id="calCurrentPeriodLabel">September 2026</div>
+        </div>
+
+        <!-- Right: View Switcher & Action Controls -->
+        <div class="cal-header-actions">
+          <!-- View Switcher -->
+          <div class="cal-view-pills">
+            <button type="button" class="cal-view-pill active" id="calViewMonthBtn" onclick="setCalView('month')" title="Month View (M)">Month</button>
+            <button type="button" class="cal-view-pill" id="calViewWeekBtn" onclick="setCalView('week')" title="Week Timeline (W)">Week</button>
+            <button type="button" class="cal-view-pill" id="calViewDayBtn" onclick="setCalView('day')" title="Day Agenda (D)">Day</button>
+          </div>
+
+          <!-- Action Buttons -->
+          <button type="button" class="cal-btn-action" id="calBtnToggleStats" onclick="toggleCalStats()" title="Toggle Productivity Analytics">
+            <span>📊</span> <span class="cal-action-label">Stats</span>
+          </button>
+          <button type="button" class="cal-btn-action" id="calBtnExportModal" onclick="openCalExportModal()" title="Sync, Backup &amp; iCal Export">
+            <span>💾</span> <span class="cal-action-label">Backup / iCal</span>
+          </button>
+          <button type="button" class="cal-btn-primary" id="calBtnNewTask" onclick="openCalNewTaskModal()" title="Create New Task (C)">
+            <span>+</span> <span>New Task</span>
+          </button>
+          <button type="button" class="btn-cal-close" onclick="closeCalendarModal()" aria-label="Close Calendar">✕</button>
+        </div>
+      </header>
+
+      <!-- Sub-Bar: Filter Bar & Live Search -->
+      <div class="cal-toolbar">
+        <div class="cal-search-wrap">
+          <span class="cal-search-icon">🔍</span>
+          <input type="text" class="cal-search-input" id="calSearchInput" placeholder="Search tasks, notes, checklists... (Press /)" oninput="handleCalSearch(this.value)" />
+          <button type="button" class="cal-search-clear" id="calSearchClear" onclick="clearCalSearch()" style="display: none;">✕</button>
+        </div>
+
+        <!-- Category Filters -->
+        <div class="cal-filter-categories" id="calCategoryFilters">
+          <button type="button" class="cal-filter-chip active" data-cat="all" onclick="setCalCategoryFilter('all')">All Categories</button>
+          <button type="button" class="cal-filter-chip" data-cat="Work" onclick="setCalCategoryFilter('Work')"><span class="cal-cat-dot dot-work"></span>Work</button>
+          <button type="button" class="cal-filter-chip" data-cat="Personal" onclick="setCalCategoryFilter('Personal')"><span class="cal-cat-dot dot-personal"></span>Personal</button>
+          <button type="button" class="cal-filter-chip" data-cat="Health" onclick="setCalCategoryFilter('Health')"><span class="cal-cat-dot dot-health"></span>Health</button>
+          <button type="button" class="cal-filter-chip" data-cat="Study" onclick="setCalCategoryFilter('Study')"><span class="cal-cat-dot dot-study"></span>Study</button>
+          <button type="button" class="cal-filter-chip" data-cat="Finance" onclick="setCalCategoryFilter('Finance')"><span class="cal-cat-dot dot-finance"></span>Finance</button>
+        </div>
+
+        <!-- Priority & Status Dropdowns -->
+        <div class="cal-dropdown-filters">
+          <select id="calPriorityFilter" class="cal-select-filter" onchange="setCalPriorityFilter(this.value)">
+            <option value="all">All Priorities</option>
+            <option value="high">High Priority</option>
+            <option value="medium">Medium Priority</option>
+            <option value="low">Low Priority</option>
+          </select>
+          <select id="calStatusFilter" class="cal-select-filter" onchange="setCalStatusFilter(this.value)">
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Collapsible Stats & Productivity Analytics Banner -->
+      <div class="cal-stats-banner" id="calStatsBanner" style="display: none;">
+        <div class="cal-stat-card">
+          <div class="cal-stat-icon">📈</div>
+          <div class="cal-stat-body">
+            <span class="cal-stat-num" id="calStatTotal">0</span>
+            <span class="cal-stat-label">Month Tasks</span>
+          </div>
+        </div>
+        <div class="cal-stat-card">
+          <div class="cal-stat-icon">🎯</div>
+          <div class="cal-stat-body">
+            <span class="cal-stat-num" id="calStatCompletion">0%</span>
+            <span class="cal-stat-label">Completion Rate</span>
+          </div>
+          <div class="cal-stat-bar-track">
+            <div class="cal-stat-bar-fill" id="calStatBarFill" style="width: 0%;"></div>
+          </div>
+        </div>
+        <div class="cal-stat-card">
+          <div class="cal-stat-icon">⚠️</div>
+          <div class="cal-stat-body">
+            <span class="cal-stat-num cal-num-overdue" id="calStatOverdue">0</span>
+            <span class="cal-stat-label">Overdue Tasks</span>
+          </div>
+        </div>
+        <div class="cal-stat-card">
+          <div class="cal-stat-icon">🔥</div>
+          <div class="cal-stat-body">
+            <span class="cal-stat-num cal-num-streak" id="calStatStreak">0d</span>
+            <span class="cal-stat-label">Completion Streak</span>
+          </div>
+        </div>
+        <div class="cal-stat-card cal-stat-priority-split">
+          <div class="cal-priority-pill pill-high"><span id="calStatHigh">0</span> High</div>
+          <div class="cal-priority-pill pill-medium"><span id="calStatMed">0</span> Med</div>
+          <div class="cal-priority-pill pill-low"><span id="calStatLow">0</span> Low</div>
+        </div>
+      </div>
+
+      <!-- Main Calendar Body Grid (Sidebar Mini-Cal + Active View Workspace) -->
+      <div class="cal-body-layout">
+        <!-- Collapsible Mini-Calendar & Agenda Sidebar -->
+        <aside class="cal-mini-sidebar" id="calMiniSidebar">
+          <div class="cal-mini-header">
+            <span class="cal-mini-title" id="calMiniMonthTitle">September 2026</span>
+            <div class="cal-mini-nav">
+              <button type="button" class="cal-mini-nav-btn" onclick="calMiniPrevMonth()">‹</button>
+              <button type="button" class="cal-mini-nav-btn" onclick="calMiniNextMonth()">›</button>
+            </div>
+          </div>
+          <!-- Mini Grid Container -->
+          <div class="cal-mini-grid" id="calMiniGrid"></div>
+
+          <!-- Quick Today Focus Agenda in Sidebar -->
+          <div class="cal-mini-agenda">
+            <div class="cal-agenda-header">
+              <span>Today's Focus</span>
+              <span class="cal-agenda-badge" id="calAgendaBadge">0</span>
+            </div>
+            <div class="cal-agenda-list" id="calAgendaList"></div>
+          </div>
+        </aside>
+
+        <!-- Main Dynamic Workspace (Month, Week, Day) -->
+        <div class="cal-main-workspace" id="calMainWorkspace">
+          <!-- 1. Month View -->
+          <div class="cal-view-container" id="calMonthView">
+            <div class="cal-month-weekdays-header">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div class="cal-month-cells-grid" id="calMonthGrid"></div>
+          </div>
+
+          <!-- 2. Week View -->
+          <div class="cal-view-container" id="calWeekView" style="display: none;">
+            <div class="cal-week-header-row" id="calWeekHeaderRow"></div>
+            <div class="cal-week-allday-row" id="calWeekAllDayRow"></div>
+            <div class="cal-week-scroll-body" id="calWeekScrollBody">
+              <div class="cal-week-time-gutter" id="calWeekTimeGutter"></div>
+              <div class="cal-week-columns-grid" id="calWeekColumnsGrid"></div>
+            </div>
+          </div>
+
+          <!-- 3. Day View -->
+          <div class="cal-view-container" id="calDayView" style="display: none;">
+            <div class="cal-day-hero-banner" id="calDayHeroBanner">
+              <div class="cal-day-hero-left">
+                <span class="cal-day-hero-weekday" id="calDayHeroWeekday">Friday</span>
+                <h3 class="cal-day-hero-date" id="calDayHeroDate">September 4, 2026</h3>
+              </div>
+              <div class="cal-day-hero-right">
+                <button type="button" class="cal-btn-day-add" onclick="openCalNewTaskModal(calState.activeDateKey)">
+                  <span>+</span> Schedule Event for This Day
+                </button>
+              </div>
+            </div>
+            <!-- Overdue Callout (if any overdue) -->
+            <div class="cal-day-overdue-banner" id="calDayOverdueBanner" style="display: none;">
+              <div class="cal-overdue-badge">⚠️ Action Required</div>
+              <div class="cal-overdue-list" id="calDayOverdueList"></div>
+            </div>
+            <div class="cal-day-timeline-scroll" id="calDayTimelineScroll">
+              <div class="cal-day-hourly-slots" id="calDayHourlySlots"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       CREATE / EDIT TASK MODAL (SMART CALENDAR OS)
+       =================================================================== -->
+  <div class="modal-backdrop cal-task-modal-backdrop" id="calTaskModal" hidden>
+    <div class="cal-task-dialog">
+      <div class="cal-dialog-header">
+        <div class="cal-dialog-title-wrap">
+          <span class="cal-dialog-icon">📝</span>
+          <h3 class="cal-dialog-title" id="calTaskModalTitle">Schedule New Task</h3>
+        </div>
+        <button type="button" class="cal-dialog-close" onclick="closeCalTaskModal()">✕</button>
+      </div>
+
+      <form class="cal-task-form" id="calTaskForm" onsubmit="handleCalTaskFormSubmit(event)">
+        <!-- Hidden Task ID for Editing -->
+        <input type="hidden" id="calTaskId" value="" />
+
+        <!-- Title -->
+        <div class="cal-form-group">
+          <label for="calTaskTitleInput">Task / Event Title <span class="cal-req">*</span></label>
+          <input type="text" id="calTaskTitleInput" required placeholder="e.g., Clinical implant review, Review trading journal..." class="cal-input" />
+        </div>
+
+        <!-- Description / Notes -->
+        <div class="cal-form-group">
+          <label for="calTaskDescInput">Description &amp; Notes</label>
+          <textarea id="calTaskDescInput" rows="2" placeholder="Add preparation notes, links, agenda..." class="cal-textarea"></textarea>
+        </div>
+
+        <!-- Date & Time Row -->
+        <div class="cal-form-row">
+          <div class="cal-form-group flex-1">
+            <label for="calTaskDateInput">Date <span class="cal-req">*</span></label>
+            <input type="date" id="calTaskDateInput" required class="cal-input" />
+          </div>
+          <div class="cal-form-group flex-1">
+            <label for="calTaskTimeInput">Time (24h)</label>
+            <input type="time" id="calTaskTimeInput" value="10:00" class="cal-input" />
+          </div>
+        </div>
+
+        <!-- Category & Priority Row -->
+        <div class="cal-form-row">
+          <div class="cal-form-group flex-1">
+            <label for="calTaskCategorySelect">Category / Workspace</label>
+            <select id="calTaskCategorySelect" class="cal-select">
+              <option value="Work">💼 Work</option>
+              <option value="Personal">🏡 Personal</option>
+              <option value="Health">💪 Health &amp; Fitness</option>
+              <option value="Study">📚 Study &amp; Learning</option>
+              <option value="Finance">💰 Finance &amp; Trading</option>
+              <option value="General">📌 General</option>
+            </select>
+          </div>
+          <div class="cal-form-group flex-1">
+            <label for="calTaskPrioritySelect">Priority Level</label>
+            <select id="calTaskPrioritySelect" class="cal-select">
+              <option value="high">🔴 High Priority</option>
+              <option value="medium" selected>🟡 Medium Priority</option>
+              <option value="low">🔵 Low Priority</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Recurrence Engine -->
+        <div class="cal-form-group">
+          <label for="calTaskRecurrenceSelect">Repeating Schedule (Recurrence)</label>
+          <select id="calTaskRecurrenceSelect" class="cal-select">
+            <option value="none" selected>Does not repeat</option>
+            <option value="daily">Daily (Every day)</option>
+            <option value="weekdays">Every weekday (Mon - Fri)</option>
+            <option value="weekly">Weekly (Same day each week)</option>
+            <option value="monthly">Monthly (Same date each month)</option>
+          </select>
+        </div>
+
+        <!-- Interactive Subtasks Checklist Builder -->
+        <div class="cal-form-group">
+          <div class="cal-subtasks-header">
+            <label>Subtasks &amp; Action Checklist</label>
+            <span class="cal-subtasks-counter" id="calSubtasksCounter">0 items</span>
+          </div>
+          <div class="cal-subtasks-list" id="calSubtasksList"></div>
+          <div class="cal-add-subtask-row">
+            <input type="text" id="calNewSubtaskInput" placeholder="Add a checklist item (Press Enter)" class="cal-input-sm" onkeydown="if(event.key==='Enter'){event.preventDefault();addCalSubtaskRow();}" />
+            <button type="button" class="cal-btn-add-st" onclick="addCalSubtaskRow()">+ Add</button>
+          </div>
+        </div>
+
+        <!-- Dialog Footer Actions -->
+        <div class="cal-dialog-footer">
+          <button type="button" class="cal-btn-danger" id="calBtnDeleteTask" onclick="handleCalDeleteTask()" style="display: none;">
+            🗑️ Delete
+          </button>
+          <div style="display: flex; gap: 10px; margin-left: auto;">
+            <button type="button" class="cal-btn-ghost" onclick="closeCalTaskModal()">Cancel</button>
+            <button type="submit" class="cal-btn-submit" id="calBtnSaveTask">Save to Schedule</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       CALENDAR BACKUP, RESTORE & ICAL EXPORT MODAL
+       =================================================================== -->
+  <div class="modal-backdrop cal-export-modal-backdrop" id="calExportModal" hidden>
+    <div class="cal-dialog-card">
+      <div class="cal-dialog-header">
+        <div class="cal-dialog-title-wrap">
+          <span class="cal-dialog-icon">💾</span>
+          <h3 class="cal-dialog-title">Calendar Sync &amp; Export</h3>
+        </div>
+        <button type="button" class="cal-dialog-close" onclick="closeCalExportModal()">✕</button>
+      </div>
+
+      <div class="cal-export-body">
+        <p class="cal-export-desc">
+          Export your complete schedule to Apple Calendar, Google Calendar, or download an encrypted JSON backup to preserve your tasks offline.
+        </p>
+
+        <div class="cal-export-options-grid">
+          <!-- Option 1: iCalendar (.ics) -->
+          <div class="cal-export-card" onclick="exportCalToIcal()">
+            <div class="cal-export-card-icon">📅</div>
+            <div class="cal-export-card-meta">
+              <strong>Export to iCalendar (.ics)</strong>
+              <span>Compatible with Google Calendar, Apple Calendar, and Outlook</span>
+            </div>
+            <span class="cal-export-btn-tag">Download .ics</span>
+          </div>
+
+          <!-- Option 2: JSON Backup -->
+          <div class="cal-export-card" onclick="exportCalToJson()">
+            <div class="cal-export-card-icon">📦</div>
+            <div class="cal-export-card-meta">
+              <strong>Complete JSON Backup</strong>
+              <span>Full snapshot of all tasks, recurrence rules, checklists &amp; notes</span>
+            </div>
+            <span class="cal-export-btn-tag">Download JSON</span>
+          </div>
+
+          <!-- Option 3: Restore / Import JSON -->
+          <div class="cal-export-card" onclick="document.getElementById('calImportFileInput').click()">
+            <div class="cal-export-card-icon">📥</div>
+            <div class="cal-export-card-meta">
+              <strong>Restore from JSON Backup</strong>
+              <span>Upload and merge tasks back into your calendar workspace</span>
+            </div>
+            <span class="cal-export-btn-tag">Choose File</span>
+            <input type="file" id="calImportFileInput" accept=".json" style="display: none;" onchange="handleCalImportFile(event)" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MONTH OVERFLOW DAY POPOVER
+       =================================================================== -->
+  <div class="cal-day-popover" id="calDayPopover" style="display: none;">
+    <div class="cal-popover-header">
+      <span class="cal-popover-date" id="calPopoverDateTitle">September 4, 2026</span>
+      <button type="button" class="cal-popover-close" onclick="closeCalDayPopover()">✕</button>
+    </div>
+    <div class="cal-popover-list" id="calPopoverList"></div>
+    <div class="cal-popover-footer">
+      <button type="button" class="cal-btn-popover-add" id="calPopoverAddBtn">+ Add Task</button>
+    </div>
+  </div>
+
+  <!-- ===================================================================
        UNIVERSAL FLOATING BRAIN DUMP TRIGGER BUTTON (FAB)
        =================================================================== -->
   <button type="button" class="btn-floating-braindump" id="btnFloatingBrainDump" onclick="openBrainDumpPalette()" title="Universal Brain Dump Quick-Capture (Ctrl + Space)">
@@ -4367,6 +4755,8 @@
 
   <!-- Chart.js Engine -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Sovereign Local-First Storage Repository Layer -->
+  <script src="storageService.js?v=1.0"></script>
   <script src="app.js?v=22.0"></script>
 </body>
 </html>

@@ -472,7 +472,16 @@ function showDashboard() {
 function showAuthPage(mode = 'login') {
   closeUserNavDropdown();
   document.documentElement.classList.add('is-unauthenticated');
+  document.documentElement.classList.remove('is-authenticated');
   document.body.classList.add('is-unauthenticated');
+  document.body.classList.remove('is-authenticated');
+
+  const gatewayScreen = document.getElementById('authGatewayScreen');
+  if (gatewayScreen) {
+    gatewayScreen.style.removeProperty('display');
+    gatewayScreen.style.setProperty('display', 'flex', 'important');
+  }
+
   setGatewayAuthMode(mode);
 }
 
@@ -532,6 +541,32 @@ async function loadTasks() {
   const { date, tasks: allTasks } = await res.json();
   currentTodayTasks = allTasks || [];
   window.allTasks = currentTodayTasks;
+
+  if (allTasks && Array.isArray(allTasks) && window.StorageService) {
+    const existing = window.StorageService.tasks.getAll(true);
+    const existingMap = new Map(existing.map(t => [String(t.id), t]));
+    allTasks.forEach(apiTask => {
+      const match = existingMap.get(String(apiTask.id));
+      if (!match) {
+        window.StorageService.tasks.create({
+          id: String(apiTask.id),
+          title: apiTask.title || apiTask.task,
+          date: apiTask.date || apiTask.dueDate || todayStr,
+          time: apiTask.timeBlock || '10:00',
+          category: apiTask.category || 'Work',
+          priority: (apiTask.priority || 'medium').toLowerCase(),
+          completed: Boolean(apiTask.completed),
+          sync_status: 'synced',
+        });
+      } else {
+        if (match.completed !== Boolean(apiTask.completed)) {
+          window.StorageService.tasks.update(match.id, { completed: Boolean(apiTask.completed) });
+        }
+      }
+    });
+    if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+  }
+
   renderDateLabel(date || todayStr);
   const tasks = currentTodayTasks.filter(t => t.category !== 'Routine');
   const total = tasks.length;
@@ -729,6 +764,11 @@ async function syncBoards() {
   // Also refresh category page if open
   if (currentCategoryPage) {
     await loadCategoryPage(currentCategoryPage);
+  }
+  if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+  if (typeof renderCalendar === 'function') {
+    const calModal = document.getElementById('calendarModal');
+    if (calModal && !calModal.hidden) renderCalendar();
   }
 }
 
@@ -10382,7 +10422,15 @@ function updateUserUi() {
     }
   } else {
     document.documentElement.classList.add('is-unauthenticated');
+    document.documentElement.classList.remove('is-authenticated');
     document.body.classList.add('is-unauthenticated');
+    document.body.classList.remove('is-authenticated');
+
+    const gatewayScreen = document.getElementById('authGatewayScreen');
+    if (gatewayScreen) {
+      gatewayScreen.style.removeProperty('display');
+      gatewayScreen.style.setProperty('display', 'flex', 'important');
+    }
 
     if (userEmailLabel) userEmailLabel.textContent = 'Sign In';
     if (dockUserAvatar) dockUserAvatar.innerHTML = '👤';
@@ -10579,10 +10627,48 @@ function handleSignOut(promptModal = true) {
   currentUser = null;
   localStorage.removeItem('antigravity_token');
   localStorage.removeItem('antigravity_user');
+  try {
+    sessionStorage.removeItem('antigravity_token');
+    sessionStorage.removeItem('antigravity_user');
+  } catch (e) {}
+
+  document.documentElement.classList.add('is-unauthenticated');
+  document.documentElement.classList.remove('is-authenticated');
   document.body.classList.add('is-unauthenticated');
+  document.body.classList.remove('is-authenticated');
+
+  const gatewayScreen = document.getElementById('authGatewayScreen');
+  if (gatewayScreen) {
+    gatewayScreen.style.removeProperty('display');
+    gatewayScreen.style.setProperty('display', 'flex', 'important');
+  }
+
+  const gatewayAuthForm = document.getElementById('gatewayAuthForm');
+  if (gatewayAuthForm) {
+    try { gatewayAuthForm.reset(); } catch (e) {}
+  }
+  const gatewayPasswordInput = document.getElementById('gatewayPasswordInput');
+  if (gatewayPasswordInput) gatewayPasswordInput.value = '';
+  const gatewayEmailInput = document.getElementById('gatewayEmailInput');
+  if (gatewayEmailInput) gatewayEmailInput.value = '';
+  const errEl = document.getElementById('gatewayErrorMsg');
+  if (errEl) {
+    errEl.style.display = 'none';
+    errEl.textContent = '';
+  }
+
   closeUserNavDropdown();
   setGatewayAuthMode('login');
   updateUserUi();
+
+  // Close any open modals
+  try {
+    document.querySelectorAll('.modal-backdrop, .habit-modal-backdrop, .brain-dump-backdrop, .brain-dump-drawer-backdrop, .dialog-backdrop').forEach(el => {
+      el.hidden = true;
+      if (el.style) el.style.display = 'none';
+    });
+  } catch (e) {}
+
   showToast('Signed out successfully.');
 }
 window.handleSignOut = handleSignOut;
@@ -15336,8 +15422,1138 @@ if (authToken && currentUser) {
     setTimeout(() => openOnboardingWizard(currentUser), 600);
   }
 } else {
+  document.documentElement.classList.add('is-unauthenticated');
+  document.documentElement.classList.remove('is-authenticated');
   document.body.classList.add('is-unauthenticated');
+  document.body.classList.remove('is-authenticated');
+
+  const gatewayScreen = document.getElementById('authGatewayScreen');
+  if (gatewayScreen) {
+    gatewayScreen.style.removeProperty('display');
+    gatewayScreen.style.setProperty('display', 'flex', 'important');
+  }
+
   setGatewayAuthMode('login');
 }
+
+// =============================================================================
+// 📅 SMART CALENDAR OS — LOCAL-FIRST ENGINE & TIME-BLOCKING SUITE
+// =============================================================================
+
+const calState = {
+  activeDate: new Date(),
+  activeDateKey: new Date().toISOString().split('T')[0],
+  currentView: 'month', // 'month' | 'week' | 'day'
+  searchQuery: '',
+  selectedCategory: 'all',
+  selectedPriority: 'all',
+  selectedStatus: 'all',
+  showStats: false,
+  editingTaskId: null,
+  subtasksBuffer: [],
+  miniDate: new Date(),
+};
+
+// ── Date Utility Helpers ──
+function getCalDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function parseCalDateKey(str) {
+  if (!str) return new Date();
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function formatCalTime12h(timeStr) {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+function isCalTaskOverdue(task) {
+  if (task.completed || task.deleted_at) return false;
+  if (!task.date) return false;
+  const timeStr = task.time || '23:59';
+  const [h, m] = timeStr.split(':').map(Number);
+  const [y, mon, d] = task.date.split('-').map(Number);
+  const deadline = new Date(y, mon - 1, d, h || 23, m || 59, 59);
+  return deadline.getTime() < Date.now();
+}
+
+// ── Category Styles Mapping ──
+const CAL_CATEGORY_MAP = {
+  work: { name: 'Work', pillClass: 'cal-pill-work', dotClass: 'dot-work' },
+  personal: { name: 'Personal', pillClass: 'cal-pill-personal', dotClass: 'dot-personal' },
+  health: { name: 'Health', pillClass: 'cal-pill-health', dotClass: 'dot-health' },
+  study: { name: 'Study', pillClass: 'cal-pill-study', dotClass: 'dot-study' },
+  finance: { name: 'Finance', pillClass: 'cal-pill-finance', dotClass: 'dot-finance' },
+  general: { name: 'General', pillClass: 'cal-pill-general', dotClass: 'dot-general' },
+};
+
+function getCalCategoryMeta(catName = '') {
+  const key = (catName || '').toLowerCase();
+  for (const [k, v] of Object.entries(CAL_CATEGORY_MAP)) {
+    if (key.includes(k)) return v;
+  }
+  return CAL_CATEGORY_MAP.general;
+}
+
+// ── Filtered Tasks Query ──
+function getCalFilteredTasks() {
+  const repo = window.StorageService ? window.StorageService.tasks : null;
+  const allTasks = repo ? repo.getAll(false) : [];
+  const query = calState.searchQuery.trim().toLowerCase();
+
+  return allTasks.filter(t => {
+    // 1. Search Query
+    if (query) {
+      const matchTitle = (t.title || '').toLowerCase().includes(query);
+      const matchDesc = (t.description || '').toLowerCase().includes(query);
+      const matchSub = (t.subtasks || []).some(st => (st.title || '').toLowerCase().includes(query));
+      if (!matchTitle && !matchDesc && !matchSub) return false;
+    }
+
+    // 2. Category Filter
+    if (calState.selectedCategory !== 'all') {
+      const taskCat = (t.category || '').toLowerCase();
+      const filterCat = calState.selectedCategory.toLowerCase();
+      if (!taskCat.includes(filterCat)) return false;
+    }
+
+    // 3. Priority Filter
+    if (calState.selectedPriority !== 'all') {
+      if ((t.priority || '').toLowerCase() !== calState.selectedPriority.toLowerCase()) return false;
+    }
+
+    // 4. Status Filter
+    if (calState.selectedStatus === 'completed' && !t.completed) return false;
+    if (calState.selectedStatus === 'pending' && t.completed) return false;
+    if (calState.selectedStatus === 'overdue' && !isCalTaskOverdue(t)) return false;
+
+    return true;
+  });
+}
+
+// ── Navigation & Period Handlers ──
+function calGoToToday() {
+  calState.activeDate = new Date();
+  calState.activeDateKey = getCalDateKey(calState.activeDate);
+  calState.miniDate = new Date();
+  renderCalendar();
+}
+window.calGoToToday = calGoToToday;
+
+function calPrevPeriod() {
+  const d = new Date(calState.activeDate);
+  if (calState.currentView === 'month') {
+    d.setMonth(d.getMonth() - 1);
+  } else if (calState.currentView === 'week') {
+    d.setDate(d.getDate() - 7);
+  } else {
+    d.setDate(d.getDate() - 1);
+  }
+  calState.activeDate = d;
+  calState.activeDateKey = getCalDateKey(d);
+  renderCalendar();
+}
+window.calPrevPeriod = calPrevPeriod;
+
+function calNextPeriod() {
+  const d = new Date(calState.activeDate);
+  if (calState.currentView === 'month') {
+    d.setMonth(d.getMonth() + 1);
+  } else if (calState.currentView === 'week') {
+    d.setDate(d.getDate() + 7);
+  } else {
+    d.setDate(d.getDate() + 1);
+  }
+  calState.activeDate = d;
+  calState.activeDateKey = getCalDateKey(d);
+  renderCalendar();
+}
+window.calNextPeriod = calNextPeriod;
+
+function setCalView(view) {
+  calState.currentView = view;
+  const views = ['month', 'week', 'day'];
+
+  views.forEach(v => {
+    const btn = document.getElementById(`calView${v.charAt(0).toUpperCase() + v.slice(1)}Btn`);
+    const container = document.getElementById(`cal${v.charAt(0).toUpperCase() + v.slice(1)}View`);
+    if (btn) btn.classList.toggle('active', v === view);
+    if (container) container.style.display = v === view ? 'flex' : 'none';
+  });
+
+  renderCalendar();
+}
+window.setCalView = setCalView;
+
+function toggleCalStats() {
+  calState.showStats = !calState.showStats;
+  const banner = document.getElementById('calStatsBanner');
+  const btn = document.getElementById('calBtnToggleStats');
+  if (banner) banner.style.display = calState.showStats ? 'grid' : 'none';
+  if (btn) btn.classList.toggle('active', calState.showStats);
+  if (calState.showStats) renderCalStats();
+}
+window.toggleCalStats = toggleCalStats;
+
+// ── Search & Filter Handlers ──
+function handleCalSearch(val) {
+  calState.searchQuery = val || '';
+  const clearBtn = document.getElementById('calSearchClear');
+  if (clearBtn) clearBtn.style.display = calState.searchQuery ? 'block' : 'none';
+  renderCalendar();
+}
+window.handleCalSearch = handleCalSearch;
+
+function clearCalSearch() {
+  const input = document.getElementById('calSearchInput');
+  if (input) input.value = '';
+  handleCalSearch('');
+}
+window.clearCalSearch = clearCalSearch;
+
+function setCalCategoryFilter(cat) {
+  calState.selectedCategory = cat;
+  document.querySelectorAll('#calCategoryFilters .cal-filter-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.getAttribute('data-cat') === cat);
+  });
+  renderCalendar();
+}
+window.setCalCategoryFilter = setCalCategoryFilter;
+
+function setCalPriorityFilter(p) {
+  calState.selectedPriority = p;
+  renderCalendar();
+}
+window.setCalPriorityFilter = setCalPriorityFilter;
+
+function setCalStatusFilter(s) {
+  calState.selectedStatus = s;
+  renderCalendar();
+}
+window.setCalStatusFilter = setCalStatusFilter;
+
+// ── Modal Opener & Closer ──
+function openCalendarModal(targetDateKey = '') {
+  if (targetDateKey) {
+    calState.activeDate = parseCalDateKey(targetDateKey);
+    calState.activeDateKey = targetDateKey;
+  }
+  const modal = document.getElementById('calendarModal');
+  if (modal) {
+    modal.hidden = false;
+    renderCalendar();
+  }
+}
+window.openCalendarModal = openCalendarModal;
+
+function closeCalendarModal() {
+  const modal = document.getElementById('calendarModal');
+  if (modal) modal.hidden = true;
+  closeCalDayPopover();
+}
+window.closeCalendarModal = closeCalendarModal;
+
+// =============================================================================
+// RENDERERS
+// =============================================================================
+
+function renderCalendar() {
+  updateCalHeaderPeriodLabel();
+  if (calState.currentView === 'month') {
+    renderCalMonthView();
+  } else if (calState.currentView === 'week') {
+    renderCalWeekView();
+  } else if (calState.currentView === 'day') {
+    renderCalDayView();
+  }
+
+  renderCalMiniCalendar();
+  renderCalMiniAgenda();
+  if (calState.showStats) renderCalStats();
+  updateCalendarDockBadge();
+}
+window.renderCalendar = renderCalendar;
+
+function updateCalHeaderPeriodLabel() {
+  const label = document.getElementById('calCurrentPeriodLabel');
+  if (!label) return;
+
+  const d = calState.activeDate;
+  if (calState.currentView === 'month') {
+    label.textContent = d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  } else if (calState.currentView === 'week') {
+    const sun = new Date(d);
+    sun.setDate(d.getDate() - d.getDay());
+    const sat = new Date(sun);
+    sat.setDate(sun.getDate() + 6);
+
+    const m1 = sun.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const m2 = sat.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    label.textContent = `${m1} – ${m2}`;
+  } else {
+    label.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+}
+
+// ── 1. Month View Renderer (42 Day Cells Grid) ──
+function renderCalMonthView() {
+  const grid = document.getElementById('calMonthGrid');
+  if (!grid) return;
+
+  const year = calState.activeDate.getFullYear();
+  const month = calState.activeDate.getMonth();
+  const todayKey = getCalDateKey(new Date());
+
+  const firstDay = new Date(year, month, 1);
+  const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const prevMonthLastDay = new Date(year, month, 0).getDate();
+
+  const cells = [];
+
+  // Previous month overflow
+  for (let i = startDayOfWeek - 1; i >= 0; i--) {
+    const dayNum = prevMonthLastDay - i;
+    const dateObj = new Date(year, month - 1, dayNum);
+    cells.push({ dateObj, dateKey: getCalDateKey(dateObj), dayNum, isCurrentMonth: false });
+  }
+
+  // Current month
+  for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+    const dateObj = new Date(year, month, dayNum);
+    cells.push({ dateObj, dateKey: getCalDateKey(dateObj), dayNum, isCurrentMonth: true });
+  }
+
+  // Next month overflow up to 42 cells (6 rows x 7 cols)
+  const remaining = 42 - cells.length;
+  for (let dayNum = 1; dayNum <= remaining; dayNum++) {
+    const dateObj = new Date(year, month + 1, dayNum);
+    cells.push({ dateObj, dateKey: getCalDateKey(dateObj), dayNum, isCurrentMonth: false });
+  }
+
+  // Filtered tasks map by date
+  const filtered = getCalFilteredTasks();
+  const tasksByDate = {};
+  filtered.forEach(t => {
+    if (!tasksByDate[t.date]) tasksByDate[t.date] = [];
+    tasksByDate[t.date].push(t);
+  });
+  // Sort by time within date
+  Object.keys(tasksByDate).forEach(k => {
+    tasksByDate[k].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  });
+
+  grid.innerHTML = cells.map(cell => {
+    const isToday = cell.dateKey === todayKey;
+    const tasks = tasksByDate[cell.dateKey] || [];
+    const maxPills = 3;
+    const visibleTasks = tasks.slice(0, maxPills);
+    const overflowCount = tasks.length - maxPills;
+
+    const pillsHtml = visibleTasks.map(task => {
+      const catMeta = getCalCategoryMeta(task.category);
+      const isDone = task.completed ? 'is-completed' : '';
+      const timeStr = task.time ? `<span class="cal-pill-time">${task.time}</span>` : '';
+      const overdueTag = isCalTaskOverdue(task) ? '⚠️ ' : '';
+
+      return `
+        <div class="cal-event-pill ${catMeta.pillClass} ${isDone}" onclick="event.stopPropagation(); openCalEditTaskModal('${task.id}')" title="${escapeHtml(task.title)} (${task.category})">
+          ${timeStr}
+          <span class="cal-pill-title">${overdueTag}${escapeHtml(task.title)}</span>
+        </div>
+      `;
+    }).join('');
+
+    const moreHtml = overflowCount > 0
+      ? `<div class="cal-more-events-badge" onclick="event.stopPropagation(); openCalDayPopover('${cell.dateKey}', this)">+${overflowCount} more</div>`
+      : '';
+
+    return `
+      <div class="cal-day-cell ${cell.isCurrentMonth ? '' : 'is-other-month'} ${isToday ? 'is-today' : ''}" onclick="openCalNewTaskModal('${cell.dateKey}')">
+        <div class="cal-cell-top-row">
+          <span class="cal-cell-day-num">${cell.dayNum}</span>
+          <button type="button" class="cal-cell-add-btn" title="Add Task for this day">+</button>
+        </div>
+        <div class="cal-cell-events-list">
+          ${pillsHtml}
+          ${moreHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── 2. Week View Renderer ──
+function renderCalWeekView() {
+  const headerRow = document.getElementById('calWeekHeaderRow');
+  const gutter = document.getElementById('calWeekTimeGutter');
+  const colsGrid = document.getElementById('calWeekColumnsGrid');
+  if (!headerRow || !gutter || !colsGrid) return;
+
+  const active = calState.activeDate;
+  const sunday = new Date(active);
+  sunday.setDate(active.getDate() - active.getDay());
+  const todayKey = getCalDateKey(new Date());
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
+    days.push({
+      dateObj: d,
+      dateKey: getCalDateKey(d),
+      dayNum: d.getDate(),
+      dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()],
+      isToday: getCalDateKey(d) === todayKey,
+    });
+  }
+
+  // 1. Header row
+  headerRow.innerHTML = `
+    <div style="width: 60px;"></div>
+    ${days.map(d => `
+      <div class="cal-week-col-head ${d.isToday ? 'is-today' : ''}">
+        <span class="cal-week-head-name">${d.dayName}</span>
+        <span class="cal-week-head-num">${d.dayNum}</span>
+      </div>
+    `).join('')}
+  `;
+
+  // 2. Time gutter (24 hours)
+  const hours = [];
+  for (let h = 0; h < 24; h++) {
+    const period = h >= 12 ? 'PM' : 'AM';
+    const displayH = h % 12 === 0 ? 12 : h % 12;
+    hours.push({ hour: h, label: `${displayH} ${period}`, timeString: `${String(h).padStart(2, '0')}:00` });
+  }
+
+  gutter.innerHTML = hours.map(h => `<div class="cal-time-slot-label">${h.label}</div>`).join('');
+
+  // 3. Columns Grid
+  const filtered = getCalFilteredTasks();
+  const tasksByDate = {};
+  filtered.forEach(t => {
+    if (!tasksByDate[t.date]) tasksByDate[t.date] = [];
+    tasksByDate[t.date].push(t);
+  });
+
+  colsGrid.innerHTML = days.map(d => {
+    const dayTasks = tasksByDate[d.dateKey] || [];
+
+    // Group tasks by hour
+    const hourCellsHtml = hours.map(h => {
+      const matchingTasks = dayTasks.filter(t => {
+        if (!t.time) return h.hour === 9; // default to 9 AM
+        const taskHour = parseInt(t.time.split(':')[0], 10);
+        return taskHour === h.hour;
+      });
+
+      const eventsHtml = matchingTasks.map(t => {
+        const catMeta = getCalCategoryMeta(t.category);
+        return `
+          <div class="cal-week-event-card ${catMeta.pillClass}" onclick="event.stopPropagation(); openCalEditTaskModal('${t.id}')">
+            <span>${t.time || ''}</span> <strong>${escapeHtml(t.title)}</strong>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="cal-week-hour-cell" onclick="openCalNewTaskModal('${d.dateKey}', '${h.timeString}')">
+          ${eventsHtml}
+        </div>
+      `;
+    }).join('');
+
+    return `<div class="cal-week-column">${hourCellsHtml}</div>`;
+  }).join('');
+}
+
+// ── 3. Day View Renderer ──
+function renderCalDayView() {
+  const heroWeekday = document.getElementById('calDayHeroWeekday');
+  const heroDate = document.getElementById('calDayHeroDate');
+  const overdueBanner = document.getElementById('calDayOverdueBanner');
+  const overdueList = document.getElementById('calDayOverdueList');
+  const slotsContainer = document.getElementById('calDayHourlySlots');
+  if (!slotsContainer) return;
+
+  const active = calState.activeDate;
+  const activeKey = calState.activeDateKey;
+
+  if (heroWeekday) heroWeekday.textContent = active.toLocaleDateString(undefined, { weekday: 'long' });
+  if (heroDate) heroDate.textContent = active.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const filtered = getCalFilteredTasks();
+  const dayTasks = filtered.filter(t => t.date === activeKey);
+
+  // Check overdue tasks (scheduled up to today and not completed)
+  const overdueTasks = filtered.filter(t => isCalTaskOverdue(t) && t.date <= activeKey);
+  if (overdueBanner && overdueList) {
+    if (overdueTasks.length > 0) {
+      overdueBanner.style.display = 'block';
+      overdueList.innerHTML = overdueTasks.map(t => `
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 4px 0;">
+          <span style="color: #fecdd3;">⚠️ <strong>${escapeHtml(t.title)}</strong> (Due: ${t.date} ${t.time || ''})</span>
+          <button type="button" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="openCalEditTaskModal('${t.id}')">Reschedule / View</button>
+        </div>
+      `).join('');
+    } else {
+      overdueBanner.style.display = 'none';
+    }
+  }
+
+  // 24 Hour Slots
+  const hoursHtml = [];
+  for (let h = 0; h < 24; h++) {
+    const timeStr = `${String(h).padStart(2, '0')}:00`;
+    const label = formatCalTime12h(timeStr);
+    const matching = dayTasks.filter(t => {
+      if (!t.time) return h === 9;
+      const tH = parseInt(t.time.split(':')[0], 10);
+      return tH === h;
+    });
+
+    const cardsHtml = matching.map(t => {
+      const catMeta = getCalCategoryMeta(t.category);
+      const isDoneClass = t.completed ? 'is-completed' : '';
+      const subtasks = t.subtasks || [];
+      const subDone = subtasks.filter(s => s.completed).length;
+      const subBadge = subtasks.length > 0 ? `<span>☑️ ${subDone}/${subtasks.length}</span>` : '';
+      const priorityBadge = `<span class="cal-priority-pill pill-${t.priority || 'medium'}">${(t.priority || 'medium').toUpperCase()}</span>`;
+      const recurrenceBadge = t.recurrence && t.recurrence !== 'none' ? `<span>🔁 ${t.recurrence}</span>` : '';
+
+      return `
+        <div class="cal-day-task-card ${isDoneClass}">
+          <input type="checkbox" class="cal-task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleCalTaskComplete('${t.id}')" title="Toggle Done" />
+          <div class="cal-task-card-body">
+            <span class="cal-task-card-title">${escapeHtml(t.title)}</span>
+            <div class="cal-task-card-meta">
+              <span class="cal-filter-chip" style="padding: 1px 6px; font-size: 10.5px;"><span class="cal-cat-dot ${catMeta.dotClass}"></span>${t.category}</span>
+              ${priorityBadge}
+              ${subBadge}
+              ${recurrenceBadge}
+              ${t.description ? `<span title="${escapeHtml(t.description)}">📝 Notes</span>` : ''}
+            </div>
+          </div>
+          <button type="button" class="btn-secondary" style="padding: 4px 10px; font-size: 11.5px;" onclick="openCalEditTaskModal('${t.id}')">Edit</button>
+        </div>
+      `;
+    }).join('');
+
+    hoursHtml.push(`
+      <div class="cal-day-slot-row">
+        <div class="cal-day-slot-time">${label}</div>
+        <div class="cal-day-slot-events">
+          ${cardsHtml}
+          <button type="button" class="cal-btn-ghost" style="padding: 3px 8px; font-size: 11px; align-self: flex-start; opacity: 0.6;" onclick="openCalNewTaskModal('${activeKey}', '${timeStr}')">
+            + Add for ${label}
+          </button>
+        </div>
+      </div>
+    `);
+  }
+
+  slotsContainer.innerHTML = hoursHtml.join('');
+}
+
+// ── 4. Mini Calendar Sidebar Renderer ──
+function renderCalMiniCalendar() {
+  const title = document.getElementById('calMiniMonthTitle');
+  const grid = document.getElementById('calMiniGrid');
+  if (!grid) return;
+
+  const d = calState.miniDate;
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  if (title) title.textContent = d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevLastDay = new Date(year, month, 0).getDate();
+  const todayKey = getCalDateKey(new Date());
+  const activeKey = calState.activeDateKey;
+
+  const weekdaysHeader = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(w => `<div class="cal-mini-weekday">${w}</div>`).join('');
+
+  const days = [];
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const dayNum = prevLastDay - i;
+    const dateObj = new Date(year, month - 1, dayNum);
+    days.push({ dateKey: getCalDateKey(dateObj), dayNum, isOther: true });
+  }
+  for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+    const dateObj = new Date(year, month, dayNum);
+    days.push({ dateKey: getCalDateKey(dateObj), dayNum, isOther: false });
+  }
+  const remaining = 42 - days.length;
+  for (let dayNum = 1; dayNum <= remaining; dayNum++) {
+    const dateObj = new Date(year, month + 1, dayNum);
+    days.push({ dateKey: getCalDateKey(dateObj), dayNum, isOther: true });
+  }
+
+  const daysHtml = days.map(cell => {
+    const isToday = cell.dateKey === todayKey ? 'is-today' : '';
+    const isActive = cell.dateKey === activeKey ? 'is-active' : '';
+    const isOther = cell.isOther ? 'is-other' : '';
+
+    return `
+      <div class="cal-mini-day ${isOther} ${isToday} ${isActive}" onclick="jumpCalToDate('${cell.dateKey}')">
+        ${cell.dayNum}
+      </div>
+    `;
+  }).join('');
+
+  grid.innerHTML = weekdaysHeader + daysHtml;
+}
+
+function calMiniPrevMonth() {
+  calState.miniDate = new Date(calState.miniDate.getFullYear(), calState.miniDate.getMonth() - 1, 1);
+  renderCalMiniCalendar();
+}
+window.calMiniPrevMonth = calMiniPrevMonth;
+
+function calMiniNextMonth() {
+  calState.miniDate = new Date(calState.miniDate.getFullYear(), calState.miniDate.getMonth() + 1, 1);
+  renderCalMiniCalendar();
+}
+window.calMiniNextMonth = calMiniNextMonth;
+
+function jumpCalToDate(dateKey) {
+  calState.activeDate = parseCalDateKey(dateKey);
+  calState.activeDateKey = dateKey;
+  renderCalendar();
+}
+window.jumpCalToDate = jumpCalToDate;
+
+// ── 5. Sidebar Agenda Renderer ──
+function renderCalMiniAgenda() {
+  const badge = document.getElementById('calAgendaBadge');
+  const list = document.getElementById('calAgendaList');
+  if (!list) return;
+
+  const todayKey = getCalDateKey(new Date());
+  const tasks = (window.StorageService ? window.StorageService.tasks.getAll(false) : []).filter(t => t.date === todayKey);
+
+  if (badge) badge.textContent = `${tasks.filter(t => t.completed).length}/${tasks.length}`;
+
+  if (tasks.length === 0) {
+    list.innerHTML = `<div style="font-size: 11px; color: #64748b; padding: 6px 0;">No tasks for today. Click '+' to schedule.</div>`;
+    return;
+  }
+
+  list.innerHTML = tasks.slice(0, 5).map(t => `
+    <div class="cal-agenda-item ${t.completed ? 'is-done' : ''}" onclick="openCalEditTaskModal('${t.id}')">
+      <input type="checkbox" style="accent-color: #6366f1;" ${t.completed ? 'checked' : ''} onchange="event.stopPropagation(); toggleCalTaskComplete('${t.id}')" />
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(t.title)}</span>
+    </div>
+  `).join('');
+}
+
+// ── 6. Productivity Stats Renderer ──
+function renderCalStats() {
+  const month = calState.activeDate.getMonth();
+  const year = calState.activeDate.getFullYear();
+  const tasks = (window.StorageService ? window.StorageService.tasks.getAll(false) : []).filter(t => {
+    if (!t.date) return false;
+    const [y, m] = t.date.split('-').map(Number);
+    return y === year && (m - 1) === month;
+  });
+
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.completed).length;
+  const overdue = tasks.filter(t => isCalTaskOverdue(t)).length;
+  const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  const elTotal = document.getElementById('calStatTotal');
+  const elComp = document.getElementById('calStatCompletion');
+  const elFill = document.getElementById('calStatBarFill');
+  const elOverdue = document.getElementById('calStatOverdue');
+  const elStreak = document.getElementById('calStatStreak');
+  const elHigh = document.getElementById('calStatHigh');
+  const elMed = document.getElementById('calStatMed');
+  const elLow = document.getElementById('calStatLow');
+
+  if (elTotal) elTotal.textContent = total;
+  if (elComp) elComp.textContent = `${rate}%`;
+  if (elFill) elFill.style.width = `${rate}%`;
+  if (elOverdue) elOverdue.textContent = overdue;
+
+  // Streak calculation (consecutive days with completed task leading up to today)
+  let streak = 0;
+  const check = new Date();
+  const allTasks = window.StorageService ? window.StorageService.tasks.getAll(false) : [];
+  for (let i = 0; i < 45; i++) {
+    const key = getCalDateKey(check);
+    const hasCompleted = allTasks.some(t => t.date === key && t.completed);
+    if (hasCompleted) {
+      streak++;
+      check.setDate(check.getDate() - 1);
+    } else {
+      if (i === 0) {
+        check.setDate(check.getDate() - 1);
+        continue;
+      }
+      break;
+    }
+  }
+  if (elStreak) elStreak.textContent = `${streak}d`;
+
+  if (elHigh) elHigh.textContent = tasks.filter(t => (t.priority || '').toLowerCase() === 'high').length;
+  if (elMed) elMed.textContent = tasks.filter(t => (t.priority || 'medium').toLowerCase() === 'medium').length;
+  if (elLow) elLow.textContent = tasks.filter(t => (t.priority || '').toLowerCase() === 'low').length;
+}
+
+// ── 7. Header & Sidebar Dock Badge Updater ──
+function updateCalendarDockBadge() {
+  const todayKey = getCalDateKey(new Date());
+  const tasks = (window.StorageService ? window.StorageService.tasks.getAll(false) : []).filter(t => t.date === todayKey);
+  const pending = tasks.filter(t => !t.completed).length;
+
+  const headerBadge = document.getElementById('headerCalendarBadge');
+  const sidebarBadge = document.getElementById('sidebarCalendarBadge');
+
+  if (headerBadge) {
+    headerBadge.textContent = pending;
+    headerBadge.style.display = pending > 0 ? 'inline-flex' : 'none';
+  }
+
+  if (sidebarBadge) {
+    sidebarBadge.textContent = `${pending} today`;
+  }
+}
+window.updateCalendarDockBadge = updateCalendarDockBadge;
+
+// =============================================================================
+// TASK CREATION, EDITING & SUBTASKS BUILDER (LOCAL-FIRST, 0ms)
+// =============================================================================
+
+function openCalNewTaskModal(initialDateKey = '', initialTimeStr = '') {
+  calState.editingTaskId = null;
+  calState.subtasksBuffer = [];
+
+  const titleEl = document.getElementById('calTaskModalTitle');
+  const idInput = document.getElementById('calTaskId');
+  const titleInput = document.getElementById('calTaskTitleInput');
+  const descInput = document.getElementById('calTaskDescInput');
+  const dateInput = document.getElementById('calTaskDateInput');
+  const timeInput = document.getElementById('calTaskTimeInput');
+  const catSelect = document.getElementById('calTaskCategorySelect');
+  const prioSelect = document.getElementById('calTaskPrioritySelect');
+  const recSelect = document.getElementById('calTaskRecurrenceSelect');
+  const btnDelete = document.getElementById('calBtnDeleteTask');
+  const saveBtn = document.getElementById('calBtnSaveTask');
+
+  if (titleEl) titleEl.textContent = 'Schedule New Task';
+  if (idInput) idInput.value = '';
+  if (titleInput) titleInput.value = '';
+  if (descInput) descInput.value = '';
+  if (dateInput) dateInput.value = initialDateKey || calState.activeDateKey || getCalDateKey(new Date());
+  if (timeInput) timeInput.value = initialTimeStr || '10:00';
+  if (catSelect) catSelect.value = 'Work';
+  if (prioSelect) prioSelect.value = 'medium';
+  if (recSelect) recSelect.value = 'none';
+  if (btnDelete) btnDelete.style.display = 'none';
+  if (saveBtn) saveBtn.textContent = 'Save to Schedule';
+
+  renderCalSubtasksInModal();
+
+  const modal = document.getElementById('calTaskModal');
+  if (modal) {
+    modal.hidden = false;
+    setTimeout(() => titleInput?.focus(), 50);
+  }
+}
+window.openCalNewTaskModal = openCalNewTaskModal;
+
+function openCalEditTaskModal(taskId) {
+  if (!window.StorageService) return;
+  const task = window.StorageService.tasks.getById(taskId);
+  if (!task) return;
+
+  calState.editingTaskId = task.id;
+  calState.subtasksBuffer = Array.isArray(task.subtasks)
+    ? task.subtasks.map(s => ({ id: s.id, title: s.title, completed: s.completed }))
+    : [];
+
+  const titleEl = document.getElementById('calTaskModalTitle');
+  const idInput = document.getElementById('calTaskId');
+  const titleInput = document.getElementById('calTaskTitleInput');
+  const descInput = document.getElementById('calTaskDescInput');
+  const dateInput = document.getElementById('calTaskDateInput');
+  const timeInput = document.getElementById('calTaskTimeInput');
+  const catSelect = document.getElementById('calTaskCategorySelect');
+  const prioSelect = document.getElementById('calTaskPrioritySelect');
+  const recSelect = document.getElementById('calTaskRecurrenceSelect');
+  const btnDelete = document.getElementById('calBtnDeleteTask');
+  const saveBtn = document.getElementById('calBtnSaveTask');
+
+  if (titleEl) titleEl.textContent = 'Edit Scheduled Task';
+  if (idInput) idInput.value = task.id;
+  if (titleInput) titleInput.value = task.title || '';
+  if (descInput) descInput.value = task.description || '';
+  if (dateInput) dateInput.value = task.date || getCalDateKey(new Date());
+  if (timeInput) timeInput.value = task.time || '10:00';
+  if (catSelect) catSelect.value = task.category || 'Work';
+  if (prioSelect) prioSelect.value = (task.priority || 'medium').toLowerCase();
+  if (recSelect) recSelect.value = task.recurrence || 'none';
+  if (btnDelete) btnDelete.style.display = 'inline-flex';
+  if (saveBtn) saveBtn.textContent = 'Update Task';
+
+  renderCalSubtasksInModal();
+
+  const modal = document.getElementById('calTaskModal');
+  if (modal) modal.hidden = false;
+}
+window.openCalEditTaskModal = openCalEditTaskModal;
+
+function closeCalTaskModal() {
+  const modal = document.getElementById('calTaskModal');
+  if (modal) modal.hidden = true;
+  calState.editingTaskId = null;
+  calState.subtasksBuffer = [];
+}
+window.closeCalTaskModal = closeCalTaskModal;
+
+function handleCalTaskFormSubmit(e) {
+  e.preventDefault();
+  if (!window.StorageService) return;
+
+  const taskId = document.getElementById('calTaskId')?.value;
+  const title = document.getElementById('calTaskTitleInput')?.value.trim();
+  const description = document.getElementById('calTaskDescInput')?.value.trim();
+  const date = document.getElementById('calTaskDateInput')?.value;
+  const time = document.getElementById('calTaskTimeInput')?.value || '10:00';
+  const category = document.getElementById('calTaskCategorySelect')?.value || 'Work';
+  const priority = document.getElementById('calTaskPrioritySelect')?.value || 'medium';
+  const recurrence = document.getElementById('calTaskRecurrenceSelect')?.value || 'none';
+
+  if (!title) {
+    showToast('Please enter a task title.');
+    return;
+  }
+
+  const taskPayload = {
+    title,
+    description,
+    date,
+    time,
+    category,
+    priority,
+    recurrence,
+    subtasks: calState.subtasksBuffer,
+  };
+
+  if (taskId) {
+    window.StorageService.tasks.update(taskId, taskPayload);
+    showToast('Task updated in schedule.');
+  } else {
+    window.StorageService.tasks.create(taskPayload);
+    showToast('Task scheduled successfully.');
+  }
+
+  closeCalTaskModal();
+  renderCalendar();
+
+  // Non-blocking sync with backend
+  if (authToken && typeof loadTasks === 'function') {
+    setTimeout(loadTasks, 100);
+  }
+}
+window.handleCalTaskFormSubmit = handleCalTaskFormSubmit;
+
+function handleCalDeleteTask() {
+  if (!calState.editingTaskId || !window.StorageService) return;
+  window.StorageService.tasks.delete(calState.editingTaskId);
+  closeCalTaskModal();
+  renderCalendar();
+  showToast('Task removed from schedule.');
+
+  if (authToken && typeof loadTasks === 'function') {
+    setTimeout(loadTasks, 100);
+  }
+}
+window.handleCalDeleteTask = handleCalDeleteTask;
+
+function toggleCalTaskComplete(taskId) {
+  if (!window.StorageService) return;
+  const updated = window.StorageService.tasks.toggleComplete(taskId);
+  if (!updated) return;
+
+  renderCalendar();
+  showToast(updated.completed ? '🎉 Task marked complete!' : 'Task reopened.');
+
+  if (authToken && typeof loadTasks === 'function') {
+    setTimeout(loadTasks, 100);
+  }
+}
+window.toggleCalTaskComplete = toggleCalTaskComplete;
+
+// ── Subtasks Buffer Management ──
+function renderCalSubtasksInModal() {
+  const container = document.getElementById('calSubtasksList');
+  const counter = document.getElementById('calSubtasksCounter');
+  if (!container) return;
+
+  if (counter) counter.textContent = `${calState.subtasksBuffer.length} items`;
+
+  container.innerHTML = calState.subtasksBuffer.map(st => `
+    <div class="cal-subtask-item ${st.completed ? 'is-done' : ''}">
+      <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="toggleCalSubtaskInModal('${st.id}')" />
+      <span class="cal-subtask-title">${escapeHtml(st.title)}</span>
+      <button type="button" class="cal-btn-del-st" onclick="removeCalSubtaskRow('${st.id}')" title="Delete subtask">✕</button>
+    </div>
+  `).join('');
+}
+
+function addCalSubtaskRow() {
+  const input = document.getElementById('calNewSubtaskInput');
+  if (!input) return;
+  const title = input.value.trim();
+  if (!title) return;
+
+  const newId = window.StorageService ? window.StorageService.generateUUID() : 'st_' + Date.now();
+  calState.subtasksBuffer.push({ id: newId, title, completed: false });
+  input.value = '';
+  renderCalSubtasksInModal();
+}
+window.addCalSubtaskRow = addCalSubtaskRow;
+
+function removeCalSubtaskRow(stId) {
+  calState.subtasksBuffer = calState.subtasksBuffer.filter(s => s.id !== stId);
+  renderCalSubtasksInModal();
+}
+window.removeCalSubtaskRow = removeCalSubtaskRow;
+
+function toggleCalSubtaskInModal(stId) {
+  calState.subtasksBuffer = calState.subtasksBuffer.map(s => s.id === stId ? { ...s, completed: !s.completed } : s);
+  renderCalSubtasksInModal();
+}
+window.toggleCalSubtaskInModal = toggleCalSubtaskInModal;
+
+// =============================================================================
+// BACKUP, RESTORE & RFC 5545 iCAL EXPORT ENGINE
+// =============================================================================
+
+function openCalExportModal() {
+  const modal = document.getElementById('calExportModal');
+  if (modal) modal.hidden = false;
+}
+window.openCalExportModal = openCalExportModal;
+
+function closeCalExportModal() {
+  const modal = document.getElementById('calExportModal');
+  if (modal) modal.hidden = true;
+}
+window.closeCalExportModal = closeCalExportModal;
+
+function exportCalToIcal() {
+  if (window.StorageService && typeof window.StorageService.exportIcal === 'function') {
+    window.StorageService.exportIcal();
+    showToast('📅 iCalendar (.ics) export downloaded!');
+  }
+}
+window.exportCalToIcal = exportCalToIcal;
+
+function exportCalToJson() {
+  if (window.StorageService && typeof window.StorageService.exportAllData === 'function') {
+    window.StorageService.exportAllData();
+    showToast('💾 Complete workspace backup downloaded!');
+  }
+}
+window.exportCalToJson = exportCalToJson;
+
+function handleCalImportFile(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (event) {
+    try {
+      const content = event.target.result;
+      const res = window.StorageService.importAllData(content, 'merge');
+      showToast(`🎉 Restored ${res.tasksCount} tasks successfully!`);
+      closeCalExportModal();
+      renderCalendar();
+    } catch (err) {
+      showToast('Import failed: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+window.handleCalImportFile = handleCalImportFile;
+
+// =============================================================================
+// MONTH DAY OVERFLOW POPOVER
+// =============================================================================
+
+function openCalDayPopover(dateKey, anchorEl) {
+  const popover = document.getElementById('calDayPopover');
+  const title = document.getElementById('calPopoverDateTitle');
+  const list = document.getElementById('calPopoverList');
+  const addBtn = document.getElementById('calPopoverAddBtn');
+  if (!popover || !list) return;
+
+  const d = parseCalDateKey(dateKey);
+  if (title) title.textContent = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const filtered = getCalFilteredTasks();
+  const dayTasks = filtered.filter(t => t.date === dateKey);
+
+  list.innerHTML = dayTasks.map(t => {
+    const catMeta = getCalCategoryMeta(t.category);
+    return `
+      <div class="cal-event-pill ${catMeta.pillClass} ${t.completed ? 'is-completed' : ''}" onclick="openCalEditTaskModal('${t.id}')">
+        <span>${t.time || ''}</span> <strong>${escapeHtml(t.title)}</strong>
+      </div>
+    `;
+  }).join('');
+
+  if (addBtn) {
+    addBtn.onclick = () => {
+      closeCalDayPopover();
+      openCalNewTaskModal(dateKey);
+    };
+  }
+
+  // Positioning
+  if (anchorEl) {
+    const rect = anchorEl.getBoundingClientRect();
+    let top = rect.bottom + 6;
+    let left = rect.left - 50;
+    if (left + 280 > window.innerWidth) left = window.innerWidth - 290;
+    if (top + 250 > window.innerHeight) top = rect.top - 240;
+    popover.style.top = `${Math.max(10, top)}px`;
+    popover.style.left = `${Math.max(10, left)}px`;
+  }
+
+  popover.style.display = 'flex';
+}
+window.openCalDayPopover = openCalDayPopover;
+
+function closeCalDayPopover() {
+  const popover = document.getElementById('calDayPopover');
+  if (popover) popover.style.display = 'none';
+}
+window.closeCalDayPopover = closeCalDayPopover;
+
+// =============================================================================
+// GLOBAL KEYBOARD SHORTCUTS FOR CALENDAR
+// =============================================================================
+
+document.addEventListener('keydown', (e) => {
+  const calModal = document.getElementById('calendarModal');
+  const isCalOpen = calModal && !calModal.hidden;
+
+  // Global Open Shortcut: Alt + C or Shift + C
+  if ((e.altKey && e.key.toLowerCase() === 'c') || (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'c')) {
+    e.preventDefault();
+    openCalendarModal();
+    return;
+  }
+
+  if (!isCalOpen) return;
+
+  // Ignore if user is currently typing in an input or textarea
+  const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+    if (e.key === 'Escape') {
+      const taskModal = document.getElementById('calTaskModal');
+      if (taskModal && !taskModal.hidden) {
+        closeCalTaskModal();
+      } else {
+        closeCalDayPopover();
+      }
+    }
+    return;
+  }
+
+  switch (e.key.toLowerCase()) {
+    case 't':
+      e.preventDefault();
+      calGoToToday();
+      break;
+    case 'p':
+    case 'arrowleft':
+      e.preventDefault();
+      calPrevPeriod();
+      break;
+    case 'n':
+    case 'arrowright':
+      e.preventDefault();
+      calNextPeriod();
+      break;
+    case 'm':
+      e.preventDefault();
+      setCalView('month');
+      break;
+    case 'w':
+      e.preventDefault();
+      setCalView('week');
+      break;
+    case 'd':
+      e.preventDefault();
+      setCalView('day');
+      break;
+    case 'c':
+      e.preventDefault();
+      openCalNewTaskModal();
+      break;
+    case '/':
+      e.preventDefault();
+      document.getElementById('calSearchInput')?.focus();
+      break;
+    case 'escape':
+      e.preventDefault();
+      const taskModal = document.getElementById('calTaskModal');
+      const exportModal = document.getElementById('calExportModal');
+      const popover = document.getElementById('calDayPopover');
+
+      if (taskModal && !taskModal.hidden) {
+        closeCalTaskModal();
+      } else if (exportModal && !exportModal.hidden) {
+        closeCalExportModal();
+      } else if (popover && popover.style.display !== 'none') {
+        closeCalDayPopover();
+      } else {
+        closeCalendarModal();
+      }
+      break;
+  }
+});
+
+// Close popover when clicking outside
+document.addEventListener('click', (e) => {
+  const popover = document.getElementById('calDayPopover');
+  if (popover && popover.style.display !== 'none') {
+    if (!popover.contains(e.target) && !e.target.classList.contains('cal-more-events-badge')) {
+      closeCalDayPopover();
+    }
+  }
+});
+
+// ── Initialize Calendar Engine ──
+function initCalendar() {
+  if (window.StorageService) {
+    window.StorageService.subscribe(() => {
+      renderCalendar();
+      updateCalendarDockBadge();
+    });
+  }
+
+  updateCalendarDockBadge();
+}
+
+initCalendar();
+
 
 
