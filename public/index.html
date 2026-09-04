@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=31.0" />
+<link rel="stylesheet" href="style.css?v=31.2" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -914,9 +914,51 @@
           </div>
         </div>
 
+        <!-- View Switcher Tabs: Cases Gallery vs Clinical Tasks & Lab Orders -->
+        <div class="dental-view-tabs" style="display: flex; gap: 10px; margin: 18px 0 16px 0;">
+          <button type="button" class="dental-pill active" id="btnDentalTabCases" onclick="switchDentalView('cases')">
+            🦷 Clinical Cases Gallery
+          </button>
+          <button type="button" class="dental-pill" id="btnDentalTabTasks" onclick="switchDentalView('tasks')">
+            📋 Clinical Tasks &amp; Lab Orders (<span id="dentalTasksBadgeCount">0</span>)
+          </button>
+        </div>
+
         <!-- Cases Grid -->
         <div class="dental-cases-grid" id="dentalCasesGrid" aria-live="polite">
           <!-- Dental Case cards rendered dynamically by app.js -->
+        </div>
+
+        <!-- Dedicated Dental Tasks & Lab Orders Container -->
+        <div class="dental-tasks-container" id="dentalTasksContainer" hidden style="margin-top: 16px;">
+          <div class="category-add-area" style="--card-color: var(--dental); margin-bottom: 24px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl);">
+            <h3 style="display: flex; align-items: center; gap: 8px; margin-top: 0; font-size: 16px;">
+              <span>🦷</span> Add Clinical Task or Lab Order
+            </h3>
+            <form class="category-quick-form" id="dentalQuickTaskForm" style="--card-color: var(--dental); display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+              <input type="text" id="dentalQuickTaskTitle" placeholder="e.g. #46 Zirconia crown delivery, Bleaching tray pickup, Check implant healing..." required style="flex: 2; min-width: 260px;" />
+              <select id="dentalQuickTaskPriority" style="min-width: 140px;">
+                <option value="High">🔴 High Priority</option>
+                <option value="Medium" selected>🟡 Medium Priority</option>
+                <option value="Low">🔵 Low Priority</option>
+              </select>
+              <input type="date" id="dentalQuickTaskDate" required style="min-width: 140px;" />
+              <input type="time" id="dentalQuickTaskTime" value="11:00" style="min-width: 110px;" />
+              <button type="submit" class="btn-primary" id="dentalQuickTaskSubmitBtn" style="padding: 9px 20px;">+ Schedule Task</button>
+            </form>
+          </div>
+
+          <div class="dental-tasks-list-wrap">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+              <h3 style="font-size: 16px; font-weight: 700; margin: 0;">Scheduled Dental Tasks &amp; Milestones</h3>
+              <button type="button" class="btn-ghost" onclick="openCalendarModal()" style="font-size: 13px; color: var(--dental); cursor: pointer; background: none; border: none; font-weight: 600;">
+                📅 View in Full Calendar &rarr;
+              </button>
+            </div>
+            <div id="dentalTasksList" class="dental-tasks-list" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+          </div>
         </div>
       </section>
 
@@ -4419,7 +4461,7 @@
           <button type="button" class="cal-filter-chip" data-cat="Religion" onclick="setCalCategoryFilter('Religion')"><span class="cal-cat-dot dot-religion"></span>Religion</button>
           <button type="button" class="cal-filter-chip" data-cat="Finance" onclick="setCalCategoryFilter('Finance')"><span class="cal-cat-dot dot-finance"></span>Finance</button>
           <button type="button" class="cal-filter-chip" data-cat="Dental Cases" onclick="setCalCategoryFilter('Dental Cases')"><span class="cal-cat-dot dot-dental"></span>🦷 Dental</button>
-          <button type="button" class="cal-filter-chip" data-cat="Health" onclick="setCalCategoryFilter('Health')"><span class="cal-cat-dot dot-health"></span>Health</button>
+          <button type="button" class="cal-filter-chip" data-cat="Workouts" onclick="setCalCategoryFilter('Workouts')"><span class="cal-cat-dot dot-health"></span>Workouts</button>
           <button type="button" class="cal-filter-chip" data-cat="Personal" onclick="setCalCategoryFilter('Personal')"><span class="cal-cat-dot dot-personal"></span>Personal</button>
         </div>
 
@@ -4618,7 +4660,7 @@
               <option value="Religion">🕌 Religion &amp; Reflection</option>
               <option value="Finance">💰 Finance &amp; Wealth</option>
               <option value="Dental Cases">🦷 Dental Cases &amp; Clinical Tasks</option>
-              <option value="Health">💪 Health &amp; Workouts</option>
+              <option value="Workouts">💪 Workouts &amp; Fitness</option>
               <option value="Personal">🏡 Personal</option>
               <option value="General">📌 General</option>
             </select>

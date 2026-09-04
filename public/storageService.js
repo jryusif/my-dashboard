@@ -194,6 +194,19 @@
       return tasks.find(t => String(t.id) === String(id)) || null;
     },
 
+    getByDate(dateStr) {
+      if (!dateStr) return [];
+      const all = this.getAll(false);
+      return all.filter(t => t.date === dateStr);
+    },
+
+    getByCategory(category) {
+      if (!category) return [];
+      const all = this.getAll(false);
+      const normTarget = String(category).toLowerCase().trim();
+      return all.filter(t => String(t.category || '').toLowerCase().trim() === normTarget);
+    },
+
     create(taskData) {
       const now = new Date().toISOString();
       const newTask = normalizeRecord({

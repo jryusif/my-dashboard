@@ -16,7 +16,7 @@ export async function GET(req) {
   const canAccessTrading = isMasterAdmin || Boolean(user?.tradingApproved);
   const canAccessDental = isMasterAdmin || Boolean(user?.dentalApproved);
 
-  const categories = ['Work', 'Studies', 'Workouts', 'Religion'];
+  const categories = ['Work', 'Studies', 'Workouts', 'Religion', 'Finance'];
   if (canAccessTrading) categories.push('Us stocks trading');
   if (canAccessDental) categories.push('Dental Cases');
 
@@ -25,6 +25,7 @@ export async function GET(req) {
     'Studies': ['Dental Board Prep', 'Lectures & Revisions', 'Research Papers', 'Clinical Notes'],
     'Workouts': ['Push (Chest/Tri)', 'Pull (Back/Bi)', 'Legs & Core', 'Recovery & Mobility'],
     'Religion': ['Quran Recitation', 'Prayer & Adhkar', 'Islamic Studies', 'Charity'],
+    'Finance': ['Budget & Cash Review', 'Investments & Gold', 'Expenses Tracking', 'Financial Goals'],
   };
 
   if (canAccessTrading) {

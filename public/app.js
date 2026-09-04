@@ -10,6 +10,25 @@ try {
   currentUser = null;
 }
 
+// Universal authenticated fetch interceptor
+const _origFetch = window.fetch;
+window.fetch = function (resource, init) {
+  const token = authToken || localStorage.getItem('antigravity_token');
+  if (token) {
+    const urlStr = typeof resource === 'string' ? resource : (resource && resource.url) || '';
+    if (urlStr.startsWith('/api/')) {
+      const clonedInit = init ? { ...init } : {};
+      const headers = new Headers(clonedInit.headers || {});
+      if (!headers.has('Authorization') && !headers.has('authorization')) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+      clonedInit.headers = headers;
+      return _origFetch.call(this, resource, clonedInit);
+    }
+  }
+  return _origFetch.call(this, resource, init);
+};
+
 // Load OAuth client IDs from server config (non-secret, safe to expose)
 (async function loadOAuthConfig() {
   try {
@@ -881,7 +900,7 @@ async function deleteTask(id, row, onDone) {
   row.style.transition = 'opacity 0.2s ease';
 
   if (window.StorageService) {
-    window.StorageService.tasks.delete(String(id));
+    window.StorageService.tasks.delete(String(id), true);
   }
 
   try {
@@ -5904,6 +5923,244 @@ if (backToDashboardFromDental) {
   backToDashboardFromDental.addEventListener('click', showDashboard);
 }
 
+let currentDentalView = 'cases'; // 'cases' | 'tasks'
+let loadedDentalTasks = [];
+
+function switchDentalView(viewName) {
+  currentDentalView = viewName;
+  const btnCases = document.getElementById('btnDentalTabCases');
+  const btnTasks = document.getElementById('btnDentalTabTasks');
+  const grid = document.getElementById('dentalCasesGrid');
+  const tasksContainer = document.getElementById('dentalTasksContainer');
+  const toolbar = document.querySelector('.dental-toolbar');
+
+  if (btnCases) btnCases.classList.toggle('active', viewName === 'cases');
+  if (btnTasks) btnTasks.classList.toggle('active', viewName === 'tasks');
+
+  if (grid) grid.hidden = (viewName !== 'cases');
+  if (tasksContainer) tasksContainer.hidden = (viewName !== 'tasks');
+  if (toolbar) toolbar.style.display = (viewName === 'cases' ? '' : 'none');
+
+  if (viewName === 'tasks') {
+    loadDentalTasks();
+  } else {
+    loadDentalCases();
+  }
+}
+window.switchDentalView = switchDentalView;
+
+async function loadDentalTasks() {
+  const listEl = document.getElementById('dentalTasksList');
+  const badgeCount = document.getElementById('dentalTasksBadgeCount');
+  if (!listEl) return;
+
+  const dateInput = document.getElementById('dentalQuickTaskDate');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = toISODate(new Date());
+  }
+
+  try {
+    const res = await fetch(`/api/tasks?category=${encodeURIComponent('Dental Cases')}`);
+    if (!res.ok) throw new Error('Failed to fetch dental tasks');
+    const data = await res.json();
+    loadedDentalTasks = data.tasks || [];
+
+    const pendingCount = loadedDentalTasks.filter(t => !t.completed).length;
+    if (badgeCount) badgeCount.textContent = pendingCount;
+
+    renderDentalTasks(loadedDentalTasks);
+  } catch (err) {
+    console.error('Error loading dental tasks:', err);
+    if (window.StorageService) {
+      const local = window.StorageService.tasks.getByCategory('Dental Cases');
+      loadedDentalTasks = local;
+      if (badgeCount) badgeCount.textContent = local.filter(t => !t.completed).length;
+      renderDentalTasks(local);
+    }
+  }
+}
+window.loadDentalTasks = loadDentalTasks;
+
+function renderDentalTasks(tasks) {
+  const listEl = document.getElementById('dentalTasksList');
+  if (!listEl) return;
+
+  if (!tasks || tasks.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-state" style="padding: 32px 20px; text-align: center; background: rgba(255,255,255,0.02); border: 1px dashed var(--border); border-radius: 14px;">
+        <span class="glyph" style="font-size: 28px; display: block; margin-bottom: 8px;">🦷</span>
+        <h4 style="margin: 0 0 6px 0; font-size: 15px;">No Dental Tasks or Lab Orders</h4>
+        <p style="margin: 0; font-size: 13px; color: var(--ink-soft);">Use the form above to schedule lab pickups, chairside setups, patient recalls, or procedure milestones.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const sorted = [...tasks].sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return (a.date || '').localeCompare(b.date || '');
+  });
+
+  listEl.innerHTML = sorted.map(t => {
+    const isDone = Boolean(t.completed);
+    const dateStr = t.date || t.dueDate || '';
+    const timeStr = t.timeBlock || t.time || '';
+    const prio = (t.priority || 'medium').toLowerCase();
+    const prioColor = prio === 'high' ? '#ef4444' : prio === 'low' ? '#38bdf8' : '#f59e0b';
+
+    return `
+      <div class="task-item ${isDone ? 'is-completed' : ''}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; gap: 12px; transition: background 0.15s ease;">
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+          <input type="checkbox" ${isDone ? 'checked' : ''} onchange="handleDentalTaskToggle('${escapeHtml(t.id)}', this.checked)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--dental);" />
+          <div style="min-width: 0; flex: 1;">
+            <div style="font-weight: 600; font-size: 14px; text-decoration: ${isDone ? 'line-through' : 'none'}; color: ${isDone ? 'var(--ink-soft)' : 'var(--ink)'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              ${escapeHtml(t.title || t.task || 'Untitled Task')}
+            </div>
+            <div style="display: flex; gap: 10px; font-size: 12px; color: var(--ink-soft); margin-top: 3px; align-items: center;">
+              <span>📅 ${escapeHtml(dateStr)}</span>
+              ${timeStr ? `<span>⏰ ${escapeHtml(timeStr)}</span>` : ''}
+              <span style="display: inline-flex; align-items: center; gap: 4px; color: ${prioColor}; font-weight: 600; font-size: 11px; text-transform: uppercase;">
+                ● ${prio}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn-ghost" onclick="openCalendarModal('${escapeHtml(dateStr)}')" title="View on Calendar" style="padding: 6px 10px; font-size: 12px; color: var(--ink-mid); background: rgba(255,255,255,0.04); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); cursor: pointer;">
+            📅 Calendar
+          </button>
+          <button type="button" class="task-delete-btn" onclick="handleDentalTaskDelete('${escapeHtml(t.id)}')" title="Delete Dental Task" style="background: none; border: none; color: var(--ink-soft); cursor: pointer; font-size: 18px; padding: 4px 8px; border-radius: 6px;">
+            &times;
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+window.renderDentalTasks = renderDentalTasks;
+
+async function handleDentalTaskToggle(taskId, completed) {
+  if (!taskId) return;
+  try {
+    if (window.StorageService) {
+      window.StorageService.tasks.update(taskId, { completed });
+    }
+    if (authToken) {
+      fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ completed }),
+      }).catch(() => {});
+    }
+    const t = loadedDentalTasks.find(item => String(item.id) === String(taskId));
+    if (t) t.completed = completed;
+    renderDentalTasks(loadedDentalTasks);
+    const badgeCount = document.getElementById('dentalTasksBadgeCount');
+    if (badgeCount) badgeCount.textContent = loadedDentalTasks.filter(item => !item.completed).length;
+
+    showToast(completed ? '🦷 Dental task completed!' : 'Dental task reopened.');
+    if (typeof renderCalendar === 'function') renderCalendar();
+    if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+  } catch (err) {
+    console.error('Failed to toggle dental task:', err);
+  }
+}
+window.handleDentalTaskToggle = handleDentalTaskToggle;
+
+async function handleDentalTaskDelete(taskId) {
+  if (!taskId) return;
+  if (!confirm('Are you sure you want to delete this clinical task?')) return;
+  try {
+    if (window.StorageService) {
+      window.StorageService.tasks.delete(taskId, true);
+    }
+    if (authToken) {
+      fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` },
+      }).catch(() => {});
+    }
+    loadedDentalTasks = loadedDentalTasks.filter(item => String(item.id) !== String(taskId));
+    renderDentalTasks(loadedDentalTasks);
+    const badgeCount = document.getElementById('dentalTasksBadgeCount');
+    if (badgeCount) badgeCount.textContent = loadedDentalTasks.filter(item => !item.completed).length;
+
+    showToast('Clinical task deleted.');
+    if (typeof renderCalendar === 'function') renderCalendar();
+    if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+  } catch (err) {
+    console.error('Failed to delete dental task:', err);
+  }
+}
+window.handleDentalTaskDelete = handleDentalTaskDelete;
+
+function initDentalTasksForm() {
+  const form = document.getElementById('dentalQuickTaskForm');
+  if (!form || form.__initialized) return;
+  form.__initialized = true;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('dentalQuickTaskTitle')?.value.trim();
+    const priority = document.getElementById('dentalQuickTaskPriority')?.value || 'Medium';
+    const date = document.getElementById('dentalQuickTaskDate')?.value || toISODate(new Date());
+    const time = document.getElementById('dentalQuickTaskTime')?.value || '11:00';
+    if (!title) return;
+
+    const btn = document.getElementById('dentalQuickTaskSubmitBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Scheduling…'; }
+
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          task: title,
+          title: title,
+          category: 'Dental Cases',
+          priority: priority,
+          dueDate: date,
+          date: date,
+          timeBlock: time,
+          completed: false,
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to create dental task');
+      const created = await res.json();
+
+      if (window.StorageService && created) {
+        window.StorageService.tasks.create({
+          id: String(created.id),
+          title: created.title || title,
+          date: created.date || date,
+          time: created.timeBlock || time,
+          category: 'Dental Cases',
+          priority: priority.toLowerCase(),
+          completed: false,
+          sync_status: 'synced',
+        });
+      }
+
+      showToast('🦷 Clinical task added and synced with Calendar!');
+      document.getElementById('dentalQuickTaskTitle').value = '';
+      await loadDentalTasks();
+
+      if (typeof renderCalendar === 'function') renderCalendar();
+      if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+      if (typeof syncBoards === 'function') syncBoards().catch(() => {});
+    } catch (err) {
+      console.error('Error adding dental task:', err);
+      showToast('Could not schedule dental task — please try again.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '+ Schedule Task'; }
+    }
+  });
+}
+
 function openDentalCasesPage() {
   if (!userCanAccessDental()) {
     showToast('🔒 Dental Cases archive is locked. Administrator approval required.');
@@ -5915,7 +6172,9 @@ function openDentalCasesPage() {
   currentCategoryPage = null;
   if (dentalCasesSection) dentalCasesSection.hidden = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  initDentalTasksForm();
   loadDentalCases();
+  loadDentalTasks();
 }
 
 async function loadDentalCases() {
@@ -15811,11 +16070,11 @@ function isCalTaskOverdue(task) {
 // ── Category Styles Mapping ──
 const CAL_CATEGORY_MAP = {
   work: { name: 'Work', pillClass: 'cal-pill-work', dotClass: 'dot-work' },
-  study: { name: 'Study', pillClass: 'cal-pill-study', dotClass: 'dot-study' },
-  trading: { name: 'Trading', pillClass: 'cal-pill-trading', dotClass: 'dot-trading' },
+  study: { name: 'Studies', pillClass: 'cal-pill-study', dotClass: 'dot-study' },
+  trading: { name: 'US Stocks Trading', pillClass: 'cal-pill-trading', dotClass: 'dot-trading' },
   religion: { name: 'Religion', pillClass: 'cal-pill-religion', dotClass: 'dot-religion' },
   finance: { name: 'Finance', pillClass: 'cal-pill-finance', dotClass: 'dot-finance' },
-  health: { name: 'Health', pillClass: 'cal-pill-health', dotClass: 'dot-health' },
+  health: { name: 'Workouts', pillClass: 'cal-pill-health', dotClass: 'dot-health' },
   dental: { name: 'Dental Cases', pillClass: 'cal-pill-dental', dotClass: 'dot-dental' },
   habits: { name: 'Habits', pillClass: 'cal-pill-habits', dotClass: 'dot-habits' },
   routines: { name: 'Routines', pillClass: 'cal-pill-routines', dotClass: 'dot-routines' },
@@ -15826,12 +16085,13 @@ const CAL_CATEGORY_MAP = {
 function normalizeCalCategory(cat) {
   const c = String(cat || '').toLowerCase().trim();
   if (!c) return 'general';
-  if (c.includes('trad') || c.includes('stock')) return 'trading';
-  if (c.includes('relig') || c.includes('quran') || c.includes('prayer')) return 'religion';
-  if (c.includes('stud') || c.includes('learn') || c.includes('exam')) return 'study';
-  if (c.includes('dent') || c.includes('teeth') || c.includes('clinic') || c.includes('patient')) return 'dental';
-  if (c.includes('finan') || c.includes('money') || c.includes('wealth')) return 'finance';
-  if (c.includes('workout') || c.includes('gym') || c.includes('health') || c.includes('fitness')) return 'health';
+  if (c === 'work' || c === 'work & clinic') return 'work';
+  if (c === 'workouts' || c === 'health' || c.includes('workout') || c.includes('gym') || c.includes('fitness')) return 'health';
+  if (c === 'dental cases' || c === 'dental' || c.includes('dent') || c.includes('teeth')) return 'dental';
+  if (c === 'us stocks trading' || c === 'trading' || c.includes('trad') || c.includes('stock')) return 'trading';
+  if (c === 'studies' || c === 'study' || c.includes('stud') || c.includes('learn') || c.includes('exam')) return 'study';
+  if (c === 'religion' || c.includes('relig') || c.includes('quran') || c.includes('prayer')) return 'religion';
+  if (c === 'finance' || c.includes('finan') || c.includes('money') || c.includes('wealth')) return 'finance';
   if (c.includes('work')) return 'work';
   if (c.includes('habit')) return 'habits';
   if (c.includes('routine')) return 'routines';
@@ -15888,8 +16148,8 @@ async function syncAllWebsiteTasksWithCalendar() {
           if (p.deleted_at) {
             try {
               await fetch(`/api/tasks/${p.id}`, { method: 'DELETE', headers: authHeaders });
-              window.StorageService.tasks.delete(p.id, true);
             } catch (_) {}
+            window.StorageService.tasks.delete(p.id, true);
           } else {
             try {
               const createRes = await fetch('/api/tasks', {
@@ -15898,7 +16158,9 @@ async function syncAllWebsiteTasksWithCalendar() {
                 body: JSON.stringify({
                   id: p.id,
                   title: p.title,
+                  task: p.title,
                   date: p.date,
+                  dueDate: p.date,
                   timeBlock: p.time,
                   category: p.category,
                   priority: p.priority === 'high' ? 'High' : p.priority === 'low' ? 'Low' : 'Medium',
@@ -15906,7 +16168,17 @@ async function syncAllWebsiteTasksWithCalendar() {
                 })
               });
               if (createRes.ok) {
-                window.StorageService.tasks.update(p.id, { sync_status: 'synced' });
+                const created = await createRes.json();
+                if (created && created.id && String(created.id) !== String(p.id)) {
+                  window.StorageService.tasks.delete(p.id, true);
+                  window.StorageService.tasks.create({
+                    ...p,
+                    id: String(created.id),
+                    sync_status: 'synced',
+                  });
+                } else {
+                  window.StorageService.tasks.update(p.id, { sync_status: 'synced' });
+                }
               }
             } catch (_) {}
           }
@@ -15929,6 +16201,12 @@ async function syncAllWebsiteTasksWithCalendar() {
     if (typeof renderCalendar === 'function') {
       const calModal = document.getElementById('calendarModal');
       if (calModal && !calModal.hidden) renderCalendar();
+    }
+    if (typeof loadDentalTasks === 'function') {
+      const dentalContainer = document.getElementById('dentalTasksContainer');
+      if (dentalContainer && !dentalContainer.hidden) {
+        loadDentalTasks().catch(() => {});
+      }
     }
   } catch (err) {
     console.warn('[syncAllWebsiteTasksWithCalendar] Error syncing tasks:', err);
@@ -16855,7 +17133,7 @@ async function handleCalTaskFormSubmit(e) {
   const taskId = document.getElementById('calTaskId')?.value;
   const title = document.getElementById('calTaskTitleInput')?.value.trim();
   const description = document.getElementById('calTaskDescInput')?.value.trim();
-  const date = document.getElementById('calTaskDateInput')?.value;
+  const date = document.getElementById('calTaskDateInput')?.value || toISODate(new Date());
   const time = document.getElementById('calTaskTimeInput')?.value || '10:00';
   const category = document.getElementById('calTaskCategorySelect')?.value || 'Work';
   const priority = document.getElementById('calTaskPrioritySelect')?.value || 'medium';
@@ -16874,10 +17152,9 @@ async function handleCalTaskFormSubmit(e) {
     category,
     priority,
     recurrence,
-    subtasks: calState.subtasksBuffer,
+    subtasks: calState.subtasksBuffer || [],
   };
 
-  // Disable submit while saving
   const submitBtn = document.getElementById('calTaskSubmitBtn') ||
     document.querySelector('#calTaskModal [type="submit"]');
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
@@ -16907,8 +17184,8 @@ async function handleCalTaskFormSubmit(e) {
       }
       showToast('Task updated in schedule.');
     } else {
-      // --- CREATE new task: save locally first for instant calendar render ---
-      savedTask = window.StorageService.tasks.create(taskPayload);
+      // --- CREATE new task ---
+      let dbTask = null;
       if (authToken) {
         try {
           const res = await fetch('/api/tasks', {
@@ -16926,26 +17203,31 @@ async function handleCalTaskFormSubmit(e) {
             })
           });
           if (res.ok) {
-            const dbTask = await res.json();
-            // Replace local temp-id with real DB id so category/weekly pages find it
-            if (dbTask && dbTask.id && savedTask) {
-              window.StorageService.tasks.delete(savedTask.id);
-              window.StorageService.tasks.create({
-                id: String(dbTask.id),
-                title: dbTask.title || title,
-                date: dbTask.dueDate || dbTask.date || date,
-                time: dbTask.timeBlock || time,
-                category: dbTask.category || category,
-                priority: (dbTask.priority || priority || 'medium').toLowerCase(),
-                completed: Boolean(dbTask.completed),
-                sync_status: 'synced',
-              });
-            }
+            dbTask = await res.json();
           }
-        } catch (_) {}
+        } catch (err) {
+          console.warn('[Calendar] POST /api/tasks failed, creating offline copy:', err);
+        }
       }
+
+      const recordToSave = {
+        ...taskPayload,
+        id: dbTask && dbTask.id ? String(dbTask.id) : undefined,
+        title: (dbTask && (dbTask.title || dbTask.task)) || title,
+        date: (dbTask && (dbTask.dueDate || dbTask.date)) || date,
+        time: (dbTask && dbTask.timeBlock) || time,
+        category: (dbTask && dbTask.category) || category,
+        priority: ((dbTask && dbTask.priority) || priority || 'medium').toLowerCase(),
+        completed: false,
+        sync_status: dbTask && dbTask.id ? 'synced' : 'pending_sync',
+      };
+
+      savedTask = window.StorageService.tasks.create(recordToSave);
       showToast('Task scheduled successfully.');
     }
+  } catch (err) {
+    console.error('[Calendar] Error in handleCalTaskFormSubmit:', err);
+    showToast('Failed to save task — please try again.');
   } finally {
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Task'; }
   }
@@ -16954,15 +17236,17 @@ async function handleCalTaskFormSubmit(e) {
   renderCalendar();
   if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
 
-  // Sync all views: sidebar today board, weekly planner, open category page
-  if (typeof syncBoards === 'function') await syncBoards();
+  // Non-blocking sync of all views (sidebar, weekly planner, category page)
+  if (typeof syncBoards === 'function') {
+    syncBoards().catch(() => {});
+  }
 }
 window.handleCalTaskFormSubmit = handleCalTaskFormSubmit;
 
 async function handleCalDeleteTask() {
   if (!calState.editingTaskId || !window.StorageService) return;
   const idToDelete = calState.editingTaskId;
-  window.StorageService.tasks.delete(idToDelete);
+  window.StorageService.tasks.delete(idToDelete, true);
   closeCalTaskModal();
   renderCalendar();
   showToast('Task removed from schedule.');
@@ -16977,7 +17261,9 @@ async function handleCalDeleteTask() {
   }
 
   if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
-  if (typeof syncBoards === 'function') await syncBoards();
+  if (typeof syncBoards === 'function') {
+    syncBoards().catch(() => {});
+  }
 }
 window.handleCalDeleteTask = handleCalDeleteTask;
 

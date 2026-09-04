@@ -617,7 +617,7 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
   flex-shrink: 0;
 }
 
-/* Responsive Ergonomics for Top Navbar */
+/* Responsive Ergonomics for Top Navbar & Anti-Crowding Architecture */
 @media (max-width: 1400px) {
   .user-email-text {
     max-width: 85px;
@@ -633,45 +633,33 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
     gap: 3px;
   }
   .calendar-flip-text {
-    max-width: 90px;
+    max-width: 110px;
   }
   .user-email-text {
     max-width: 70px;
   }
 }
 
-@media (max-width: 960px) {
-  .dock-meta-group {
-    display: none;
-  }
-  .chrono-seam-divider {
-    display: none;
-  }
-}
-
-@media (max-width: 760px) {
-  .header-flip-clock-wrap {
+/* Crowding Prevention Threshold (<= 1120px):
+   Hide extra dock suites from navbar — reachable via the side drawer toggle.
+   Preserve Date and Flip Clock cleanly centered. */
+@media (max-width: 1120px) {
+  .nav-apps-dock {
     display: none !important;
   }
-  .nav-left-zone,
   .nav-right-zone {
-    flex: 1 1 auto;
+    display: none !important;
   }
-}
-
-@media (max-width: 640px) {
-  .main-top-navbar {
-    padding: 5px 8px;
+  .nav-system-dock {
+    display: none !important;
   }
-  .nav-apps-dock {
-    padding: 2px 3px;
-    gap: 2px;
+  .nav-left-zone {
+    flex: 0 0 auto !important;
+    width: auto !important;
   }
-  .btn-app-dock {
-    padding: 3px 5px;
-  }
-  .user-email-text {
-    max-width: 55px;
+  .header-flip-clock-wrap {
+    display: flex !important;
+    margin: 0 auto !important;
   }
 }
 
@@ -9999,13 +9987,36 @@ body.is-authenticated .auth-gateway-screen {
     box-shadow: 0 14px 40px rgba(0, 0, 0, 0.75), 0 0 25px rgba(56, 189, 248, 0.25) !important;
   }
 
+  /* Top Navbar Small Screen Ergonomics: Keep only Sidebar Toggle + Clock & Date */
+  .nav-apps-dock,
+  .nav-right-zone,
+  .nav-system-dock,
+  .main-top-navbar .dock-notification-group,
+  .main-top-navbar .dock-user-capsule,
+  .main-top-navbar .dock-divider {
+    display: none !important;
+  }
+
+  .nav-left-zone {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
   .header-flip-clock-wrap {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    flex: 0 1 auto !important;
     margin: 0 !important;
+    min-width: 0 !important;
   }
 
+  .header-chrono-dock,
   .header-live-dock {
     background: transparent !important;
     border: none !important;
@@ -10017,17 +10028,24 @@ body.is-authenticated .auth-gateway-screen {
   }
 
   .flip-clock-live-badge {
-    padding: 2px 6px !important;
-    font-size: 9px !important;
-    gap: 4px !important;
+    display: none !important;
+  }
+
+  .dock-meta-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
   }
 
   .flip-paper-calendar {
-    background: transparent !important;
-    border: none !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 999px !important;
     box-shadow: none !important;
-    padding: 0 4px !important;
-    gap: 4px !important;
+    padding: 3px 8px !important;
+    gap: 5px !important;
+    display: inline-flex !important;
+    align-items: center !important;
   }
 
   .calendar-flip-pin {
@@ -10035,40 +10053,51 @@ body.is-authenticated .auth-gateway-screen {
   }
 
   .calendar-flip-text {
-    font-size: 11.5px !important;
-    font-weight: 700 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
     color: #e2e8f0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 130px !important;
+  }
+
+  .chrono-seam-divider {
+    display: block !important;
+    width: 1px !important;
+    height: 18px !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    margin: 0 4px !important;
+    flex-shrink: 0 !important;
   }
 
   .mechanical-flip-clock {
-    gap: 2px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 2.5px !important;
+    flex-shrink: 0 !important;
   }
 
   .flip-digit-tile {
-    width: 24px !important;
-    height: 28px !important;
-    border-radius: 4px !important;
+    width: 25px !important;
+    height: 29px !important;
+    border-radius: 5px !important;
   }
 
   .flip-digit-val {
-    font-size: 13px !important;
+    font-size: 13.5px !important;
   }
 
   .flip-colon {
     font-size: 12px !important;
     padding: 0 !important;
+    color: rgba(255, 255, 255, 0.6) !important;
   }
 
   .flip-ampm-tag {
-    font-size: 8px !important;
-    padding: 1px 3px !important;
+    font-size: 8.5px !important;
+    padding: 1.5px 4px !important;
     margin-left: 2px !important;
-  }
-
-  .main-top-navbar .dock-notification-group,
-  .main-top-navbar .dock-user-capsule,
-  .main-top-navbar .dock-divider {
-    display: none !important;
   }
 
   .dashboard-grid {
@@ -10099,6 +10128,47 @@ body.is-authenticated .auth-gateway-screen {
     grid-template-columns: 1fr !important;
     gap: 10px;
     width: 100% !important;
+  }
+}
+
+/* Compact Floating Top Navbar for Small Mobile Phones (<= 480px) */
+@media (max-width: 480px) {
+  .main-top-navbar {
+    max-width: 98% !important;
+    padding: 3px 6px 3px 5px !important;
+    gap: 4px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .main-top-navbar .btn-sidebar-toggle {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+  }
+
+  .main-top-navbar #flipTileSeconds,
+  .main-top-navbar .mechanical-flip-clock .flip-colon:last-of-type {
+    display: none !important;
+  }
+
+  .main-top-navbar .calendar-flip-text {
+    max-width: 95px !important;
+    font-size: 11px !important;
+  }
+
+  .main-top-navbar .flip-digit-tile {
+    width: 22px !important;
+    height: 26px !important;
+    border-radius: 4px !important;
+  }
+
+  .main-top-navbar .flip-digit-val {
+    font-size: 12px !important;
+  }
+
+  .main-top-navbar .chrono-seam-divider {
+    margin: 0 2px !important;
   }
 }
 
@@ -13521,8 +13591,8 @@ body.is-authenticated .auth-gateway-screen {
    ===================================================================== */
 .btn-scroll-to-top {
   position: fixed;
-  bottom: 32px;
-  right: 32px;
+  bottom: 28px;
+  right: 28px;
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -13614,7 +13684,7 @@ body.is-unauthenticated .btn-scroll-to-top {
 
 @media (max-width: 768px) {
   .btn-scroll-to-top {
-    bottom: 22px;
+    bottom: 20px;
     right: 18px;
     width: 44px;
     height: 44px;
@@ -13698,13 +13768,15 @@ body.is-unauthenticated .btn-scroll-to-top {
 /* ── Universal Floating Trigger Button (Bottom-Right FAB) ────────── */
 .btn-floating-braindump {
   position: fixed;
-  bottom: 24px;
-  right: 80px;
+  bottom: 31px;
+  right: 98px;
+  height: 44px;
+  box-sizing: border-box;
   z-index: 990;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 18px;
+  padding: 0 18px;
   border-radius: 999px;
   background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -13746,8 +13818,9 @@ body.is-unauthenticated .btn-floating-braindump {
 @media (max-width: 768px) {
   .btn-floating-braindump {
     bottom: 22px;
-    right: 74px;
-    padding: 10px 14px;
+    right: 78px;
+    height: 40px;
+    padding: 0 12px;
   }
   .floating-bd-label {
     display: none;
