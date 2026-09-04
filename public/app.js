@@ -777,17 +777,20 @@ async function toggleTask(id, completed, row, onToggled) {
 }
 
 async function syncBoards() {
+  // Step 1: Pull all DB tasks into StorageService so the calendar is up-to-date
   if (typeof syncAllWebsiteTasksWithCalendar === 'function') {
     await syncAllWebsiteTasksWithCalendar();
   }
+  // Step 2: Reload all dashboard panels from DB
   await loadTasks();
   await loadWeekDay();
   loadWeeklyProgress();
   loadCardBadges();
-  // Also refresh category page if open
+  // Step 3: Reload open category page (reads from DB directly)
   if (currentCategoryPage) {
     await loadCategoryPage(currentCategoryPage);
   }
+  // Step 4: Re-render calendar UI if open (reads from StorageService, now up-to-date)
   if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
   if (typeof renderCalendar === 'function') {
     const calModal = document.getElementById('calendarModal');
@@ -16823,27 +16826,29 @@ function closeCalTaskModal() {
 }
 window.closeCalTaskModal = closeCalTaskModal;
 
-function rescheduleCalTaskToToday(taskId) {
+async function rescheduleCalTaskToToday(taskId) {
   if (!taskId || !window.StorageService) return;
   const todayKey = getCalDateKey(new Date());
   const updated = window.StorageService.tasks.update(taskId, { date: todayKey });
   if (updated) {
     showToast(`🗓️ Rescheduled "${updated.title}" to Today!`);
     if (authToken) {
-      fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({ date: todayKey, dueDate: todayKey })
-      }).catch(() => {});
+      try {
+        await fetch(`/api/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ date: todayKey, dueDate: todayKey })
+        });
+      } catch (_) {}
     }
     renderCalendar();
     if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
-    if (typeof syncBoards === 'function') setTimeout(syncBoards, 50);
+    if (typeof syncBoards === 'function') await syncBoards();
   }
 }
 window.rescheduleCalTaskToToday = rescheduleCalTaskToToday;
 
-function handleCalTaskFormSubmit(e) {
+async function handleCalTaskFormSubmit(e) {
   e.preventDefault();
   if (!window.StorageService) return;
 
@@ -16872,61 +16877,89 @@ function handleCalTaskFormSubmit(e) {
     subtasks: calState.subtasksBuffer,
   };
 
+  // Disable submit while saving
+  const submitBtn = document.getElementById('calTaskSubmitBtn') ||
+    document.querySelector('#calTaskModal [type="submit"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
+
   let savedTask = null;
-  if (taskId) {
-    savedTask = window.StorageService.tasks.update(taskId, taskPayload);
-    showToast('Task updated in schedule.');
-    if (authToken) {
-      fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({
-          title,
-          task: title,
-          date,
-          dueDate: date,
-          timeBlock: time,
-          category,
-          priority: priority === 'high' ? 'High' : priority === 'low' ? 'Low' : 'Medium',
-        })
-      }).catch(() => {});
+  try {
+    if (taskId) {
+      // --- EDIT existing task ---
+      savedTask = window.StorageService.tasks.update(taskId, taskPayload);
+      if (authToken) {
+        try {
+          await fetch(`/api/tasks/${taskId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({
+              title,
+              task: title,
+              date,
+              dueDate: date,
+              timeBlock: time,
+              category,
+              priority: priority === 'high' ? 'High' : priority === 'low' ? 'Low' : 'Medium',
+            })
+          });
+          if (savedTask) window.StorageService.tasks.update(savedTask.id, { sync_status: 'synced' });
+        } catch (_) {}
+      }
+      showToast('Task updated in schedule.');
+    } else {
+      // --- CREATE new task: save locally first for instant calendar render ---
+      savedTask = window.StorageService.tasks.create(taskPayload);
+      if (authToken) {
+        try {
+          const res = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({
+              title,
+              task: title,
+              date,
+              dueDate: date,
+              timeBlock: time,
+              category,
+              priority: priority === 'high' ? 'High' : priority === 'low' ? 'Low' : 'Medium',
+              completed: false,
+            })
+          });
+          if (res.ok) {
+            const dbTask = await res.json();
+            // Replace local temp-id with real DB id so category/weekly pages find it
+            if (dbTask && dbTask.id && savedTask) {
+              window.StorageService.tasks.delete(savedTask.id);
+              window.StorageService.tasks.create({
+                id: String(dbTask.id),
+                title: dbTask.title || title,
+                date: dbTask.dueDate || dbTask.date || date,
+                time: dbTask.timeBlock || time,
+                category: dbTask.category || category,
+                priority: (dbTask.priority || priority || 'medium').toLowerCase(),
+                completed: Boolean(dbTask.completed),
+                sync_status: 'synced',
+              });
+            }
+          }
+        } catch (_) {}
+      }
+      showToast('Task scheduled successfully.');
     }
-  } else {
-    savedTask = window.StorageService.tasks.create(taskPayload);
-    showToast('Task scheduled successfully.');
-    if (authToken) {
-      fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({
-          id: savedTask.id,
-          title,
-          task: title,
-          date,
-          dueDate: date,
-          timeBlock: time,
-          category,
-          priority: priority === 'high' ? 'High' : priority === 'low' ? 'Low' : 'Medium',
-          completed: false,
-        })
-      }).then(res => {
-        if (res.ok && savedTask) window.StorageService.tasks.update(savedTask.id, { sync_status: 'synced' });
-      }).catch(() => {});
-    }
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Task'; }
   }
 
   closeCalTaskModal();
   renderCalendar();
   if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
 
-  // Instantly sync dashboard boards & weekly planner
-  if (typeof syncBoards === 'function') {
-    setTimeout(syncBoards, 50);
-  }
+  // Sync all views: sidebar today board, weekly planner, open category page
+  if (typeof syncBoards === 'function') await syncBoards();
 }
 window.handleCalTaskFormSubmit = handleCalTaskFormSubmit;
 
-function handleCalDeleteTask() {
+async function handleCalDeleteTask() {
   if (!calState.editingTaskId || !window.StorageService) return;
   const idToDelete = calState.editingTaskId;
   window.StorageService.tasks.delete(idToDelete);
@@ -16935,16 +16968,16 @@ function handleCalDeleteTask() {
   showToast('Task removed from schedule.');
 
   if (authToken) {
-    fetch(`/api/tasks/${idToDelete}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${authToken}` }
-    }).catch(() => {});
+    try {
+      await fetch(`/api/tasks/${idToDelete}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+    } catch (_) {}
   }
 
   if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
-  if (typeof syncBoards === 'function') {
-    setTimeout(syncBoards, 50);
-  }
+  if (typeof syncBoards === 'function') await syncBoards();
 }
 window.handleCalDeleteTask = handleCalDeleteTask;
 
