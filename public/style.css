@@ -9858,6 +9858,20 @@ body.is-authenticated .auth-gateway-screen {
     box-shadow: 20px 0 60px rgba(0, 0, 0, 0.92), 0 0 35px rgba(56, 189, 248, 0.25) !important;
   }
 
+  /* Hide the top navbar entirely while the mobile sidebar drawer is open */
+  body.sidebar-mobile-open #mainTopNavbar {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(-100%) !important;
+    transition: opacity 0.25s ease, transform 0.25s ease !important;
+  }
+
+  /* Smooth re-entry when sidebar closes */
+  #mainTopNavbar {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+
   .main-content,
   body.sidebar-is-collapsed .main-content {
     margin-left: auto !important;
