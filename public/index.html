@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=24.0" />
+<link rel="stylesheet" href="style.css?v=25.0" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -339,7 +339,7 @@
            =================================================================== -->
       <header class="main-top-navbar" id="mainTopNavbar">
 
-        <!-- ZONE 1: LEFT WING — Sidebar Toggle -->
+        <!-- ZONE 1: LEFT WING — Sidebar Toggle & Productivity Suite (Calendar, Brain Dump, Habits) -->
         <div class="nav-left-zone">
           <button type="button" class="btn-sidebar-toggle" id="btnSidebarToggle" title="Toggle Tasks &amp; Routines Sidebar (Ctrl+\)" aria-label="Toggle Tasks &amp; Routines Sidebar">
             <div class="toggle-icon-wrap">
@@ -348,6 +348,31 @@
               <span class="toggle-bar bar-3"></span>
             </div>
           </button>
+
+          <!-- Productivity Suite Dock (Calendar, Brain Dump, Habits, Triage) -->
+          <div class="nav-apps-dock" id="navAppsDock" role="toolbar" aria-label="Productivity Apps">
+            <button type="button" class="btn-app-dock app-dock-calendar" id="btnHeaderCalendar" onclick="openCalendarModal()" title="Smart Calendar OS &amp; Task Timeline">
+              <span class="app-dock-icon">📅</span>
+              <span class="app-dock-label">Calendar</span>
+              <span class="app-dock-badge badge-indigo" id="headerCalendarBadge">0</span>
+            </button>
+
+            <button type="button" class="btn-app-dock app-dock-braindump" id="btnHeaderBrainDump" onclick="openBrainDumpPalette()" title="Universal Brain Dump Quick-Capture (Ctrl + Space)">
+              <span class="app-dock-icon">⚡</span>
+              <span class="app-dock-label">Brain Dump</span>
+              <span class="app-dock-badge" id="headerBrainDumpBadge">0</span>
+            </button>
+
+            <button type="button" class="btn-app-dock app-dock-habits" id="btnHeaderHabitTracker" onclick="openHabitTrackerModal()" title="HabitOS Pro — Behavioral Habits &amp; Streaks (Ctrl + H)">
+              <span class="app-dock-icon">🔥</span>
+              <span class="app-dock-label">Habits</span>
+              <span class="app-dock-badge badge-amber" id="headerHabitBadge" style="display: none;">0/0</span>
+            </button>
+
+            <button type="button" class="btn-app-dock-triage" id="btnHeaderTriage" onclick="openEveningTriageModal()" title="Nightly Triage Ritual (8 PM)">
+              <span class="app-triage-icon">🌙</span>
+            </button>
+          </div>
         </div>
 
         <!-- ZONE 2: CENTERPIECE — 3D Mechanical Split-Flap Clock & Live Date Station -->
@@ -391,28 +416,8 @@
           </div>
         </div>
 
-        <!-- ZONE 3: RIGHT WING — Productivity Suite Dock & System/User Control Center -->
+        <!-- ZONE 3: RIGHT WING — Alerts, Admin, User Profile & Sign Out -->
         <div class="nav-right-zone">
-          <!-- Sub-Island A: Productivity Suite Dock (Brain Dump, Calendar, Triage) -->
-          <div class="nav-apps-dock" id="navAppsDock" role="toolbar" aria-label="Productivity Apps">
-            <button type="button" class="btn-app-dock app-dock-braindump" id="btnHeaderBrainDump" onclick="openBrainDumpPalette()" title="Universal Brain Dump Quick-Capture (Ctrl + Space)">
-              <span class="app-dock-icon">⚡</span>
-              <span class="app-dock-label">Brain Dump</span>
-              <span class="app-dock-badge" id="headerBrainDumpBadge">0</span>
-            </button>
-
-            <button type="button" class="btn-app-dock app-dock-calendar" id="btnHeaderCalendar" onclick="openCalendarModal()" title="Smart Calendar OS &amp; Task Timeline">
-              <span class="app-dock-icon">📅</span>
-              <span class="app-dock-label">Calendar</span>
-              <span class="app-dock-badge badge-indigo" id="headerCalendarBadge">0</span>
-            </button>
-
-            <button type="button" class="btn-app-dock-triage" id="btnHeaderTriage" onclick="openEveningTriageModal()" title="Nightly Triage Ritual (8 PM)">
-              <span class="app-triage-icon">🌙</span>
-            </button>
-          </div>
-
-          <!-- Sub-Island B: Alerts & User Account Control Capsule -->
           <div class="nav-system-dock" id="navSystemDock">
             <div class="dock-notification-group">
               <button type="button" class="btn-dock-notification" id="btnHeaderNotificationBell" title="Reminders &amp; Notifications" aria-haspopup="dialog">
@@ -4757,7 +4762,7 @@
   <!-- Chart.js Engine -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
-  <script src="storageService.js?v=24.0"></script>
-  <script src="app.js?v=24.0"></script>
+  <script src="storageService.js?v=25.0"></script>
+  <script src="app.js?v=25.0"></script>
 </body>
 </html>

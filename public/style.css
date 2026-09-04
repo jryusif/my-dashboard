@@ -407,44 +407,27 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
    3-ZONE REFINED HEADER ARCHITECTURE (Uncluttered, Balanced & Prestigious)
    ============================================================================= */
 
-/* Zone 1: Left Wing (Navigation Toggle) */
+/* Zone 1: Left Wing (Navigation Toggle & Productivity Suite Dock) */
 .nav-left-zone {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: flex-start;
   z-index: 10;
 }
 
 /* Zone 2: Centerpiece 3D Mechanical Chrono Station */
 .header-flip-clock-wrap {
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   perspective: 1000px;
+  flex: 0 0 auto;
+  margin: 0 auto;
   z-index: 5;
-}
-
-body.sidebar-is-collapsed .header-flip-clock-wrap {
-  display: flex;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  animation: flipClockFlyIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   pointer-events: auto;
-}
-
-@keyframes flipClockFlyIn {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-10px) scale(0.96) rotateX(10deg);
-    filter: blur(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1) rotateX(0deg);
-    filter: blur(0);
-  }
 }
 
 .header-chrono-dock,
@@ -475,14 +458,15 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   flex-shrink: 0;
 }
 
-/* Zone 3: Right Wing (Productivity Tools & System Controls) */
+/* Zone 3: Right Wing (Alerts, Admin, User Profile & Sign Out) */
 .nav-right-zone {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: flex-end;
   z-index: 10;
-  flex: 0 0 auto;
 }
 
 /* Sub-Island A: Productivity Suite Island */
@@ -541,6 +525,12 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   box-shadow: 0 0 14px rgba(99, 102, 241, 0.3);
 }
 
+.app-dock-habits:hover {
+  background: rgba(249, 115, 22, 0.16);
+  border-color: rgba(249, 115, 22, 0.45);
+  box-shadow: 0 0 14px rgba(249, 115, 22, 0.3);
+}
+
 .app-dock-icon {
   font-size: 12.5px;
   line-height: 1;
@@ -565,6 +555,10 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 }
 .app-dock-badge.badge-indigo {
   background: #6366f1;
+  color: #fff;
+}
+.app-dock-badge.badge-amber {
+  background: #f97316;
   color: #fff;
 }
 
@@ -609,7 +603,13 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 }
 
 /* Responsive Ergonomics for Top Navbar */
-@media (max-width: 1350px) {
+@media (max-width: 1400px) {
+  .user-email-text {
+    max-width: 85px;
+  }
+}
+
+@media (max-width: 1240px) {
   .app-dock-label {
     display: none;
   }
@@ -617,23 +617,15 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
     padding: 4px 7px;
     gap: 3px;
   }
-}
-
-@media (max-width: 1120px) {
-  body.sidebar-is-collapsed .header-flip-clock-wrap {
-    position: static;
-    transform: none;
-    margin: 0 auto;
-  }
   .calendar-flip-text {
-    max-width: 80px;
+    max-width: 90px;
   }
   .user-email-text {
-    max-width: 60px;
+    max-width: 70px;
   }
 }
 
-@media (max-width: 920px) {
+@media (max-width: 960px) {
   .dock-meta-group {
     display: none;
   }
@@ -642,12 +634,13 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   }
 }
 
-@media (max-width: 780px) {
+@media (max-width: 760px) {
   .header-flip-clock-wrap {
     display: none !important;
   }
+  .nav-left-zone,
   .nav-right-zone {
-    gap: 4px;
+    flex: 1 1 auto;
   }
 }
 
@@ -663,7 +656,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
     padding: 3px 5px;
   }
   .user-email-text {
-    display: none;
+    max-width: 55px;
   }
 }
 
