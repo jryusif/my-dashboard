@@ -12918,6 +12918,76 @@ function initTopNavScroll() {
 }
 
 // =============================================================================
+// SCROLL TO TOP FLOATING BUTTON WITH CIRCULAR SCROLL PROGRESSION
+// =============================================================================
+function initScrollToTop() {
+  const btn = document.getElementById('btnScrollToTop');
+  const progressBar = document.getElementById('scrollProgressBar');
+  if (!btn) return;
+
+  const circumference = 113.1; // 2 * PI * 18
+
+  const updateScrollState = () => {
+    const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    const docHeight = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight
+    );
+    const winHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const maxScroll = docHeight - winHeight;
+
+    const openModal = document.querySelector('.modal-backdrop:not([hidden]):not([style*="display: none"]) .modal');
+    const modalScrollY = openModal ? openModal.scrollTop : 0;
+
+    const isVisible = scrollY > 260 || modalScrollY > 260;
+
+    if (isVisible) {
+      btn.classList.add('is-visible');
+    } else {
+      btn.classList.remove('is-visible');
+    }
+
+    if (progressBar) {
+      let progress = 0;
+      if (openModal && modalScrollY > 0) {
+        const modalMax = openModal.scrollHeight - openModal.clientHeight;
+        if (modalMax > 0) progress = Math.min(1, Math.max(0, modalScrollY / modalMax));
+      } else if (maxScroll > 0) {
+        progress = Math.min(1, Math.max(0, scrollY / maxScroll));
+      }
+      const offset = circumference - (progress * circumference);
+      progressBar.style.strokeDashoffset = offset;
+    }
+  };
+
+  btn.addEventListener('click', () => {
+    const openModal = document.querySelector('.modal-backdrop:not([hidden]):not([style*="display: none"]) .modal');
+    if (openModal && openModal.scrollTop > 50) {
+      openModal.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
+
+  window.addEventListener('scroll', updateScrollState, { passive: true });
+  window.addEventListener('resize', updateScrollState, { passive: true });
+
+  document.addEventListener('scroll', (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains('modal')) {
+      updateScrollState();
+    }
+  }, { capture: true, passive: true });
+
+  updateScrollState();
+}
+window.initScrollToTop = initScrollToTop;
+
+// =============================================================================
 // OAUTH REDIRECT RETURN HANDLER
 // Handles ?oauth_token=, ?oauth_user=, ?oauth_pending=, ?oauth_error= params
 // that are set by /api/auth/oauth/callback after Google/Apple sign-in redirect.
@@ -12991,6 +13061,7 @@ initTheme();
 initAuthEvents();
 initSidebarState();
 initTopNavScroll();
+initScrollToTop();
 
 if (authToken && currentUser) {
   document.body.classList.remove('is-unauthenticated');
