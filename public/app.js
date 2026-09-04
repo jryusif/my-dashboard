@@ -6140,37 +6140,109 @@ if (btnOpenNewCaseModal) {
 // CASE DETAILS DRAWER & INTERACTIVE SLIDER
 // =============================================================================
 
-// Helper to ensure the Before/Initial photo is represented as Step 1 in walkthroughs
+// Helper to ensure Pre-Op is Step 1, procedure steps sit in between, and Post-Op is the final step
 function getTheaterSteps(c) {
   if (!c) return [];
-  const rawSteps = Array.isArray(c.steps) ? [...c.steps] : [];
-  const beforeUrl = c.beforeAfter?.beforeImageUrl || (c.photos && c.photos[0]?.url) || '';
-  const beforeLabel = c.beforeAfter?.beforeLabel || 'Initial Presentation / Pre-Op';
-  const beforeDesc = c.diagnosis || c.patientComplaint || 'Baseline clinical condition prior to intervention.';
+  const rawSteps = Array.isArray(c.steps)
+    ? c.steps.filter(s => s && (s.title || s.imageUrl || s.description))
+    : [];
 
-  // Check if step 0 is already the before image (avoid duplicate)
-  const firstStepHasBefore = rawSteps.length > 0 && rawSteps[0].imageUrl && beforeUrl && rawSteps[0].imageUrl.trim() === beforeUrl.trim();
+  const beforeUrl = (c.beforeAfter?.beforeImageUrl || '').trim() || (c.photos && c.photos[0]?.url ? c.photos[0].url.trim() : '');
+  const beforeLabel = (c.beforeAfter?.beforeLabel || '').trim() || 'Initial Presentation / Pre-Op';
+  const beforeDesc = (c.diagnosis || c.patientComplaint || '').trim() || 'Baseline clinical condition prior to intervention.';
 
-  const stepsList = [];
-  if (beforeUrl && !firstStepHasBefore) {
-    stepsList.push({
+  const afterUrl = (c.beforeAfter?.afterImageUrl || '').trim() || (c.photos && c.photos.length > 1 ? (c.photos[c.photos.length - 1]?.url ? c.photos[c.photos.length - 1].url.trim() : '') : '');
+  const afterLabel = (c.beforeAfter?.afterLabel || '').trim() || 'Treatment Outcome / Post-Op';
+  const afterDesc = (c.treatmentPlan || c.outcomeNotes || '').trim() || 'Final clinical result and post-operative outcome.';
+
+  // Check if first step in rawSteps is already before/pre-op
+  const firstIsBefore = rawSteps.length > 0 && (
+    rawSteps[0].isBefore === true ||
+    (beforeUrl && rawSteps[0].imageUrl && rawSteps[0].imageUrl.trim() === beforeUrl)
+  );
+
+  // Check if last step in rawSteps is already after/post-op (ensure it's not the same step if length is 1)
+  const lastIsAfter = rawSteps.length > (firstIsBefore ? 1 : 0) && (
+    rawSteps[rawSteps.length - 1].isAfter === true ||
+    (afterUrl && rawSteps[rawSteps.length - 1].imageUrl && rawSteps[rawSteps.length - 1].imageUrl.trim() === afterUrl)
+  );
+
+  // 1. Construct Pre-Op step (Step 1)
+  let preOpStep = null;
+  if (firstIsBefore) {
+    preOpStep = {
+      ...rawSteps[0],
       isBeforeStep: true,
-      stepNumber: 1,
+      isAfterStep: false,
+      title: rawSteps[0].title || beforeLabel,
+      description: rawSteps[0].description || beforeDesc,
+      imageUrl: rawSteps[0].imageUrl || beforeUrl
+    };
+  } else if (beforeUrl) {
+    preOpStep = {
+      isBeforeStep: true,
+      isAfterStep: false,
       title: beforeLabel,
       description: beforeDesc,
       imageUrl: beforeUrl
-    });
+    };
   }
 
-  rawSteps.forEach(s => {
-    stepsList.push({
-      ...s,
+  // 2. Extract intermediate procedure steps (strictly between Pre-Op and Post-Op)
+  const intermediateStartIndex = firstIsBefore ? 1 : 0;
+  const intermediateEndIndex = lastIsAfter ? rawSteps.length - 1 : rawSteps.length;
+  const intermediateRaw = rawSteps.slice(intermediateStartIndex, intermediateEndIndex);
+
+  const intermediateSteps = intermediateRaw.map(s => ({
+    ...s,
+    isBeforeStep: false,
+    isAfterStep: false,
+    title: s.title || 'Clinical Step',
+    description: s.description || '',
+    imageUrl: s.imageUrl || ''
+  }));
+
+  // 3. Construct Post-Op step (always the final step)
+  let postOpStep = null;
+  if (lastIsAfter) {
+    const rawPostOp = rawSteps[rawSteps.length - 1];
+    postOpStep = {
+      ...rawPostOp,
       isBeforeStep: false,
-      title: s.title || 'Clinical Step',
-      description: s.description || '',
-      imageUrl: s.imageUrl || ''
+      isAfterStep: true,
+      title: rawPostOp.title || afterLabel,
+      description: rawPostOp.description || afterDesc,
+      imageUrl: rawPostOp.imageUrl || afterUrl
+    };
+  } else if (afterUrl) {
+    postOpStep = {
+      isBeforeStep: false,
+      isAfterStep: true,
+      title: afterLabel,
+      description: afterDesc,
+      imageUrl: afterUrl
+    };
+  }
+
+  // Combine into final ordered sequence: Pre-Op -> [Intermediate Procedure Steps] -> Post-Op
+  const stepsList = [];
+  if (preOpStep) stepsList.push(preOpStep);
+  intermediateSteps.forEach(s => stepsList.push(s));
+  if (postOpStep) stepsList.push(postOpStep);
+
+  // Fallback if neither beforeUrl nor afterUrl were present but rawSteps existed
+  if (stepsList.length === 0 && rawSteps.length > 0) {
+    rawSteps.forEach((s, idx) => {
+      stepsList.push({
+        ...s,
+        isBeforeStep: idx === 0,
+        isAfterStep: idx === rawSteps.length - 1,
+        title: s.title || `Clinical Step ${idx + 1}`,
+        description: s.description || '',
+        imageUrl: s.imageUrl || ''
+      });
     });
-  });
+  }
 
   // Re-number sequentially (Step 1, Step 2, Step 3...)
   stepsList.forEach((s, idx) => {
@@ -6237,22 +6309,32 @@ function openDentalCaseDrawer(c) {
   // Render Steps
   if (drawerStepsTimeline) {
     if (drawerSteps.length) {
-      drawerStepsTimeline.innerHTML = drawerSteps.map((s, idx) => `
+      drawerStepsTimeline.innerHTML = drawerSteps.map((s, idx) => {
+        const rawTitle = s.title || `Clinical Step ${idx + 1}`;
+        const displayTitle = rawTitle.replace(/^Step\s*\d+\s*[:\-]\s*/i, '');
+        const badgeLabel = s.isBeforeStep
+          ? 'PRE-OP · Step 1'
+          : s.isAfterStep
+            ? `POST-OP · Step ${s.stepNumber || idx + 1}`
+            : `Step ${s.stepNumber || idx + 1}`;
+        const badgeClass = s.isBeforeStep ? 'badge-initial' : s.isAfterStep ? 'badge-outcome' : '';
+        return `
         <div class="dental-step-card">
           ${s.imageUrl ? `
             <div class="step-card-img-wrap">
-              <img src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(s.title || '')}" class="step-card-img" onclick="openImageLightbox('${escapeHtml(s.imageUrl)}')" />
+              <img src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(displayTitle)}" class="step-card-img" onclick="openImageLightbox('${escapeHtml(s.imageUrl)}')" />
             </div>
           ` : ''}
           <div class="step-card-info">
-            <span class="step-card-num-badge ${s.isBeforeStep ? 'badge-initial' : ''}">
-              ${s.isBeforeStep ? 'INITIAL STATE · Step 1' : `Step ${s.stepNumber || idx + 1}`}
+            <span class="step-card-num-badge ${badgeClass}">
+              ${badgeLabel}
             </span>
-            <h4 class="step-card-title">${escapeHtml(s.title || `Clinical Step ${idx + 1}`)}</h4>
+            <h4 class="step-card-title">${escapeHtml(displayTitle)}</h4>
             <p class="step-card-desc">${escapeHtml(s.description || '')}</p>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     } else {
       drawerStepsTimeline.innerHTML = '<p class="finance-empty">No clinical photos attached to this case yet.</p>';
     }
@@ -6576,18 +6658,23 @@ function renderTheaterCase(c) {
     theaterStepCount.textContent = `${currentTheaterSteps.length} Step${currentTheaterSteps.length === 1 ? '' : 's'}`;
 
     if (currentTheaterSteps.length) {
-      theaterStepsScroll.innerHTML = currentTheaterSteps.map((s, idx) => `
+      theaterStepsScroll.innerHTML = currentTheaterSteps.map((s, idx) => {
+        const rawTitle = s.title || `Clinical Step ${idx + 1}`;
+        const displayTitle = rawTitle.replace(/^Step\s*\d+\s*[:\-]\s*/i, '');
+        return `
         <div class="theater-step-card ${idx === 0 ? 'active' : ''}" id="theaterStepCard_${idx}" onclick="selectTheaterStep(${idx})">
           ${s.imageUrl ? `
-            <img src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(s.title || '')}" class="theater-step-card-img" />
+            <img src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(displayTitle)}" class="theater-step-card-img" />
           ` : ''}
           <div class="theater-step-card-title">
-            ${s.isBeforeStep ? '<span class="step-initial-badge">INITIAL</span>' : ''}
-            Step ${s.stepNumber || idx + 1}: ${escapeHtml(s.title || '')}
+            ${s.isBeforeStep ? '<span class="step-initial-badge">PRE-OP</span>' : ''}
+            ${s.isAfterStep ? '<span class="step-outcome-badge">POST-OP</span>' : ''}
+            Step ${s.stepNumber || idx + 1}: ${escapeHtml(displayTitle)}
           </div>
           <div class="theater-step-card-desc">${escapeHtml(s.description || '')}</div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     } else {
       theaterStepsScroll.innerHTML = '<p style="color:var(--ink-soft);font-size:13px;padding:12px;">No clinical steps added for this case.</p>';
     }
@@ -6667,7 +6754,10 @@ function displayTheaterStep(index = 0) {
   if (theaterStepFocusImg) {
     theaterStepFocusImg.classList.remove('fade-in');
     void theaterStepFocusImg.offsetWidth; // force reflow for animation
-    theaterStepFocusImg.src = step.imageUrl || currentTheaterCase.beforeAfter?.afterImageUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="%230f172a" width="600" height="400"/><text fill="%2338bdf8" font-family="sans-serif" font-size="18" font-weight="bold" x="50%" y="45%" text-anchor="middle">🦷 Step</text></svg>';
+    const fallbackImg = step.isBeforeStep
+      ? (currentTheaterCase.beforeAfter?.beforeImageUrl || '')
+      : (currentTheaterCase.beforeAfter?.afterImageUrl || '');
+    theaterStepFocusImg.src = step.imageUrl || fallbackImg || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="%230f172a" width="600" height="400"/><text fill="%2338bdf8" font-family="sans-serif" font-size="18" font-weight="bold" x="50%" y="45%" text-anchor="middle">🦷 Step</text></svg>';
     theaterStepFocusImg.alt = step.title || 'Clinical Step';
     theaterStepFocusImg.classList.add('fade-in');
   }
@@ -6675,14 +6765,18 @@ function displayTheaterStep(index = 0) {
   if (theaterFocusStepBadge) {
     if (step.isBeforeStep) {
       theaterFocusStepBadge.className = 'focus-step-badge badge-initial';
-      theaterFocusStepBadge.textContent = `INITIAL STATE · Step 1 of ${steps.length}`;
+      theaterFocusStepBadge.textContent = `PRE-OP · Step 1 of ${steps.length}`;
+    } else if (step.isAfterStep) {
+      theaterFocusStepBadge.className = 'focus-step-badge badge-outcome';
+      theaterFocusStepBadge.textContent = `POST-OP · Step ${step.stepNumber || steps.length} of ${steps.length}`;
     } else {
       theaterFocusStepBadge.className = 'focus-step-badge';
       theaterFocusStepBadge.textContent = `Step ${step.stepNumber || currentTheaterStepIndex + 1} of ${steps.length}`;
     }
   }
   if (theaterFocusStepTitle) {
-    theaterFocusStepTitle.textContent = step.title || `Clinical Step ${currentTheaterStepIndex + 1}`;
+    const rawTitle = step.title || `Clinical Step ${currentTheaterStepIndex + 1}`;
+    theaterFocusStepTitle.textContent = rawTitle.replace(/^Step\s*\d+\s*[:\-]\s*/i, '');
   }
   if (theaterFocusStepDesc) {
     theaterFocusStepDesc.textContent = step.description || '';
