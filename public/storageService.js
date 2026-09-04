@@ -189,14 +189,15 @@
     },
 
     getById(id) {
+      if (!id) return null;
       const tasks = this.getAll(true);
-      return tasks.find(t => t.id === id) || null;
+      return tasks.find(t => String(t.id) === String(id)) || null;
     },
 
     create(taskData) {
       const now = new Date().toISOString();
       const newTask = normalizeRecord({
-        id: generateUUID(),
+        id: taskData.id ? String(taskData.id) : generateUUID(),
         title: (taskData.title || taskData.task || '').trim() || 'Untitled Task',
         description: taskData.description || '',
         date: taskData.date || taskData.dueDate || now.split('T')[0],
@@ -233,7 +234,7 @@
       let updatedItem = null;
 
       const updated = current.map(item => {
-        if (item.id === id) {
+        if (String(item.id) === String(id)) {
           updatedItem = normalizeRecord({
             ...item,
             ...partialUpdates,
@@ -248,8 +249,11 @@
       if (updatedItem) {
         writeRaw(STORAGE_KEYS.TASKS, updated);
         notifyChange('tasks', 'update', updatedItem);
+        return updatedItem;
       }
-      return updatedItem;
+
+      // If task was not found in local cache, create it so updates are never lost
+      return this.create({ id, ...partialUpdates });
     },
 
     toggleComplete(id) {
@@ -298,7 +302,7 @@
       let deletedItem = null;
 
       if (hardDelete) {
-        const filtered = current.filter(t => t.id !== id);
+        const filtered = current.filter(t => String(t.id) !== String(id));
         writeRaw(STORAGE_KEYS.TASKS, filtered);
         notifyChange('tasks', 'delete', { id });
         return true;
@@ -306,7 +310,7 @@
 
       // Soft delete: sets deleted_at timestamp
       const updated = current.map(item => {
-        if (item.id === id) {
+        if (String(item.id) === String(id)) {
           deletedItem = normalizeRecord({
             ...item,
             deleted_at: now,

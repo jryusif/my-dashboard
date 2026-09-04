@@ -16588,6 +16588,10 @@ body.is-unauthenticated .btn-floating-braindump {
   padding: 16px;
 }
 
+.cal-task-modal-backdrop[hidden] {
+  display: none !important;
+}
+
 .cal-task-dialog {
   width: 100%;
   max-width: 580px;

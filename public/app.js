@@ -15669,7 +15669,9 @@ function formatCalTime12h(timeStr) {
 }
 
 function isCalTaskOverdue(task) {
-  if (task.completed || task.deleted_at || task.isRoutine || task.isDentalCase) return false;
+  if (!task || task.completed || task.deleted_at || task.isRoutine || task.isDentalCase || task.isHabit) return false;
+  const tid = String(task.id || '');
+  if (tid.startsWith('habit_') || tid.startsWith('routine_') || tid.startsWith('dental_')) return false;
   if (!task.date) return false;
   const timeStr = task.time || '23:59';
   const [h, m] = timeStr.split(':').map(Number);
@@ -15801,98 +15803,13 @@ async function syncAllWebsiteTasksWithCalendar() {
 }
 window.syncAllWebsiteTasksWithCalendar = syncAllWebsiteTasksWithCalendar;
 
-// ── Filtered Tasks Query (Includes Database Tasks, Habits, Routines, and Dental Cases) ──
+// ── Filtered Tasks Query (Includes Database Tasks and Dental Cases) ──
 function getCalFilteredTasks() {
   const repo = window.StorageService ? window.StorageService.tasks : null;
   const allTasks = repo ? repo.getAll(false) : [];
   const allEvents = [...allTasks];
 
-  // Generate date list around active date (-35 days to +45 days covers 80 days, whole month view grid + buffer)
-  const centerDate = new Date(calState.activeDate);
-  const startWindow = new Date(centerDate);
-  startWindow.setDate(centerDate.getDate() - 35);
-  const endWindow = new Date(centerDate);
-  endWindow.setDate(centerDate.getDate() + 45);
-
-  const windowDates = [];
-  const cur = new Date(startWindow);
-  while (cur <= endWindow) {
-    windowDates.push(getCalDateKey(cur));
-    cur.setDate(cur.getDate() + 1);
-  }
-
-  // 1. Inject Habits from HabitOS Pro
-  if (Array.isArray(htHabits) && htHabits.length > 0) {
-    const activeHabits = htHabits.filter(h => h.type !== 'break');
-    windowDates.forEach(dateStr => {
-      const dObj = parseCalDateKey(dateStr);
-      const dayOfWeek = dObj.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-
-      activeHabits.forEach(h => {
-        let applies = true;
-        if (h.frequency === 'weekdays') {
-          applies = (dayOfWeek >= 1 && dayOfWeek <= 5);
-        } else if (h.frequency === 'weekends') {
-          applies = (dayOfWeek === 0 || dayOfWeek === 6);
-        }
-
-        if (applies) {
-          const isDone = Boolean(htLogs[dateStr]?.[h.id]?.completed);
-          let habitTime = '09:00';
-          if (h.timeOfDay === 'morning') habitTime = '08:00';
-          else if (h.timeOfDay === 'afternoon') habitTime = '13:00';
-          else if (h.timeOfDay === 'evening') habitTime = '20:00';
-
-          allEvents.push({
-            id: `habit_${h.id}_${dateStr}`,
-            habitId: h.id,
-            isHabit: true,
-            title: `${h.icon || '🔥'} ${h.title}`,
-            description: h.description || `HabitOS Pro • ${h.category || 'Routine'}`,
-            date: dateStr,
-            time: habitTime,
-            category: 'Habits',
-            priority: 'medium',
-            completed: isDone,
-            recurrence: h.frequency || 'daily',
-            subtasks: [],
-          });
-        }
-      });
-    });
-  }
-
-  // 2. Inject Daily Routines
-  windowDates.forEach(dateStr => {
-    allEvents.push({
-      id: `routine_morning_${dateStr}`,
-      isRoutine: true,
-      routineSlot: 'Morning',
-      title: '🌅 Morning Routine',
-      description: 'Morning habits & daily setup ritual',
-      date: dateStr,
-      time: '07:30',
-      category: 'Routines',
-      priority: 'medium',
-      completed: false,
-      subtasks: [],
-    });
-    allEvents.push({
-      id: `routine_evening_${dateStr}`,
-      isRoutine: true,
-      routineSlot: 'Evening',
-      title: '🌙 Evening Routine',
-      description: 'Nightly reflection & wind-down checklist',
-      date: dateStr,
-      time: '21:00',
-      category: 'Routines',
-      priority: 'medium',
-      completed: false,
-      subtasks: [],
-    });
-  });
-
-  // 3. Inject Dental Clinical Cases
+  // Inject Dental Clinical Cases (if user has access)
   if (typeof userCanAccessDental === 'function' && userCanAccessDental() && Array.isArray(loadedDentalCases)) {
     loadedDentalCases.forEach(c => {
       if (!c.date) return;
@@ -16310,9 +16227,12 @@ function renderCalDayView() {
     if (overdueTasks.length > 0) {
       overdueBanner.style.display = 'block';
       overdueList.innerHTML = overdueTasks.map(t => `
-        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 4px 0;">
-          <span style="color: #fecdd3;">⚠️ <strong>${escapeHtml(t.title)}</strong> (Due: ${t.date} ${t.time || ''})</span>
-          <button type="button" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="openCalEditTaskModal('${t.id}')">Reschedule / View</button>
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); gap: 10px;">
+          <span style="color: #fecdd3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">⚠️ <strong>${escapeHtml(t.title)}</strong> <span style="opacity: 0.75; font-size: 11px;">(Due: ${t.date}${t.time ? ' ' + t.time : ''})</span></span>
+          <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+            <button type="button" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="rescheduleCalTaskToToday('${escapeHtml(String(t.id))}')" title="Reschedule to Today">To Today</button>
+            <button type="button" class="btn-secondary" style="padding: 2px 8px; font-size: 11px; background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4);" onclick="openCalEditTaskModal('${escapeHtml(String(t.id))}')">Reschedule / View</button>
+          </div>
         </div>
       `).join('');
     } else {
@@ -16595,6 +16515,7 @@ function openCalNewTaskModal(initialDateKey = '', initialTimeStr = '') {
   const modal = document.getElementById('calTaskModal');
   if (modal) {
     modal.hidden = false;
+    modal.style.display = 'flex';
     setTimeout(() => titleInput?.focus(), 50);
   }
 }
@@ -16650,48 +16571,43 @@ function handleSelectBrainDumpIntoCal(indexStr) {
 window.handleSelectBrainDumpIntoCal = handleSelectBrainDumpIntoCal;
 
 function openCalEditTaskModal(taskId) {
-  // 1. Virtual habit task -> open habit tracker
-  if (taskId.startsWith('habit_')) {
-    const parts = taskId.split('_');
-    const habitId = parts[1];
-    const dateKey = parts.slice(2).join('_');
-    const habit = (htHabits || []).find(h => h.id === habitId);
-    if (habit) {
-      htSelectedDate = dateKey;
-      closeCalendarModal();
-      openHabitTrackerModal();
-      showToast(`🔥 Focused "${habit.title}" for ${dateKey}`);
-      return;
-    }
-  }
+  if (!taskId) return;
 
-  // 2. Virtual routine task -> open routine checklist
-  if (taskId.startsWith('routine_')) {
-    const slot = taskId.includes('morning') ? 'Morning' : 'Evening';
+  // 1. Virtual dental clinical case -> open dental drawer
+  if (String(taskId).startsWith('dental_')) {
+    const caseId = String(taskId).replace('dental_', '');
     closeCalendarModal();
-    openRoutineModal(slot);
-    return;
-  }
-
-  // 3. Virtual dental clinical case -> open dental drawer
-  if (taskId.startsWith('dental_')) {
-    const caseId = taskId.replace('dental_', '');
-    closeCalendarModal();
-    openDentalCasesPage();
+    if (typeof openDentalCasesPage === 'function') openDentalCasesPage();
     setTimeout(() => {
-      openDentalCaseDrawer(caseId);
+      if (typeof openDentalCaseDrawer === 'function') openDentalCaseDrawer(caseId);
     }, 150);
     return;
   }
 
-  // 4. Standard local-first task
-  if (!window.StorageService) return;
-  const task = window.StorageService.tasks.getById(taskId);
-  if (!task) return;
+  // 2. Fetch task from StorageService
+  let task = window.StorageService ? window.StorageService.tasks.getById(taskId) : null;
 
-  calState.editingTaskId = task.id;
+  // Fallback 1: search in in-memory filtered events
+  if (!task && typeof getCalFilteredTasks === 'function') {
+    const all = getCalFilteredTasks();
+    task = all.find(t => String(t.id) === String(taskId));
+  }
+
+  // Fallback 2: check all local storage tasks including deleted or legacy
+  if (!task && window.StorageService) {
+    const allRaw = window.StorageService.tasks.getAll(true);
+    task = allRaw.find(t => String(t.id) === String(taskId));
+  }
+
+  if (!task) {
+    console.warn('[openCalEditTaskModal] Task not found for ID:', taskId);
+    showToast('Task details could not be found.');
+    return;
+  }
+
+  calState.editingTaskId = String(task.id);
   calState.subtasksBuffer = Array.isArray(task.subtasks)
-    ? task.subtasks.map(s => ({ id: s.id, title: s.title, completed: s.completed }))
+    ? task.subtasks.map(s => ({ id: s.id, title: s.title, completed: Boolean(s.completed) }))
     : [];
 
   const titleEl = document.getElementById('calTaskModalTitle');
@@ -16706,7 +16622,7 @@ function openCalEditTaskModal(taskId) {
   const btnDelete = document.getElementById('calBtnDeleteTask');
   const saveBtn = document.getElementById('calBtnSaveTask');
 
-  if (titleEl) titleEl.textContent = 'Edit Scheduled Task';
+  if (titleEl) titleEl.textContent = 'Reschedule & Edit Task';
   if (idInput) idInput.value = task.id;
   if (titleInput) titleInput.value = task.title || '';
   if (descInput) descInput.value = task.description || '';
@@ -16716,7 +16632,7 @@ function openCalEditTaskModal(taskId) {
   if (prioSelect) prioSelect.value = (task.priority || 'medium').toLowerCase();
   if (recSelect) recSelect.value = task.recurrence || 'none';
   if (btnDelete) btnDelete.style.display = 'inline-flex';
-  if (saveBtn) saveBtn.textContent = 'Update Task';
+  if (saveBtn) saveBtn.textContent = 'Save / Reschedule Task';
 
   // Hide brain dump bar in edit mode
   const bdBar = document.getElementById('calBrainDumpImportBar');
@@ -16725,17 +16641,46 @@ function openCalEditTaskModal(taskId) {
   renderCalSubtasksInModal();
 
   const modal = document.getElementById('calTaskModal');
-  if (modal) modal.hidden = false;
+  if (modal) {
+    modal.hidden = false;
+    modal.style.display = 'flex';
+    setTimeout(() => {
+      dateInput?.focus();
+    }, 50);
+  }
 }
 window.openCalEditTaskModal = openCalEditTaskModal;
 
 function closeCalTaskModal() {
   const modal = document.getElementById('calTaskModal');
-  if (modal) modal.hidden = true;
+  if (modal) {
+    modal.hidden = true;
+    modal.style.display = 'none';
+  }
   calState.editingTaskId = null;
   calState.subtasksBuffer = [];
 }
 window.closeCalTaskModal = closeCalTaskModal;
+
+function rescheduleCalTaskToToday(taskId) {
+  if (!taskId || !window.StorageService) return;
+  const todayKey = getCalDateKey(new Date());
+  const updated = window.StorageService.tasks.update(taskId, { date: todayKey });
+  if (updated) {
+    showToast(`🗓️ Rescheduled "${updated.title}" to Today!`);
+    if (authToken) {
+      fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ date: todayKey, dueDate: todayKey })
+      }).catch(() => {});
+    }
+    renderCalendar();
+    if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+    if (typeof syncBoards === 'function') setTimeout(syncBoards, 50);
+  }
+}
+window.rescheduleCalTaskToToday = rescheduleCalTaskToToday;
 
 function handleCalTaskFormSubmit(e) {
   e.preventDefault();
@@ -16843,25 +16788,7 @@ function handleCalDeleteTask() {
 window.handleCalDeleteTask = handleCalDeleteTask;
 
 function toggleCalTaskComplete(taskId) {
-  // 1. Virtual habit task -> toggle habit log for that date
-  if (taskId.startsWith('habit_')) {
-    const parts = taskId.split('_');
-    const habitId = parts[1];
-    const dateKey = parts.slice(2).join('_');
-    toggleHabitHT(habitId, dateKey);
-    renderCalendar();
-    return;
-  }
-
-  // 2. Virtual routine task -> open routine modal
-  if (taskId.startsWith('routine_')) {
-    const slot = taskId.includes('morning') ? 'Morning' : 'Evening';
-    openRoutineModal(slot);
-    return;
-  }
-
-  // 3. Regular local-first task
-  if (!window.StorageService) return;
+  if (!taskId || !window.StorageService) return;
   const updated = window.StorageService.tasks.toggleComplete(taskId);
   if (!updated) return;
 
