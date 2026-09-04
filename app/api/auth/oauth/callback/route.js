@@ -63,16 +63,18 @@ export async function GET(req) {
     /*  GOOGLE                                                              */
     /* ------------------------------------------------------------------ */
     if (state === 'google') {
+      if (!googleClientSecret) {
+        return redirectToHome(appUrl, 'Google Client Secret is missing. Please configure your Client Secret in OAuth settings.');
+      }
+
       // Exchange code → tokens
       const tokenBody = {
         code,
         client_id:     googleClientId,
+        client_secret: googleClientSecret,
         redirect_uri:  `${appUrl}/api/auth/oauth/callback`,
         grant_type:    'authorization_code'
       };
-      if (googleClientSecret) {
-        tokenBody.client_secret = googleClientSecret;
-      }
 
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -83,7 +85,8 @@ export async function GET(req) {
       const tokenData = await tokenRes.json();
       if (!tokenRes.ok || !tokenData.id_token) {
         console.error('[Google token exchange failed]:', tokenData);
-        return redirectToHome(appUrl, tokenData.error_description || 'Google token exchange failed.');
+        const errMsg = tokenData.error_description || tokenData.error || 'Google token exchange failed.';
+        return redirectToHome(appUrl, errMsg.includes('client_secret') ? 'Google Client Secret is missing or invalid. Please configure it in settings.' : errMsg);
       }
 
       // Verify id_token → get profile

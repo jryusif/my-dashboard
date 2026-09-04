@@ -18,6 +18,11 @@ try {
       const cfg = await res.json();
       if (cfg.googleClientId) window.GOOGLE_CLIENT_ID = cfg.googleClientId;
       if (cfg.appleClientId)  window.APPLE_CLIENT_ID  = cfg.appleClientId;
+      window.HAS_GOOGLE_SECRET = Boolean(cfg.hasGoogleSecret);
+      window.HAS_APPLE_SECRET  = Boolean(cfg.hasAppleSecret);
+      if (typeof initGoogleIdentityServices === 'function') {
+        initGoogleIdentityServices();
+      }
     }
   } catch (e) {
     // Non-critical — buttons fall back to email-modal if IDs not loaded
@@ -11097,16 +11102,17 @@ function openOAuthProviderModal(provider = 'google') {
       badge.style.borderColor = 'rgba(56,189,248,0.4)';
     }
     if (pill) pill.textContent = '⚡ Official Google OAuth 2.0';
-    if (title) title.textContent = 'Connect Real Google Sign-In';
-    if (sub) sub.textContent = 'To sign in with real Google accounts, enter your Google Cloud OAuth Client ID & Secret below.';
+    if (pill) pill.textContent = '⚡ Official Google OAuth 2.0';
+    if (title) title.textContent = 'Connect Google OAuth Credentials';
+    if (sub) sub.textContent = 'Enter your Google Cloud OAuth 2.0 Client ID & Secret below. The Client Secret is required for redirect code exchange.';
     if (clientIdLabel) clientIdLabel.textContent = 'Google OAuth Client ID *';
     if (clientIdInput) {
       clientIdInput.placeholder = 'e.g. 123456789-xxxx.apps.googleusercontent.com';
       clientIdInput.value = isRealOAuthClientId(window.GOOGLE_CLIENT_ID) ? window.GOOGLE_CLIENT_ID : '';
     }
-    if (secretLabel) secretLabel.textContent = 'Google Client Secret (Optional)';
+    if (secretLabel) secretLabel.textContent = 'Google Client Secret * (from Google Cloud Console)';
     if (secretInput) {
-      secretInput.placeholder = 'e.g. GOCSPX-xxxxxxxxxxxx';
+      secretInput.placeholder = 'e.g. GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxx';
       secretInput.value = '';
     }
     if (submitText) submitText.textContent = '🚀 Save & Connect Google';
@@ -11184,15 +11190,17 @@ async function handleOAuthModalSubmit(e) {
 
     if (currentOAuthProvider === 'google') {
       window.GOOGLE_CLIENT_ID = clientId;
+      if (clientSecret) window.HAS_GOOGLE_SECRET = true;
       closeOAuthProviderModal();
-      showToast('Google credentials saved! Redirecting to Google...');
+      showToast('Google credentials saved! Initiating sign-in...', 3000);
       setTimeout(() => {
         handleGoogleAuth();
       }, 500);
     } else {
       window.APPLE_CLIENT_ID = clientId;
+      if (clientSecret) window.HAS_APPLE_SECRET = true;
       closeOAuthProviderModal();
-      showToast('Apple credentials saved! Redirecting to Apple...');
+      showToast('Apple credentials saved! Redirecting to Apple...', 3000);
       setTimeout(() => {
         handleAppleAuth();
       }, 500);
@@ -11230,6 +11238,7 @@ function initGoogleIdentityServices() {
     }
   }
 }
+window.initGoogleIdentityServices = initGoogleIdentityServices;
 
 async function handleGoogleCredentialResponse(response) {
   if (!response || !response.credential) return;
@@ -11248,15 +11257,70 @@ window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
 
 function handleGoogleAuth() {
   const clientId = window.GOOGLE_CLIENT_ID || '';
-  const appUrl = window.location.origin;
-  const redirectUri = encodeURIComponent(`${appUrl}/api/auth/oauth/callback`);
-  const scope = encodeURIComponent('openid email profile');
 
   if (!clientId || !isRealOAuthClientId(clientId)) {
     // Open the Google Cloud configuration modal with redirect URI ready to copy
     openOAuthProviderModal('google');
     return;
   }
+
+  // 1. Preferred modern frictionless path: Google Identity Services Token Client Popup
+  // Runs client-side directly in the browser and does NOT require a client_secret!
+  if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
+    try {
+      showToast('Connecting with Google...', 2000);
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'openid email profile',
+        callback: async (tokenRes) => {
+          if (tokenRes && tokenRes.access_token) {
+            showToast('Verifying Google Account...', 3000);
+            try {
+              const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${tokenRes.access_token}` }
+              });
+              const info = await infoRes.json();
+              if (info && info.email) {
+                await executeOAuthSignIn({
+                  provider: 'google',
+                  email: info.email,
+                  name: info.name || info.given_name || info.email.split('@')[0],
+                  avatar: info.picture || '🌐',
+                  oauthId: info.sub || `google_${info.email}`,
+                  accessToken: tokenRes.access_token
+                });
+                return;
+              }
+            } catch (fetchErr) {
+              console.error('Google profile fetch error:', fetchErr);
+              showToast('Could not fetch Google profile details.');
+            }
+          } else if (tokenRes && tokenRes.error) {
+            console.warn('[GIS] Token client error:', tokenRes.error);
+            if (tokenRes.error !== 'access_denied') {
+              showToast(`Google Sign-In: ${tokenRes.error}`);
+            }
+          }
+        }
+      });
+      tokenClient.requestAccessToken({ prompt: 'select_account' });
+      return;
+    } catch (gisErr) {
+      console.warn('[GIS] Token client launch exception, trying redirect fallback:', gisErr);
+    }
+  }
+
+  // 2. Redirect Flow: If GIS is unavailable and server doesn't have the client_secret yet,
+  // prompt for the secret instead of sending the user to a broken Google redirect!
+  if (!window.HAS_GOOGLE_SECRET) {
+    openOAuthProviderModal('google');
+    showToast('Google Client Secret is required for redirect sign-in. Please enter your Client Secret.', 6000);
+    return;
+  }
+
+  const appUrl = window.location.origin;
+  const redirectUri = encodeURIComponent(`${appUrl}/api/auth/oauth/callback`);
+  const scope = encodeURIComponent('openid email profile');
 
   const googleAuthUrl =
     `https://accounts.google.com/o/oauth2/v2/auth` +
@@ -13504,14 +13568,27 @@ window.initScrollToTop = initScrollToTop;
       showToast('Registration submitted! Awaiting administrator approval.', 6000);
     });
   } else if (oauthError) {
-    // Show error on the gateway
+    // Show error on the gateway with an interactive configuration button
     window.addEventListener('load', () => {
       const errEl = document.getElementById('gatewayErrorMsg');
       if (errEl) {
-        errEl.textContent = decodeURIComponent(oauthError);
+        const decodedMsg = decodeURIComponent(oauthError);
+        const isSecretError = /client_secret|secret/i.test(decodedMsg);
+        if (isSecretError) {
+          errEl.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+              <span>⚠️ ${decodedMsg}</span>
+              <button type="button" onclick="openOAuthProviderModal('google')" style="background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                ⚙️ Configure Google Client Secret
+              </button>
+            </div>
+          `;
+        } else {
+          errEl.textContent = decodedMsg;
+        }
         errEl.style.display = 'block';
       }
-      showToast(`Sign-in failed: ${decodeURIComponent(oauthError)}`, 5000);
+      showToast(`Sign-in note: ${decodeURIComponent(oauthError)}`, 5000);
     });
   }
 })();

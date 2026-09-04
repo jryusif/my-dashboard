@@ -3068,8 +3068,11 @@
         </div>
 
         <div>
-          <label for="oauthClientSecretInput" id="oauthSecretLabel" style="font-size: 12px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 5px;">Google Client Secret (Optional / for Code Exchange)</label>
-          <input type="password" id="oauthClientSecretInput" placeholder="e.g. GOCSPX-xxxxxxxxxxxx" style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 10px 12px; border-radius: 10px; font-size: 13px; width: 100%; font-family: monospace;" />
+          <label for="oauthClientSecretInput" id="oauthSecretLabel" style="font-size: 12px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 5px;">Google Client Secret *</label>
+          <input type="password" id="oauthClientSecretInput" placeholder="e.g. GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxx" style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 10px 12px; border-radius: 10px; font-size: 13px; width: 100%; font-family: monospace;" />
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 5px; line-height: 1.4;">
+            Found in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: underline;">Google Cloud Console</a> &gt; <strong>APIs &amp; Services</strong> &gt; <strong>Credentials</strong> &gt; <strong>OAuth 2.0 Client IDs</strong>.
+          </div>
         </div>
 
         <div id="oauthErrorMsg" style="color: #f87171; font-size: 12px; display: none; text-align: center; font-weight: 600;"></div>

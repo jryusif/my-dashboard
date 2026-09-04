@@ -7,9 +7,9 @@ import { sendAdminSignupNotification } from '@/lib/email.js';
 export async function POST(req) {
   try {
     const body = await req.json();
-    let { provider = 'google', email, name, avatar, oauthId, credential } = body;
+    let { provider = 'google', email, name, avatar, oauthId, credential, accessToken } = body;
 
-    // Real Google Identity Services (GIS) ID Token Verification
+    // 1. Google Identity Services (GIS) ID Token Verification
     if (credential) {
       let googleData = null;
       try {
@@ -31,6 +31,28 @@ export async function POST(req) {
         avatar = googleData.picture || '🌐';
         oauthId = googleData.sub || `google_${googleData.email}`;
         provider = 'google';
+      }
+    }
+    // 2. Google Identity Services Access Token Verification (Zero client_secret required)
+    else if (accessToken && provider === 'google') {
+      try {
+        const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (infoRes.ok) {
+          const info = await infoRes.json();
+          if (info && info.email) {
+            email = info.email;
+            name = info.name || info.given_name || email.split('@')[0];
+            avatar = info.picture || '🌐';
+            oauthId = info.sub || `google_${info.email}`;
+            provider = 'google';
+          }
+        } else {
+          console.warn('[Google userinfo] returned status:', infoRes.status);
+        }
+      } catch (e) {
+        console.warn('Could not verify access token with Google userinfo:', e);
       }
     }
 

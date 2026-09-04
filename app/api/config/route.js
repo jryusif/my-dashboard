@@ -78,12 +78,35 @@ export async function GET() {
     }
   }
 
+  // 3. Resolve secrets (check existence only, never leak the actual secret values)
+  let gSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+  if (!gSecret || gSecret.includes('YOUR_')) {
+    const dbGSecret = await getDbSetting('GOOGLE_CLIENT_SECRET');
+    if (dbGSecret) {
+      gSecret = dbGSecret;
+      process.env.GOOGLE_CLIENT_SECRET = dbGSecret;
+    }
+  }
+
+  let aSecret = process.env.APPLE_CLIENT_SECRET || '';
+  if (!aSecret || aSecret.includes('YOUR_')) {
+    const dbASecret = await getDbSetting('APPLE_CLIENT_SECRET');
+    if (dbASecret) {
+      aSecret = dbASecret;
+      process.env.APPLE_CLIENT_SECRET = dbASecret;
+    }
+  }
+
   const isRealGoogleId = gId && !gId.includes('YOUR_GOOGLE_CLIENT_ID') && gId.includes('.apps.googleusercontent.com');
+  const hasGoogleSecret = Boolean(gSecret && !gSecret.includes('YOUR_') && gSecret.trim().length > 5);
+  const hasAppleSecret = Boolean(aSecret && !aSecret.includes('YOUR_') && aSecret.trim().length > 5);
 
   return Response.json({
     googleClientId: isRealGoogleId ? gId : '',
     hasGoogleConfig: Boolean(isRealGoogleId),
+    hasGoogleSecret,
     appleClientId:  aId && !aId.includes('YOUR_APPLE') ? aId : '',
+    hasAppleSecret,
     appUrl:         appUrl || ''
   });
 }
