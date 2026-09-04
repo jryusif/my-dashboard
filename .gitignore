@@ -1,6 +1,7 @@
-# Next.js build output
+# Next.js and Vite build output
 .next/
 out/
+dist/
 
 # Node dependencies
 node_modules/

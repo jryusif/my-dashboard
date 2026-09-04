@@ -5,34 +5,55 @@ import { JWT_SECRET, successResponse, errorResponse } from '@/lib/auth.js';
 import { sendAdminSignupNotification } from '@/lib/email.js';
 
 /**
- * OAuth Callback Handler — Google & Apple Sign In
- *
- * Flow:
- *   1. Google/Apple redirect to this URL with ?code=...&state=...
- *   2. We exchange the code for an access token + user profile
- *   3. We upsert the user in Postgres (auto-approve admin email)
- *   4. We issue a JWT and redirect to / with ?oauth_token=<jwt>
- *      so the SPA can pick it up and boot the dashboard.
+ * Helper to dynamically fetch a setting from process.env or PostgreSQL system_settings
  */
+async function resolveSetting(key) {
+  if (process.env[key] && !process.env[key].includes('YOUR_')) {
+    return process.env[key];
+  }
+  try {
+    const rows = await prisma.$queryRaw`
+      SELECT value FROM system_settings WHERE key = ${key} LIMIT 1;
+    `;
+    if (rows && rows.length > 0 && rows[0].value) {
+      return rows[0].value.trim();
+    }
+  } catch (err) {}
+  return process.env[key] || '';
+}
 
-const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID     || '';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const APPLE_CLIENT_ID      = process.env.APPLE_CLIENT_ID      || '';
-const APPLE_CLIENT_SECRET  = process.env.APPLE_CLIENT_SECRET  || '';
-const APP_URL              = process.env.NEXT_PUBLIC_APP_URL   || 'http://localhost:3000';
-
+/**
+ * OAuth Callback Handler — Google & Apple Sign In
+ */
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const code     = searchParams.get('code');
   const state    = searchParams.get('state');   // 'google' | 'apple'
   const error    = searchParams.get('error');
 
+  // Dynamically resolve credentials and base URL
+  const googleClientId     = await resolveSetting('GOOGLE_CLIENT_ID');
+  const googleClientSecret = await resolveSetting('GOOGLE_CLIENT_SECRET');
+  const appleClientId      = await resolveSetting('APPLE_CLIENT_ID');
+  const appleClientSecret  = await resolveSetting('APPLE_CLIENT_SECRET');
+  
+  let appUrl = await resolveSetting('NEXT_PUBLIC_APP_URL');
+  if (!appUrl || appUrl.includes('localhost')) {
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
+    const proto = req.headers.get('x-forwarded-proto') || 'https';
+    if (host) {
+      appUrl = `${proto}://${host}`;
+    } else {
+      appUrl = 'https://mydashboard-bice.vercel.app';
+    }
+  }
+
   if (error) {
-    return redirectToHome(`OAuth cancelled: ${error}`);
+    return redirectToHome(appUrl, `OAuth cancelled: ${error}`);
   }
 
   if (!code || !state) {
-    return redirectToHome('Missing OAuth code or state.');
+    return redirectToHome(appUrl, 'Missing OAuth code or state.');
   }
 
   try {
@@ -43,21 +64,26 @@ export async function GET(req) {
     /* ------------------------------------------------------------------ */
     if (state === 'google') {
       // Exchange code → tokens
+      const tokenBody = {
+        code,
+        client_id:     googleClientId,
+        redirect_uri:  `${appUrl}/api/auth/oauth/callback`,
+        grant_type:    'authorization_code'
+      };
+      if (googleClientSecret) {
+        tokenBody.client_secret = googleClientSecret;
+      }
+
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          code,
-          client_id:     GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
-          redirect_uri:  `${APP_URL}/api/auth/oauth/callback`,
-          grant_type:    'authorization_code'
-        })
+        body: new URLSearchParams(tokenBody)
       });
 
       const tokenData = await tokenRes.json();
       if (!tokenRes.ok || !tokenData.id_token) {
-        return redirectToHome('Google token exchange failed.');
+        console.error('[Google token exchange failed]:', tokenData);
+        return redirectToHome(appUrl, tokenData.error_description || 'Google token exchange failed.');
       }
 
       // Verify id_token → get profile
@@ -66,7 +92,7 @@ export async function GET(req) {
       );
       const info = await infoRes.json();
       if (!info.email) {
-        return redirectToHome('Could not retrieve Google email.');
+        return redirectToHome(appUrl, 'Could not retrieve Google email.');
       }
 
       userProfile = {
@@ -82,32 +108,29 @@ export async function GET(req) {
     /*  APPLE                                                               */
     /* ------------------------------------------------------------------ */
     else if (state === 'apple') {
-      // Exchange code → tokens
-      const clientSecret = APPLE_CLIENT_SECRET; // pre-generated JWT from Apple private key
+      const clientSecret = appleClientSecret;
       const tokenRes = await fetch('https://appleid.apple.com/auth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           code,
-          client_id:     APPLE_CLIENT_ID,
+          client_id:     appleClientId,
           client_secret: clientSecret,
-          redirect_uri:  `${APP_URL}/api/auth/oauth/callback`,
+          redirect_uri:  `${appUrl}/api/auth/oauth/callback`,
           grant_type:    'authorization_code'
         })
       });
 
       const tokenData = await tokenRes.json();
       if (!tokenRes.ok || !tokenData.id_token) {
-        return redirectToHome('Apple token exchange failed.');
+        return redirectToHome(appUrl, 'Apple token exchange failed.');
       }
 
-      // Decode the id_token (Apple signs it; for full verification use apple-signin npm pkg)
       const decoded = jwt.decode(tokenData.id_token);
       if (!decoded?.email) {
-        return redirectToHome('Could not retrieve Apple email.');
+        return redirectToHome(appUrl, 'Could not retrieve Apple email.');
       }
 
-      // On first sign-in Apple sends user info in the POST body (handled separately)
       userProfile = {
         provider: 'apple',
         email:    decoded.email,
@@ -118,7 +141,7 @@ export async function GET(req) {
     }
 
     if (!userProfile) {
-      return redirectToHome('Unknown OAuth provider.');
+      return redirectToHome(appUrl, 'Unknown OAuth provider.');
     }
 
     /* ------------------------------------------------------------------ */
@@ -164,18 +187,16 @@ export async function GET(req) {
         } catch (e) {
           console.warn('[OAuth callback] Signup email warning:', e.message);
         }
-        return redirectToHome(null, null, 'pending');
+        return redirectToHome(appUrl, null, 'pending');
       }
     } else {
-      // Check approval status
       if (user.status === 'PENDING') {
-        return redirectToHome(null, null, 'pending');
+        return redirectToHome(appUrl, null, 'pending');
       }
       if (user.status === 'REJECTED') {
-        return redirectToHome('Your account access has been declined by the administrator.');
+        return redirectToHome(appUrl, 'Your account access has been declined by the administrator.');
       }
 
-      // Update login timestamp
       await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -211,28 +232,25 @@ export async function GET(req) {
     }));
 
     return Response.redirect(
-      `${APP_URL}/?oauth_token=${encodeURIComponent(token)}&oauth_user=${userPayload}&onboarding_needed=${!user.onboardingCompleted}`,
+      `${appUrl}/?oauth_token=${encodeURIComponent(token)}&oauth_user=${userPayload}&onboarding_needed=${!user.onboardingCompleted}`,
       302
     );
   } catch (err) {
     console.error('[OAuth callback] error:', err);
-    return redirectToHome('Authentication failed. Please try again.');
+    return redirectToHome(appUrl, 'Authentication failed. Please try again.');
   }
 }
 
-// Apple sends user data as a POST on first sign-in
 export async function POST(req) {
   return GET(req);
 }
 
-function redirectToHome(errorMsg = null, token = null, special = null) {
-  let url = APP_URL + '/';
+function redirectToHome(appUrl, errorMsg = null, special = null) {
+  let url = (appUrl || 'https://mydashboard-bice.vercel.app') + '/';
   if (special === 'pending') {
     url += '?oauth_pending=1';
   } else if (errorMsg) {
     url += `?oauth_error=${encodeURIComponent(errorMsg)}`;
-  } else if (token) {
-    url += `?oauth_token=${encodeURIComponent(token)}`;
   }
   return Response.redirect(url, 302);
 }
