@@ -18,6 +18,9 @@ export async function POST(req) {
   const amount = Math.max(0, parseFloat(rawAmount) || 0);
   const today = new Date().toISOString().split('T')[0];
 
+  const dbUser = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true } });
+  const cashCurrency = (body.currency || dbUser?.currency || 'EGP').toUpperCase();
+
   // 1. Find or create user's Liquid Cash Asset in database
   const existingCashAsset = await prisma.asset.findFirst({
     where: { userId, type: 'Cash' }
@@ -29,6 +32,8 @@ export async function POST(req) {
       where: { id: existingCashAsset.id },
       data: {
         quantity: amount,
+        unit: cashCurrency,
+        currency: cashCurrency,
         purchasePrice: amount,
         purchaseDate: today,
         notes: 'Money I Already Have (Pre-existing Cash Savings)'
@@ -42,7 +47,8 @@ export async function POST(req) {
         type: 'Cash',
         status: 'Owned',
         quantity: amount,
-        unit: 'EGP',
+        unit: cashCurrency,
+        currency: cashCurrency,
         purchasePrice: amount,
         purchaseDate: today,
         notes: 'Money I Already Have (Pre-existing Cash Savings)'

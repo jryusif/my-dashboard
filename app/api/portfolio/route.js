@@ -47,9 +47,13 @@ export async function GET(req) {
 
   const holdings = [
     ...assets.map(a => {
-      const assetCurrency = (a.currency || a.unit || userCurrency || 'USD').toUpperCase();
-      const isKnownCurrency = ['USD', 'EGP', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'QAR', 'CAD', 'JPY'].includes(assetCurrency);
-      const fromCurr = isKnownCurrency ? assetCurrency : userCurrency;
+      const KNOWN_CURRENCIES = ['USD', 'EGP', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'QAR', 'CAD', 'JPY'];
+      let fromCurr = userCurrency;
+      if (a.unit && KNOWN_CURRENCIES.includes(a.unit.toUpperCase())) {
+        fromCurr = a.unit.toUpperCase();
+      } else if (a.currency && KNOWN_CURRENCIES.includes(a.currency.toUpperCase())) {
+        fromCurr = a.currency.toUpperCase();
+      }
       const costInOriginalCurr = a.purchasePrice || 0;
       const costInUserCurr = convertCurrency(costInOriginalCurr, fromCurr, userCurrency, liveGoldPrice.rates);
       const liveValInUserCurr = a.purchasePrice != null ? costInUserCurr : (a.quantity * 100);

@@ -80,8 +80,22 @@ export async function GET(req) {
     // Saved Cash Baseline ("Money I Already Have")
     const cashAsset = assets.find(a => a.type === 'Cash');
     const baselineTx = transactions.find(t => t.category === 'Saved Cash Baseline');
-    const savedCashBaseline = baselineTx ? baselineTx.amount : (cashAsset ? (cashAsset.purchasePrice || cashAsset.quantity || 0) : 0);
+    let savedCashBaseline = baselineTx ? baselineTx.amount : (cashAsset ? (cashAsset.purchasePrice || cashAsset.quantity || 0) : 0);
     
+    // Convert cash baseline to userCurrency if needed
+    if (cashAsset && savedCashBaseline > 0) {
+      const KNOWN_CURRENCIES = ['USD', 'EGP', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'QAR', 'CAD', 'JPY'];
+      let cashCurr = 'EGP';
+      if (cashAsset.unit && KNOWN_CURRENCIES.includes(cashAsset.unit.toUpperCase())) {
+        cashCurr = cashAsset.unit.toUpperCase();
+      } else if (cashAsset.currency && KNOWN_CURRENCIES.includes(cashAsset.currency.toUpperCase())) {
+        cashCurr = cashAsset.currency.toUpperCase();
+      }
+      if (cashCurr !== userCurrency) {
+        savedCashBaseline = convertCurrency(savedCashBaseline, cashCurr, userCurrency, liveGold.rates);
+      }
+    }
+
     // Real Available Cash / Liquid Money = Baseline Saved Cash + All Inflows - All Outflows
     const totalWalletCash = Math.max(0, savedCashBaseline + allRegularIncome - allExpenses);
 
