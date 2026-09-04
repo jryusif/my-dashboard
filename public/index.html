@@ -2971,7 +2971,7 @@
        MODERN OAUTH PROVIDER AUTHENTICATION MODAL (GOOGLE & APPLE SSO)
        =================================================================== -->
   <div class="modal-backdrop" id="oauthProviderModalBackdrop" hidden>
-    <div class="modal oauth-provider-modal" role="dialog" aria-modal="true" aria-labelledby="oauthModalTitle" style="max-width: 440px;">
+    <div class="modal oauth-provider-modal" role="dialog" aria-modal="true" aria-labelledby="oauthModalTitle" style="max-width: 480px;">
       <button type="button" class="modal-close-btn" onclick="closeOAuthProviderModal()" title="Close dialog">✕</button>
 
       <div class="oauth-modal-brand-header">
@@ -2983,33 +2983,46 @@
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
           </svg>
         </div>
-        <div class="oauth-verified-pill" id="oauthSecurityPill">⚡ Secure Single Sign-On</div>
-        <h2 id="oauthModalTitle" style="font-size: 21px; color: #fff; margin: 8px 0 4px;">Sign In with Google</h2>
-        <p class="subtitle" id="oauthModalSub" style="font-size: 13px; margin: 0; color: var(--ink-soft);">Authenticate instantly using your verified Google Account</p>
+        <div class="oauth-verified-pill" id="oauthSecurityPill">⚡ Official Google OAuth 2.0</div>
+        <h2 id="oauthModalTitle" style="font-size: 20px; color: #fff; margin: 8px 0 4px;">Connect Real Google Sign-In</h2>
+        <p class="subtitle" id="oauthModalSub" style="font-size: 12.5px; margin: 0; color: var(--ink-soft); line-height: 1.45;">
+          Google Single Sign-On connects to official Google accounts via your Google Cloud OAuth Client credentials.
+        </p>
       </div>
 
-      <form id="oauthModalForm" onsubmit="handleOAuthModalSubmit(event)" style="display: flex; flex-direction: column; gap: 14px; margin-top: 18px;">
-        <div>
-          <label for="oauthEmailInput" id="oauthEmailLabel" style="font-size: 12px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 6px;">Google Account Email</label>
-          <div class="gateway-input-wrap">
-            <span class="gateway-input-icon">✉️</span>
-            <input type="email" id="oauthEmailInput" required placeholder="you@gmail.com" autocomplete="email" style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 12px 14px 12px 42px; border-radius: 12px; font-size: 14px; width: 100%;" />
+      <form id="oauthModalForm" onsubmit="handleOAuthModalSubmit(event)" style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+        <!-- Redirect URI to copy into Google Cloud Console -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <label style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Authorized Redirect URI (Google Cloud)</label>
+            <button type="button" onclick="copyOAuthRedirectUri()" id="btnCopyRedirectUri" style="background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.3); color: #38bdf8; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; cursor: pointer;">📋 Copy</button>
           </div>
+          <input type="text" id="oauthRedirectUriDisplay" readonly style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 6px 8px; border-radius: 6px; font-size: 11.5px; width: 100%; font-family: monospace;" />
+        </div>
+
+        <div>
+          <label for="oauthClientIdInput" id="oauthClientIdLabel" style="font-size: 12px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 5px;">Google OAuth Client ID *</label>
+          <input type="text" id="oauthClientIdInput" required placeholder="e.g. 123456789-xxxx.apps.googleusercontent.com" style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 10px 12px; border-radius: 10px; font-size: 13px; width: 100%; font-family: monospace;" />
+        </div>
+
+        <div>
+          <label for="oauthClientSecretInput" id="oauthSecretLabel" style="font-size: 12px; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 5px;">Google Client Secret (Optional / for Code Exchange)</label>
+          <input type="password" id="oauthClientSecretInput" placeholder="e.g. GOCSPX-xxxxxxxxxxxx" style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 10px 12px; border-radius: 10px; font-size: 13px; width: 100%; font-family: monospace;" />
         </div>
 
         <div id="oauthErrorMsg" style="color: #f87171; font-size: 12px; display: none; text-align: center; font-weight: 600;"></div>
 
         <div style="display: flex; gap: 10px; margin-top: 4px;">
-          <button type="button" class="btn-secondary" onclick="closeOAuthProviderModal()" style="flex: 1; border-radius: 12px; font-weight: 600;">
+          <button type="button" class="btn-secondary" onclick="closeOAuthProviderModal()" style="flex: 1; border-radius: 10px; font-weight: 600;">
             Cancel
           </button>
-          <button type="submit" class="btn-primary" id="btnOAuthModalSubmit" style="flex: 1.6; border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);">
-            <span id="oauthSubmitBtnText">Continue with Google</span>
+          <button type="submit" class="btn-primary" id="btnOAuthModalSubmit" style="flex: 1.8; border-radius: 10px; font-weight: 700; background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);">
+            <span id="oauthSubmitBtnText">🚀 Save &amp; Connect Google</span>
           </button>
         </div>
 
-        <div class="gateway-footer-note" style="margin-top: 10px; font-size: 11px;">
-          <span>🔒 256-bit OAuth Token Exchange · Zero Password Sharing</span>
+        <div class="gateway-footer-note" style="margin-top: 6px; font-size: 11px; text-align: center; color: var(--ink-soft);">
+          <span>🔒 Stored securely in your workspace <code style="color:#38bdf8;">.env</code></span>
         </div>
       </form>
     </div>

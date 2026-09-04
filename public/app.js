@@ -10555,30 +10555,72 @@ window.handleForgotPassword = handleForgotPassword;
 
 let currentOAuthProvider = 'google'; // 'google' | 'apple'
 
+function copyOAuthRedirectUri() {
+  const uriInput = document.getElementById('oauthRedirectUriDisplay');
+  const uri = uriInput ? uriInput.value : `${window.location.origin}/api/auth/oauth/callback`;
+  navigator.clipboard.writeText(uri).then(() => {
+    const btn = document.getElementById('btnCopyRedirectUri');
+    if (btn) {
+      const origText = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      btn.style.color = '#34d399';
+      setTimeout(() => {
+        btn.textContent = origText;
+        btn.style.color = '#38bdf8';
+      }, 2000);
+    }
+    showToast('Redirect URI copied to clipboard!');
+  }).catch(() => {
+    showToast('Failed to copy to clipboard. Please copy manually.');
+  });
+}
+window.copyOAuthRedirectUri = copyOAuthRedirectUri;
+
+function isRealOAuthClientId(id) {
+  if (!id) return false;
+  if (id.includes('YOUR_GOOGLE_CLIENT_ID') || id.includes('YOUR_APPLE')) return false;
+  return id.includes('.apps.googleusercontent.com') || id.length > 20;
+}
+
 function openOAuthProviderModal(provider = 'google') {
   currentOAuthProvider = provider;
   const backdrop = document.getElementById('oauthProviderModalBackdrop');
   const badge = document.getElementById('oauthProviderBadge');
   const title = document.getElementById('oauthModalTitle');
   const sub = document.getElementById('oauthModalSub');
-  const emailLabel = document.getElementById('oauthEmailLabel');
-  const emailInput = document.getElementById('oauthEmailInput');
+  const redirectDisplay = document.getElementById('oauthRedirectUriDisplay');
+  const clientIdLabel = document.getElementById('oauthClientIdLabel');
+  const clientIdInput = document.getElementById('oauthClientIdInput');
+  const secretLabel = document.getElementById('oauthSecretLabel');
+  const secretInput = document.getElementById('oauthClientSecretInput');
   const submitText = document.getElementById('oauthSubmitBtnText');
   const errorMsg = document.getElementById('oauthErrorMsg');
+  const pill = document.getElementById('oauthSecurityPill');
 
   if (errorMsg) errorMsg.style.display = 'none';
-  if (emailInput) emailInput.value = '';
+
+  const redirectUri = `${window.location.origin}/api/auth/oauth/callback`;
+  if (redirectDisplay) redirectDisplay.value = redirectUri;
 
   if (provider === 'apple') {
     if (badge) {
       badge.innerHTML = `<span style="font-size:30px;">🍏</span>`;
       badge.style.borderColor = 'rgba(255,255,255,0.3)';
     }
-    if (title) title.textContent = 'Sign In with Apple ID';
-    if (sub) sub.textContent = 'Authenticate securely with Apple Single Sign-On';
-    if (emailLabel) emailLabel.textContent = 'Apple ID Email Address';
-    if (emailInput) emailInput.placeholder = 'you@icloud.com';
-    if (submitText) submitText.textContent = 'Continue with Apple ID';
+    if (pill) pill.textContent = '🍎 Apple Developer OAuth';
+    if (title) title.textContent = 'Connect Sign In with Apple';
+    if (sub) sub.textContent = 'Enter your Apple Developer Services ID and Secret to enable official Sign In with Apple.';
+    if (clientIdLabel) clientIdLabel.textContent = 'Apple Services ID *';
+    if (clientIdInput) {
+      clientIdInput.placeholder = 'e.g. com.yourapp.signin';
+      clientIdInput.value = window.APPLE_CLIENT_ID || '';
+    }
+    if (secretLabel) secretLabel.textContent = 'Apple Client Secret (Signed JWT)';
+    if (secretInput) {
+      secretInput.placeholder = 'e.g. eyJhbGciOiJFUzI1NiIs...';
+      secretInput.value = '';
+    }
+    if (submitText) submitText.textContent = '🚀 Save & Connect Apple';
   } else {
     if (badge) {
       badge.innerHTML = `
@@ -10591,11 +10633,20 @@ function openOAuthProviderModal(provider = 'google') {
       `;
       badge.style.borderColor = 'rgba(56,189,248,0.4)';
     }
-    if (title) title.textContent = 'Sign In with Google';
-    if (sub) sub.textContent = 'Authenticate securely with your Google Account';
-    if (emailLabel) emailLabel.textContent = 'Google Account Email';
-    if (emailInput) emailInput.placeholder = 'you@gmail.com';
-    if (submitText) submitText.textContent = 'Continue with Google';
+    if (pill) pill.textContent = '⚡ Official Google OAuth 2.0';
+    if (title) title.textContent = 'Connect Real Google Sign-In';
+    if (sub) sub.textContent = 'To sign in with real Google accounts, enter your Google Cloud OAuth Client ID & Secret below.';
+    if (clientIdLabel) clientIdLabel.textContent = 'Google OAuth Client ID *';
+    if (clientIdInput) {
+      clientIdInput.placeholder = 'e.g. 123456789-xxxx.apps.googleusercontent.com';
+      clientIdInput.value = isRealOAuthClientId(window.GOOGLE_CLIENT_ID) ? window.GOOGLE_CLIENT_ID : '';
+    }
+    if (secretLabel) secretLabel.textContent = 'Google Client Secret (Optional)';
+    if (secretInput) {
+      secretInput.placeholder = 'e.g. GOCSPX-xxxxxxxxxxxx';
+      secretInput.value = '';
+    }
+    if (submitText) submitText.textContent = '🚀 Save & Connect Google';
   }
 
   if (backdrop) {
@@ -10604,8 +10655,8 @@ function openOAuthProviderModal(provider = 'google') {
     backdrop.style.setProperty('display', 'flex', 'important');
   }
 
-  if (emailInput) {
-    setTimeout(() => emailInput.focus(), 80);
+  if (clientIdInput) {
+    setTimeout(() => clientIdInput.focus(), 80);
   }
 }
 window.openOAuthProviderModal = openOAuthProviderModal;
@@ -10622,55 +10673,91 @@ window.closeOAuthProviderModal = closeOAuthProviderModal;
 
 async function handleOAuthModalSubmit(e) {
   e.preventDefault();
-  const emailInput = document.getElementById('oauthEmailInput');
+  const clientIdInput = document.getElementById('oauthClientIdInput');
+  const secretInput = document.getElementById('oauthClientSecretInput');
   const errorMsg = document.getElementById('oauthErrorMsg');
   const submitBtn = document.getElementById('btnOAuthModalSubmit');
 
   if (errorMsg) errorMsg.style.display = 'none';
 
-  const cleanEmail = (emailInput?.value || '').trim().toLowerCase();
-  if (!cleanEmail || !cleanEmail.includes('@')) {
+  const clientId = (clientIdInput?.value || '').trim();
+  const clientSecret = (secretInput?.value || '').trim();
+
+  if (!clientId) {
     if (errorMsg) {
-      errorMsg.textContent = 'Please enter a valid email address.';
+      errorMsg.textContent = 'Client ID is required.';
       errorMsg.style.display = 'block';
     }
     return;
   }
 
-  const guessedName = cleanEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
   try {
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span>⏳</span> Authenticating...';
+      submitBtn.innerHTML = '<span>⏳</span> Saving credentials...';
     }
 
-    closeOAuthProviderModal();
+    const payload = {
+      appUrl: window.location.origin
+    };
+    if (currentOAuthProvider === 'google') {
+      payload.googleClientId = clientId;
+      payload.googleClientSecret = clientSecret;
+    } else {
+      payload.appleClientId = clientId;
+      payload.appleClientSecret = clientSecret;
+    }
 
-    await executeOAuthSignIn({
-      provider: currentOAuthProvider,
-      email: cleanEmail,
-      name: guessedName,
-      avatar: currentOAuthProvider === 'google' ? '🌐' : '🍏',
-      oauthId: `${currentOAuthProvider}_${btoa(cleanEmail)}`
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to save credentials.');
+    }
+
+    if (currentOAuthProvider === 'google') {
+      window.GOOGLE_CLIENT_ID = clientId;
+      closeOAuthProviderModal();
+      showToast('Google credentials saved! Redirecting to Google...');
+      setTimeout(() => {
+        handleGoogleAuth();
+      }, 500);
+    } else {
+      window.APPLE_CLIENT_ID = clientId;
+      closeOAuthProviderModal();
+      showToast('Apple credentials saved! Redirecting to Apple...');
+      setTimeout(() => {
+        handleAppleAuth();
+      }, 500);
+    }
   } catch (err) {
-    console.error('OAuth submit error:', err);
-    showToast('Failed to complete Single Sign-On.');
+    console.error('OAuth config save error:', err);
+    if (errorMsg) {
+      errorMsg.textContent = err.message || 'Failed to save credentials.';
+      errorMsg.style.display = 'block';
+    }
+    showToast(err.message || 'Failed to save credentials.');
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = `<span id="oauthSubmitBtnText">Continue with ${currentOAuthProvider === 'google' ? 'Google' : 'Apple ID'}</span>`;
+      submitBtn.innerHTML = `<span id="oauthSubmitBtnText">🚀 Save &amp; Connect ${currentOAuthProvider === 'google' ? 'Google' : 'Apple'}</span>`;
     }
   }
 }
 window.handleOAuthModalSubmit = handleOAuthModalSubmit;
 
 function initGoogleIdentityServices() {
+  const clientId = window.GOOGLE_CLIENT_ID || '';
+  if (!isRealOAuthClientId(clientId)) return;
+
   if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
     try {
       google.accounts.id.initialize({
-        client_id: window.GOOGLE_CLIENT_ID || '1088498877522-dashboard-client.apps.googleusercontent.com',
+        client_id: clientId,
         callback: handleGoogleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true
@@ -10697,14 +10784,13 @@ async function handleGoogleCredentialResponse(response) {
 window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
 
 function handleGoogleAuth() {
-  // Build the real Google OAuth 2.0 redirect URL → opens the native account chooser
-  const clientId   = window.GOOGLE_CLIENT_ID || '';
-  const appUrl     = window.location.origin;
+  const clientId = window.GOOGLE_CLIENT_ID || '';
+  const appUrl = window.location.origin;
   const redirectUri = encodeURIComponent(`${appUrl}/api/auth/oauth/callback`);
-  const scope       = encodeURIComponent('openid email profile');
+  const scope = encodeURIComponent('openid email profile');
 
-  if (!clientId) {
-    // Fallback: email-based modal when no client ID is configured
+  if (!clientId || !isRealOAuthClientId(clientId)) {
+    // Open the Google Cloud configuration modal with redirect URI ready to copy
     openOAuthProviderModal('google');
     return;
   }
@@ -10717,20 +10803,18 @@ function handleGoogleAuth() {
     `&scope=${scope}` +
     `&state=google` +
     `&access_type=offline` +
-    `&prompt=select_account`;   // forces account chooser every time
+    `&prompt=select_account`;
 
   window.location.href = googleAuthUrl;
 }
 window.handleGoogleAuth = handleGoogleAuth;
 
 function handleAppleAuth() {
-  // Build the real Apple Sign In redirect URL
-  const clientId    = window.APPLE_CLIENT_ID || '';
-  const appUrl      = window.location.origin;
+  const clientId = window.APPLE_CLIENT_ID || '';
+  const appUrl = window.location.origin;
   const redirectUri = encodeURIComponent(`${appUrl}/api/auth/oauth/callback`);
 
-  if (!clientId) {
-    // Fallback: email-based modal when no client ID is configured
+  if (!clientId || !isRealOAuthClientId(clientId)) {
     openOAuthProviderModal('apple');
     return;
   }
