@@ -6643,21 +6643,90 @@ if (dentalCaseModalBackdrop) {
   });
 }
 
+// Client-side image compressor to eliminate 413 Payload Too Large on high-resolution camera photos
+function compressImageFile(file, maxWidth = 1600, maxHeight = 1600, quality = 0.82) {
+  return new Promise((resolve) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      return resolve('');
+    }
+    const reader = new FileReader();
+    reader.onerror = () => resolve('');
+    reader.onload = () => {
+      compressDataUrl(reader.result, maxWidth, maxHeight, quality)
+        .then(resolve)
+        .catch(() => resolve(reader.result));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function compressDataUrl(dataUrl, maxWidth = 1600, maxHeight = 1600, quality = 0.82) {
+  return new Promise((resolve) => {
+    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      return resolve(dataUrl);
+    }
+    // If already under 150KB, no need to recompress
+    if (dataUrl.length < 150 * 1024) {
+      return resolve(dataUrl);
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        let width = img.naturalWidth || img.width;
+        let height = img.naturalHeight || img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width / height > maxWidth / maxHeight) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const result = canvas.toDataURL('image/jpeg', quality);
+        resolve(result);
+      } catch (e) {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 // File upload preview handlers for Before & After
 function setupImageUploadPreview(fileInput, urlInput, imgPreview, emptyPlaceholder) {
   if (!fileInput) return;
 
-  fileInput.addEventListener('change', e => {
+  fileInput.addEventListener('change', async e => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      imgPreview.src = reader.result;
+    try {
+      const compressed = await compressImageFile(file);
+      imgPreview.src = compressed;
       imgPreview.hidden = false;
       emptyPlaceholder.hidden = true;
       if (urlInput) urlInput.value = '';
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        imgPreview.src = reader.result;
+        imgPreview.hidden = false;
+        emptyPlaceholder.hidden = true;
+        if (urlInput) urlInput.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
   });
 
   if (urlInput) {
@@ -6724,30 +6793,25 @@ window.updateFormStep = function(idx, field, val) {
   if (activeFormSteps[idx]) activeFormSteps[idx][field] = val;
 };
 
-window.uploadStepImageFile = function(idx, input) {
+window.uploadStepImageFile = async function(idx, input) {
   const file = input.files && input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async () => {
-    try {
-      const res = await fetch('/api/dental-cases/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataUrl: reader.result, filename: file.name, type: 'step' }),
-      });
-      const data = await res.json();
-      if (data.url && activeFormSteps[idx]) {
-        activeFormSteps[idx].imageUrl = data.url;
-        renderFormStepsList();
-      }
-    } catch {
+  try {
+    const compressed = await compressImageFile(file);
+    if (activeFormSteps[idx]) {
+      activeFormSteps[idx].imageUrl = compressed;
+      renderFormStepsList();
+    }
+  } catch {
+    const reader = new FileReader();
+    reader.onload = () => {
       if (activeFormSteps[idx]) {
         activeFormSteps[idx].imageUrl = reader.result;
         renderFormStepsList();
       }
-    }
-  };
-  reader.readAsDataURL(file);
+    };
+    reader.readAsDataURL(file);
+  }
 };
 
 // Dynamic X-Ray Builder
@@ -6809,30 +6873,25 @@ window.updateFormXray = function(idx, field, val) {
   if (activeFormXrays[idx]) activeFormXrays[idx][field] = val;
 };
 
-window.uploadXrayImageFile = function(idx, input) {
+window.uploadXrayImageFile = async function(idx, input) {
   const file = input.files && input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async () => {
-    try {
-      const res = await fetch('/api/dental-cases/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataUrl: reader.result, filename: file.name, type: 'xray' }),
-      });
-      const data = await res.json();
-      if (data.url && activeFormXrays[idx]) {
-        activeFormXrays[idx].url = data.url;
-        renderFormXraysList();
-      }
-    } catch {
+  try {
+    const compressed = await compressImageFile(file);
+    if (activeFormXrays[idx]) {
+      activeFormXrays[idx].url = compressed;
+      renderFormXraysList();
+    }
+  } catch {
+    const reader = new FileReader();
+    reader.onload = () => {
       if (activeFormXrays[idx]) {
         activeFormXrays[idx].url = reader.result;
         renderFormXraysList();
       }
-    }
-  };
-  reader.readAsDataURL(file);
+    };
+    reader.readAsDataURL(file);
+  }
 };
 
 // Form Submit Handler
@@ -6841,35 +6900,57 @@ if (dentalCaseForm) {
     e.preventDefault();
     const caseId = dentalFormCaseId.value;
 
-    const beforeUrl = beforeImgPreview.src && !beforeImgPreview.hidden ? beforeImgPreview.src : beforeUrlInput.value.trim();
-    const afterUrl  = afterImgPreview.src && !afterImgPreview.hidden ? afterImgPreview.src : afterUrlInput.value.trim();
-
-    const payload = {
-      title: dentalFormTitle.value.trim(),
-      patientCode: dentalFormPatientCode.value.trim() || 'Anonymous',
-      date: dentalFormDate.value,
-      specialty: dentalFormSpecialty.value,
-      teeth: dentalFormTeeth.value.trim(),
-      diagnosis: dentalFormDiagnosis.value.trim(),
-      treatmentPlan: dentalFormTreatmentPlan.value.trim(),
-      clinicalNotes: dentalFormClinicalNotes.value.trim(),
-      tags: dentalFormTags.value.split(',').map(t => t.trim()).filter(Boolean),
-      showcaseForPatients: dentalFormShowcase.checked,
-      beforeAfter: {
-        beforeImageUrl: beforeUrl || '',
-        afterImageUrl: afterUrl || '',
-        beforeLabel: 'Initial Condition',
-        afterLabel: 'Final Result',
-      },
-      steps: activeFormSteps,
-      xrays: activeFormXrays,
-    };
-
     const submitBtn = document.getElementById('dentalFormSubmitBtn');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving Case...';
+    submitBtn.textContent = 'Optimizing & Saving Case...';
+
+    const rawBeforeUrl = beforeImgPreview.src && !beforeImgPreview.hidden ? beforeImgPreview.src : beforeUrlInput.value.trim();
+    const rawAfterUrl  = afterImgPreview.src && !afterImgPreview.hidden ? afterImgPreview.src : afterUrlInput.value.trim();
 
     try {
+      // Compress any large images before sending to prevent 413
+      const [beforeUrl, afterUrl] = await Promise.all([
+        compressDataUrl(rawBeforeUrl),
+        compressDataUrl(rawAfterUrl),
+      ]);
+
+      if (Array.isArray(activeFormSteps)) {
+        for (const s of activeFormSteps) {
+          if (s.imageUrl && s.imageUrl.startsWith('data:image/')) {
+            s.imageUrl = await compressDataUrl(s.imageUrl);
+          }
+        }
+      }
+
+      if (Array.isArray(activeFormXrays)) {
+        for (const x of activeFormXrays) {
+          if (x.url && x.url.startsWith('data:image/')) {
+            x.url = await compressDataUrl(x.url);
+          }
+        }
+      }
+
+      const payload = {
+        title: dentalFormTitle.value.trim(),
+        patientCode: dentalFormPatientCode.value.trim() || 'Anonymous',
+        date: dentalFormDate.value,
+        specialty: dentalFormSpecialty.value,
+        teeth: dentalFormTeeth.value.trim(),
+        diagnosis: dentalFormDiagnosis.value.trim(),
+        treatmentPlan: dentalFormTreatmentPlan.value.trim(),
+        clinicalNotes: dentalFormClinicalNotes.value.trim(),
+        tags: dentalFormTags.value.split(',').map(t => t.trim()).filter(Boolean),
+        showcaseForPatients: dentalFormShowcase.checked,
+        beforeAfter: {
+          beforeImageUrl: beforeUrl || '',
+          afterImageUrl: afterUrl || '',
+          beforeLabel: 'Initial Condition',
+          afterLabel: 'Final Result',
+        },
+        steps: activeFormSteps,
+        xrays: activeFormXrays,
+      };
+
       const url = caseId ? `/api/dental-cases/${encodeURIComponent(caseId)}` : '/api/dental-cases';
       const method = caseId ? 'PATCH' : 'POST';
 
@@ -6880,6 +6961,9 @@ if (dentalCaseForm) {
       });
 
       if (!res.ok) {
+        if (res.status === 413) {
+          throw new Error('Images are too large. Please use smaller photos or external image links.');
+        }
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.error || errJson.message || `Server error (${res.status})`);
       }

@@ -19,8 +19,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-fallback-jwt-secret-replace-in
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Serve static frontend assets
 app.use(express.static(path.join(__dirname, 'public')));

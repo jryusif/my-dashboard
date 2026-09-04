@@ -25,7 +25,7 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-        <script src="/app.js?v=10.0" defer></script>
+        <script src="/app.js?v=11.0" defer></script>
       </body>
     </html>
   );
