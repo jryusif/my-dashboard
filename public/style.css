@@ -288,7 +288,8 @@ body.sidebar-mobile-open .sidebar-backdrop {
               box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
               border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
               padding 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+              opacity 0.3s ease,
+              transform 0.3s ease;
 }
 
 /* Glassy Animated State When Scrolled */
@@ -301,6 +302,20 @@ body.is-scrolled .main-top-navbar,
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.12) !important;
   padding-top: 8px !important;
   padding-bottom: 8px !important;
+}
+
+/* —— Desktop: hide navbar when sidebar is expanded (not collapsed) —————— */
+@media (min-width: 1025px) {
+  body:not(.sidebar-is-collapsed) .main-top-navbar {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-100%);
+  }
+  body.sidebar-is-collapsed .main-top-navbar {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
 }
 
 .btn-sidebar-toggle {

@@ -16711,7 +16711,7 @@ function handleSelectBrainDumpIntoCal(indexStr) {
     saveBrainDumpStats();
   }
   showToast('📥 Loaded item from Brain Dump inbox!');
-  renderBrainDumpInbox();
+  renderBrainDumpDrawerList();
 
   // Refresh select
   const bdBar = document.getElementById('calBrainDumpImportBar');
