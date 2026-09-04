@@ -1,43 +1,61 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser, jsonError } from '@/lib/auth.js';
 import prisma from '@/lib/prisma.js';
-import { getLiveGoldPrice } from '@/lib/gold.js';
+import { getLiveGoldPrice, convertCurrency } from '@/lib/gold.js';
 
 async function resolveUserId(req) {
   const auth = getAuthUser(req);
   if (auth && auth.authenticated && auth.userId) return auth.userId;
-  
   return null;
 }
 
 export async function GET(req) {
   const auth = getAuthUser(req);
   const userId = auth && auth.authenticated ? auth.userId : null;
-  const user = auth && auth.authenticated ? auth.user : null;
 
   let assets = [];
   let goldLots = [];
+  let dbUser = null;
 
   if (userId) {
-    assets = await prisma.asset.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' }
-    });
-    goldLots = await prisma.goldLot.findMany({
-      where: { userId },
-      orderBy: { date: 'desc' }
-    });
+    [assets, goldLots, dbUser] = await Promise.all([
+      prisma.asset.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.goldLot.findMany({
+        where: { userId },
+        orderBy: { date: 'desc' }
+      }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { currency: true }
+      })
+    ]);
   }
 
-  const userCurrency = user?.currency || 'USD';
+  const { searchParams } = new URL(req.url);
+  const userCurrency = (
+    searchParams.get('currency') ||
+    req.headers.get('x-user-currency') ||
+    auth?.user?.currency ||
+    dbUser?.currency ||
+    'USD'
+  ).toUpperCase();
+
   const liveGoldPrice = await getLiveGoldPrice(userCurrency);
 
   const holdings = [
     ...assets.map(a => {
-      const cost = a.purchasePrice || 0;
-      const liveVal = a.purchasePrice || (a.quantity * 100);
-      const diff = liveVal - cost;
-      const pct = cost > 0 ? (diff / cost) * 100 : 0;
+      const assetCurrency = (a.currency || a.unit || userCurrency || 'USD').toUpperCase();
+      const isKnownCurrency = ['USD', 'EGP', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'QAR', 'CAD', 'JPY'].includes(assetCurrency);
+      const fromCurr = isKnownCurrency ? assetCurrency : userCurrency;
+      const costInOriginalCurr = a.purchasePrice || 0;
+      const costInUserCurr = convertCurrency(costInOriginalCurr, fromCurr, userCurrency, liveGoldPrice.rates);
+      const liveValInUserCurr = a.purchasePrice != null ? costInUserCurr : (a.quantity * 100);
+      const diff = liveValInUserCurr - costInUserCurr;
+      const pct = costInUserCurr > 0 ? (diff / costInUserCurr) * 100 : 0;
+
       return {
         id: a.id,
         name: a.name,
@@ -45,20 +63,36 @@ export async function GET(req) {
         status: a.status || 'Owned',
         quantity: a.quantity,
         unit: a.unit || 'units',
-        purchasePrice: cost,
-        liveValue: Math.round(liveVal),
+        currency: fromCurr,
+        displayCurrency: userCurrency,
+        originalPurchasePrice: costInOriginalCurr,
+        purchasePrice: Math.round(costInUserCurr),
+        liveValue: Math.round(liveValInUserCurr),
         date: a.purchaseDate,
         notes: a.notes,
-        pnl: { isGain: diff >= 0, diff: Math.abs(Math.round(diff)), pct: Math.abs(Math.round(pct * 10) / 10) }
+        pnl: {
+          isGain: diff >= 0,
+          diff: Math.abs(Math.round(diff)),
+          pct: Math.abs(Math.round(pct * 10) / 10)
+        }
       };
     }),
     ...goldLots.map(g => {
-      const karatRatio = (g.karat === '21k' ? 21/24 : (g.karat === '18k' ? 18/24 : 1));
-      const gramRate = liveGoldPrice.pricePerGram24 || liveGoldPrice.pricePerGramEgp24;
-      const liveVal = g.grams * gramRate * karatRatio;
-      const cost = g.pricePaid || 0;
-      const diff = cost > 0 ? liveVal - cost : 0;
-      const pct = cost > 0 ? (diff / cost) * 100 : 0;
+      const lotCurrency = (g.currency || userCurrency || 'USD').toUpperCase();
+      const costInLotCurr = g.pricePaid || 0;
+      const costInUserCurr = convertCurrency(costInLotCurr, lotCurrency, userCurrency, liveGoldPrice.rates);
+
+      // Karat-specific live gram rate in user's active currency
+      const gramRate = (g.karat === '21k'
+        ? liveGoldPrice.pricePerGram21
+        : (g.karat === '18k'
+          ? liveGoldPrice.pricePerGram18
+          : liveGoldPrice.pricePerGram24));
+
+      const liveValInUserCurr = g.grams * gramRate;
+      const diff = costInUserCurr > 0 ? (liveValInUserCurr - costInUserCurr) : 0;
+      const pct = costInUserCurr > 0 ? (diff / costInUserCurr) * 100 : 0;
+
       return {
         id: g.id,
         name: g.name || `${g.karat.toUpperCase()} Gold Bullion`,
@@ -67,10 +101,17 @@ export async function GET(req) {
         status: 'Owned',
         quantity: g.grams,
         unit: 'grams',
-        purchasePrice: cost,
-        liveValue: Math.round(liveVal),
+        currency: lotCurrency,
+        displayCurrency: userCurrency,
+        originalPurchasePrice: costInLotCurr,
+        purchasePrice: Math.round(costInUserCurr),
+        liveValue: Math.round(liveValInUserCurr),
         date: g.date,
-        pnl: { isGain: diff >= 0, diff: Math.abs(Math.round(diff)), pct: Math.abs(Math.round(pct * 10) / 10) }
+        pnl: {
+          isGain: diff >= 0,
+          diff: Math.abs(Math.round(diff)),
+          pct: Math.abs(Math.round(pct * 10) / 10)
+        }
       };
     })
   ];
@@ -113,9 +154,10 @@ export async function GET(req) {
   const allPct = allAssetsInvested > 0 ? (allDiff / allAssetsInvested) * 100 : 0;
 
   return NextResponse.json({
+    currency: userCurrency,
     goldPrice: liveGoldPrice,
     summary: {
-      // Primary Gold Page metrics: Total Gold live value and gold invested
+      currency: userCurrency,
       currentValue: Math.round(goldCurrentValue),
       totalInvested: Math.round(goldInvested),
       totalPnl: {
@@ -133,7 +175,6 @@ export async function GET(req) {
         totalGrams: totalGoldGrams,
         byKarat
       },
-      // Explicit breakdowns
       goldValue: Math.round(goldCurrentValue),
       goldInvested: Math.round(goldInvested),
       goldPnl: {
@@ -159,13 +200,20 @@ export async function POST(req) {
   const userId = await resolveUserId(req);
   if (!userId) return jsonError('User account not found', 401);
 
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { currency: true }
+  });
+  const defaultCurrency = dbUser?.currency || 'USD';
+
   const body = await req.json();
-  const { name, assetType, type, quantity, grams, unit, purchasePrice, pricePaid, date, notes, status, karat } = body;
+  const { name, assetType, type, quantity, grams, unit, purchasePrice, pricePaid, date, notes, status, karat, currency } = body;
 
   const resolvedType = assetType || type || 'Gold';
   const qty = parseFloat(quantity || grams) || 1;
   const cost = parseFloat(purchasePrice || pricePaid || 0);
   const targetDate = date || new Date().toISOString().split('T')[0];
+  const targetCurrency = (currency || defaultCurrency || 'USD').toUpperCase();
 
   if (resolvedType === 'Gold') {
     const karatStr = (karat || '21k').toLowerCase();
@@ -176,6 +224,7 @@ export async function POST(req) {
         grams: qty,
         karat: karatStr,
         pricePaid: cost,
+        currency: targetCurrency,
         date: targetDate
       }
     });
@@ -188,6 +237,7 @@ export async function POST(req) {
       status: 'Owned',
       quantity: goldLot.grams,
       unit: 'grams',
+      currency: goldLot.currency,
       purchasePrice: goldLot.pricePaid,
       date: goldLot.date
     }, { status: 201 });
@@ -202,6 +252,7 @@ export async function POST(req) {
       quantity: qty,
       unit: unit || 'units',
       purchasePrice: cost > 0 ? cost : null,
+      currency: targetCurrency,
       purchaseDate: targetDate,
       notes: notes || null
     }
@@ -214,6 +265,7 @@ export async function POST(req) {
     status: asset.status,
     quantity: asset.quantity,
     unit: asset.unit,
+    currency: asset.currency,
     purchasePrice: asset.purchasePrice,
     date: asset.purchaseDate
   }, { status: 201 });

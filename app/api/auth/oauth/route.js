@@ -136,7 +136,8 @@ export async function POST(req) {
       userId: user.id,
       email: user.email,
       role: user.role,
-      status: user.status
+      status: user.status,
+      currency: user.currency || 'USD'
     }, JWT_SECRET, { expiresIn: '30d' });
 
     return successResponse({

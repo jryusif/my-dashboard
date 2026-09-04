@@ -48,12 +48,13 @@ window.fetch = async function(resource, init = {}) {
   if (url.startsWith('/api/') && !url.startsWith('/api/auth/login') && !url.startsWith('/api/auth/register') && !url.startsWith('/api/finance/assets/gold-price')) {
     init = init || {};
     init.headers = init.headers || {};
-    if (authToken) {
-      if (init.headers instanceof Headers) {
-        init.headers.set('Authorization', `Bearer ${authToken}`);
-      } else {
-        init.headers['Authorization'] = `Bearer ${authToken}`;
-      }
+    const curr = typeof getUserCurrency === 'function' ? getUserCurrency() : 'EGP';
+    if (init.headers instanceof Headers) {
+      if (authToken) init.headers.set('Authorization', `Bearer ${authToken}`);
+      if (!init.headers.has('x-user-currency')) init.headers.set('x-user-currency', curr);
+    } else {
+      if (authToken) init.headers['Authorization'] = `Bearer ${authToken}`;
+      if (!init.headers['x-user-currency']) init.headers['x-user-currency'] = curr;
     }
   }
 
@@ -400,7 +401,9 @@ const CURRENCY_SYMBOLS = {
 
 function getUserCurrency() {
   if (currentUser && currentUser.currency) return currentUser.currency.toUpperCase();
-  return 'USD';
+  const stored = localStorage.getItem('user_currency') || localStorage.getItem('antigravity_currency');
+  if (stored) return stored.toUpperCase();
+  return 'EGP';
 }
 
 function getUserCurrencySymbol() {
@@ -3644,7 +3647,8 @@ function renderWealthValue() {
 async function loadWealthCard() {
   if (!currentUser || !authToken) return;
   try {
-    const res = await fetch('/api/finance/overview');
+    const curr = getUserCurrency();
+    const res = await fetch(`/api/finance/overview?currency=${encodeURIComponent(curr)}`);
     if (!res.ok) throw new Error('failed');
     const overview = await res.json();
     lastNetWorth = overview.netWorth;
@@ -4828,10 +4832,11 @@ function stopGoldPricePolling() {
 
 async function fetchPortfolioQuietly() {
   try {
-    const res = await fetch('/api/portfolio');
+    const curr = getUserCurrency();
+    const res = await fetch(`/api/portfolio?currency=${encodeURIComponent(curr)}`);
     if (!res.ok) return;
     const data = await res.json();
-    prevGoldPricePerGram24 = latestGoldPrice ? latestGoldPrice.pricePerGramEgp24 : null;
+    prevGoldPricePerGram24 = latestGoldPrice ? (latestGoldPrice.pricePerGram24 || latestGoldPrice.pricePerGramEgp24) : null;
     portfolioData = data;
     latestGoldPrice = data.goldPrice;
     updatePortfolioInPlace();
@@ -4905,7 +4910,8 @@ async function loadPortfolioPage() {
   `;
 
   try {
-    const res = await fetch('/api/portfolio');
+    const curr = getUserCurrency();
+    const res = await fetch(`/api/portfolio?currency=${encodeURIComponent(curr)}`);
     if (!res.ok) throw new Error('failed');
     portfolioData = await res.json();
     latestGoldPrice = portfolioData.goldPrice;
@@ -4969,7 +4975,15 @@ function renderHoldingCard(h) {
   const karatLabel = isGold && h.karat ? `${h.karat.toUpperCase()} ` : '';
   const qtyStr = h.quantity != null ? `${h.quantity} ${h.unit || 'g'}` : '';
   const dateStr = h.date ? fmtDate(h.date) : '';
-  const costStr = typeof h.purchasePrice === 'number' ? `Cost: ${fmtMoney(h.purchasePrice)}` : '';
+  const userCurr = getUserCurrency();
+  let costStr = '';
+  if (typeof h.purchasePrice === 'number') {
+    if (h.currency && h.currency.toUpperCase() !== userCurr.toUpperCase() && h.originalPurchasePrice != null) {
+      costStr = `Cost: ${fmtMoney(h.originalPurchasePrice, h.currency)} (≈ ${fmtMoney(h.purchasePrice)})`;
+    } else {
+      costStr = `Cost: ${fmtMoney(h.purchasePrice)}`;
+    }
+  }
   const metaBits = [karatLabel ? `${karatLabel}Gold` : h.assetType, qtyStr, costStr, dateStr].filter(Boolean);
 
   return `
@@ -5056,10 +5070,27 @@ function renderPortfolioPage() {
             <input type="number" id="portQuantity" step="0.001" min="0" placeholder="e.g. 1, 5, 10, 31.1" required />
           </div>
 
-          <div class="field-group span-2">
+          <div class="field-group">
+            <label class="field-label">Currency</label>
+            <select id="portCurrency">
+              <option value="EGP">EGP (E£)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="SAR">SAR (﷼)</option>
+              <option value="AED">AED (د.إ)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="KWD">KWD (KD)</option>
+              <option value="QAR">QAR (QR)</option>
+              <option value="CAD">CAD (CA$)</option>
+              <option value="AUD">AUD (AU$)</option>
+              <option value="TRY">TRY (₺)</option>
+            </select>
+          </div>
+
+          <div class="field-group">
             <label class="field-label">Total Cost / Price Paid</label>
             <div class="amount-input-wrap">
-              <span class="amount-prefix">${getUserCurrencySymbol()}</span>
+              <span class="amount-prefix" id="portPricePrefix">${getUserCurrencySymbol()}</span>
               <input type="number" id="portPrice" step="0.01" min="0" placeholder="0.00" />
             </div>
           </div>
@@ -5116,6 +5147,18 @@ function renderPortfolioPage() {
   }
   typeSelect.addEventListener('change', updateFormFields);
   updateFormFields();
+
+  // Currency select and price prefix in add form
+  const portCurrSelect = document.getElementById('portCurrency');
+  const portPricePrefix = document.getElementById('portPricePrefix');
+  if (portCurrSelect && portPricePrefix) {
+    portCurrSelect.value = getUserCurrency();
+    const updatePortPrefix = () => {
+      portPricePrefix.textContent = CURRENCY_SYMBOLS[portCurrSelect.value] || (portCurrSelect.value + ' ');
+    };
+    updatePortPrefix();
+    portCurrSelect.addEventListener('change', updatePortPrefix);
+  }
 
   // Filter bar
   assetsContent.querySelectorAll('.portfolio-filter-btn').forEach(btn => {
@@ -5179,6 +5222,7 @@ async function handleAddPortfolio(e) {
   const karat     = document.getElementById('portKarat').value;
   const quantity  = parseFloat(document.getElementById('portQuantity').value);
   const priceVal  = document.getElementById('portPrice').value;
+  const currency  = document.getElementById('portCurrency') ? document.getElementById('portCurrency').value : getUserCurrency();
   const date      = document.getElementById('portDate').value;
   const name      = document.getElementById('portName').value.trim();
 
@@ -5197,6 +5241,7 @@ async function handleAddPortfolio(e) {
     unit: assetType === 'Gold' ? 'gram' : 'unit',
     purchasePrice: priceVal ? parseFloat(priceVal) : undefined,
     pricePaid: priceVal ? parseFloat(priceVal) : undefined,
+    currency,
     date,
   };
 
@@ -5268,12 +5313,20 @@ function openEditHoldingModal(item) {
   document.getElementById('editHoldingIsLot').value     = String(!!item.isGoldLot);
   document.getElementById('editHoldingName').value      = item.name || '';
   document.getElementById('editHoldingQuantity').value  = item.quantity ?? '';
-  document.getElementById('editHoldingPrice').value     = item.purchasePrice ?? '';
+  document.getElementById('editHoldingPrice').value     = item.originalPurchasePrice ?? item.purchasePrice ?? '';
   document.getElementById('editHoldingDate').value      = item.date || toISODate(new Date());
   document.getElementById('editHoldingStatus').value    = item.status || 'Owned';
 
   const prefix = document.getElementById('editHoldingPricePrefix');
-  if (prefix) prefix.textContent = getUserCurrencySymbol();
+  const editCurrEl = document.getElementById('editHoldingCurrency');
+  const itemCurrency = (item.currency || getUserCurrency()).toUpperCase();
+  if (editCurrEl) {
+    editCurrEl.value = itemCurrency;
+    editCurrEl.onchange = () => {
+      if (prefix) prefix.textContent = CURRENCY_SYMBOLS[editCurrEl.value] || (editCurrEl.value + ' ');
+    };
+  }
+  if (prefix) prefix.textContent = CURRENCY_SYMBOLS[itemCurrency] || (itemCurrency + ' ');
 
   const karatField = document.getElementById('editHoldingKaratField');
   if (item.assetType === 'Gold') {
@@ -5298,6 +5351,7 @@ editHoldingForm.addEventListener('submit', async e => {
   const karat    = document.getElementById('editHoldingKarat').value;
   const quantity = parseFloat(document.getElementById('editHoldingQuantity').value);
   const priceVal = document.getElementById('editHoldingPrice').value;
+  const currency = document.getElementById('editHoldingCurrency') ? document.getElementById('editHoldingCurrency').value : undefined;
   const date     = document.getElementById('editHoldingDate').value;
   const status   = document.getElementById('editHoldingStatus').value;
 
@@ -5308,6 +5362,7 @@ editHoldingForm.addEventListener('submit', async e => {
     grams: quantity,
     purchasePrice: priceVal ? parseFloat(priceVal) : undefined,
     pricePaid: priceVal ? parseFloat(priceVal) : undefined,
+    currency,
     date,
     status,
   };
@@ -5348,7 +5403,8 @@ async function loadFinanceAssetsQuickGlance() {
   const el = document.getElementById('financeAssetsQuickGlance');
   if (!el) return;
   try {
-    const res = await fetch('/api/portfolio');
+    const curr = getUserCurrency();
+    const res = await fetch(`/api/portfolio?currency=${encodeURIComponent(curr)}`);
     if (!res.ok) throw new Error('failed');
     const { summary } = await res.json();
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth.js';
 import prisma from '@/lib/prisma.js';
-import { getLiveGoldPrice } from '@/lib/gold.js';
+import { getLiveGoldPrice, convertCurrency } from '@/lib/gold.js';
 
 async function resolveUserId(req) {
   const auth = getAuthUser(req);
@@ -41,8 +41,15 @@ export async function GET(req) {
       });
     }
 
-    const auth = await getAuthUser(req);
-    const userCurrency = auth?.authenticated ? auth.user?.currency : 'USD';
+    let userCurrency = searchParams.get('currency') || req.headers.get('x-user-currency');
+    if (!userCurrency && userId) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { currency: true }
+      });
+      if (dbUser?.currency) userCurrency = dbUser.currency;
+    }
+    userCurrency = (userCurrency || setting?.currency || 'USD').toUpperCase();
     const liveGold = await getLiveGoldPrice(userCurrency);
 
     // Map month name (e.g. "September 2026") to date prefix ("2026-09")
@@ -79,17 +86,25 @@ export async function GET(req) {
     const totalWalletCash = Math.max(0, savedCashBaseline + allRegularIncome - allExpenses);
 
     // Real Gold Lots Valuation in User Currency
-    const gramRate = liveGold.pricePerGram24 || liveGold.pricePerGramEgp24;
     const goldLotsTotalVal = goldLots.reduce((sum, g) => {
-      const ratio = (g.karat === '21k' ? 21/24 : (g.karat === '18k' ? 18/24 : 1));
-      return sum + (g.grams * gramRate * ratio);
+      const gramRate = (g.karat === '21k'
+        ? liveGold.pricePerGram21
+        : (g.karat === '18k'
+          ? liveGold.pricePerGram18
+          : liveGold.pricePerGram24));
+      return sum + (g.grams * gramRate);
     }, 0);
 
-    // Other Investment Assets Total
+    // Other Investment Assets Total in User Currency
     const otherAssets = assets.filter(a => a.type !== 'Cash');
-    const otherAssetsTotal = otherAssets.reduce((sum, a) => sum + (a.purchasePrice || (a.quantity * 100)), 0);
+    const otherAssetsTotal = otherAssets.reduce((sum, a) => {
+      const aCurr = (a.currency || a.unit || userCurrency).toUpperCase();
+      const cost = a.purchasePrice || (a.quantity * 100) || 0;
+      const isKnownCurrency = ['USD', 'EGP', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'QAR', 'CAD', 'JPY'].includes(aCurr);
+      return sum + (isKnownCurrency ? convertCurrency(cost, aCurr, userCurrency, liveGold.rates) : cost);
+    }, 0);
 
-    const totalAssets = otherAssetsTotal + goldLotsTotalVal + totalWalletCash;
+    const totalAssets = Math.round(otherAssetsTotal + goldLotsTotalVal + totalWalletCash);
     const totalLiabilities = 0;
     const netWorthVal = totalAssets - totalLiabilities;
 

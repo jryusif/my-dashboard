@@ -268,6 +268,7 @@ model Asset {
   quantity      Float
   unit          String?  // 'gram', 'ounce', 'kg', 'shares', 'units'
   purchasePrice Float?   @map("purchase_price")
+  currency      String?  @default("USD")
   purchaseDate  String?  @map("purchase_date")
   notes         String?
   createdAt     DateTime @default(now()) @map("created_at")
@@ -286,6 +287,7 @@ model GoldLot {
   grams       Float
   karat       String   @default("24k")
   pricePaid   Float    @map("price_paid")
+  currency    String?  @default("EGP")
   date        String   // 'YYYY-MM-DD'
   createdAt   DateTime @default(now()) @map("created_at")
 

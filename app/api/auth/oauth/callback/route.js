@@ -190,7 +190,7 @@ export async function GET(req) {
     /*  Issue JWT and redirect home                                         */
     /* ------------------------------------------------------------------ */
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role, status: user.status },
+      { userId: user.id, email: user.email, role: user.role, status: user.status, currency: user.currency || 'USD' },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
