@@ -1,12 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="50%" stop-color="#818cf8"/>
-      <stop offset="100%" stop-color="#e8b44a"/>
-    </linearGradient>
-  </defs>
-  <rect width="100" height="100" rx="26" fill="#0f172a"/>
-  <rect width="92" height="92" x="4" y="4" rx="22" fill="none" stroke="url(#g)" stroke-width="3" opacity="0.8"/>
-  <text x="50" y="65" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="46" font-weight="900" text-anchor="middle" fill="url(#g)">⚡</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    path { fill: #0f172a; }
+    @media (prefers-color-scheme: dark) {
+      path { fill: #f8fafc; }
+    }
+  </style>
+  <circle cx="25.059" cy="6.943" r="6.943" fill="#E73348"/>
+  <path d="M13.887 6.943A6.943 6.943 0 1 1 0 6.943a6.943 6.943 0 0 1 13.887 0m0 18.114a6.943 6.943 0 1 1-13.887 0 6.943 6.943 0 0 1 13.887 0m18.113 0a6.943 6.943 0 1 1-13.887 0 6.943 6.943 0 0 1 13.887 0"/>
 </svg>
