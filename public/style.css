@@ -112,10 +112,14 @@
   background: transparent;
 }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background-color: #06080d;
   background-image: 
     radial-gradient(ellipse at 20% 0%, rgba(30, 58, 138, 0.3) 0%, transparent 60%),
@@ -265,13 +269,14 @@ body.sidebar-mobile-open .sidebar-backdrop {
   top: 0;
   z-index: 100;
   width: 100%;
+  max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 18px;
+  gap: 12px;
+  padding: 8px 16px;
   margin-bottom: 24px;
-  min-height: 58px;
+  min-height: 54px;
   box-sizing: border-box;
   background: rgba(6, 8, 13, 0.45);
   backdrop-filter: blur(20px) saturate(180%);
@@ -402,56 +407,13 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
    3-ZONE REFINED HEADER ARCHITECTURE (Uncluttered, Balanced & Prestigious)
    ============================================================================= */
 
-/* Zone 1: Left Wing (Navigation & Quick-Capture) */
+/* Zone 1: Left Wing (Navigation Toggle) */
 .nav-left-zone {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-shrink: 0;
   z-index: 10;
-}
-
-.nav-quick-jump-btn {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #cbd5e1;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-body.sidebar-is-collapsed .nav-quick-jump-btn {
-  display: inline-flex;
-}
-.nav-quick-jump-btn:hover {
-  background: rgba(56, 189, 248, 0.12);
-  border-color: rgba(56, 189, 248, 0.45);
-  color: #fff;
-  box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
-  transform: translateY(-1px);
-}
-.jump-spark-icon {
-  font-size: 13px;
-  color: #38bdf8;
-  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8));
-}
-.jump-kbd {
-  font-size: 10px;
-  font-family: var(--font-mono, monospace);
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #94a3b8;
-  letter-spacing: 0.04em;
 }
 
 /* Zone 2: Centerpiece 3D Mechanical Chrono Station */
@@ -462,22 +424,41 @@ body.sidebar-is-collapsed .nav-quick-jump-btn {
   perspective: 1000px;
   z-index: 5;
 }
+
+body.sidebar-is-collapsed .main-top-navbar {
+  display: grid;
+  grid-template-columns: minmax(42px, 1fr) auto minmax(auto, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+body.sidebar-is-collapsed .nav-left-zone {
+  grid-column: 1;
+  justify-self: start;
+}
+
 body.sidebar-is-collapsed .header-flip-clock-wrap {
+  grid-column: 2;
+  justify-self: center;
   display: flex;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  margin: 0 auto;
   animation: flipClockFlyIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+body.sidebar-is-collapsed .nav-right-zone {
+  grid-column: 3;
+  justify-self: end;
+}
+
 @keyframes flipClockFlyIn {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-14px) scale(0.96) rotateX(10deg);
+    transform: translateY(-10px) scale(0.96) rotateX(10deg);
     filter: blur(4px);
   }
   100% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1) rotateX(0deg);
+    transform: translateY(0) scale(1) rotateX(0deg);
     filter: blur(0);
   }
 }
@@ -486,25 +467,26 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 .header-live-dock {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   background: linear-gradient(135deg, rgba(14, 18, 28, 0.94) 0%, rgba(8, 11, 18, 0.98) 100%);
   border: 1px solid rgba(56, 189, 248, 0.3);
   border-radius: 999px;
-  padding: 5px 14px;
+  padding: 4px 10px;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 0 16px rgba(56, 189, 248, 0.1);
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  white-space: nowrap;
 }
 .header-chrono-dock:hover,
 .header-live-dock:hover {
   border-color: rgba(56, 189, 248, 0.52);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65), 0 0 28px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65), 0 0 24px rgba(56, 189, 248, 0.2);
 }
 
 .chrono-seam-divider {
   width: 1px;
-  height: 24px;
+  height: 20px;
   background: rgba(255, 255, 255, 0.12);
   flex-shrink: 0;
 }
@@ -513,9 +495,11 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 .nav-right-zone {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   margin-left: auto;
   z-index: 10;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 /* Sub-Island A: Productivity Suite Island */
@@ -526,15 +510,16 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   background: linear-gradient(135deg, rgba(15, 22, 36, 0.88) 0%, rgba(10, 14, 24, 0.94) 100%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  padding: 4px 6px;
+  padding: 3px 5px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
   transition: all 0.25s ease;
+  flex-shrink: 0;
 }
 .nav-apps-dock:hover {
   border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 .btn-app-dock {
@@ -543,8 +528,8 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   background: transparent;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 5px 10px;
   border-radius: 999px;
   color: #cbd5e1;
   font-size: 12px;
@@ -553,6 +538,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .btn-app-dock:hover {
@@ -566,12 +552,6 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
 }
 
-.app-dock-habits:hover {
-  background: rgba(249, 115, 22, 0.14);
-  border-color: rgba(249, 115, 22, 0.4);
-  box-shadow: 0 0 14px rgba(249, 115, 22, 0.25);
-}
-
 .app-dock-calendar:hover {
   background: rgba(99, 102, 241, 0.16);
   border-color: rgba(99, 102, 241, 0.45);
@@ -579,7 +559,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 }
 
 .app-dock-icon {
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -589,9 +569,9 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
   border-radius: 999px;
   background: #38bdf8;
   color: #0b1120;
@@ -599,10 +579,6 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   font-weight: 800;
   font-family: var(--font-mono, monospace);
   line-height: 1;
-}
-.app-dock-badge.badge-orange {
-  background: #f97316;
-  color: #fff;
 }
 .app-dock-badge.badge-indigo {
   background: #6366f1;
@@ -614,16 +590,17 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   border: 1px solid rgba(168, 85, 247, 0.25);
   background: rgba(168, 85, 247, 0.1);
   color: #d8b4fe;
-  width: 29px;
-  height: 29px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   margin-left: 2px;
+  flex-shrink: 0;
 }
 .btn-app-dock-triage:hover {
   background: rgba(168, 85, 247, 0.25);
@@ -637,75 +614,72 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 .nav-system-dock {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: linear-gradient(135deg, rgba(15, 22, 36, 0.88) 0%, rgba(10, 14, 24, 0.94) 100%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  padding: 4px 6px 4px 8px;
+  padding: 3px 6px 3px 6px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
 }
 
-/* Responsive Ergonomics for 3-Zone Navbar */
-@media (max-width: 1440px) {
-  body.sidebar-is-collapsed .header-flip-clock-wrap {
-    position: static;
-    transform: none;
-    margin: 0 auto;
-  }
-}
-
+/* Responsive Ergonomics for Top Navbar */
 @media (max-width: 1250px) {
   .app-dock-label {
     display: none;
   }
   .btn-app-dock {
-    padding: 6px 9px;
-    gap: 5px;
+    padding: 5px 8px;
+    gap: 4px;
   }
-  .nav-quick-jump-btn .jump-label {
+}
+
+@media (max-width: 1100px) {
+  body.sidebar-is-collapsed .main-top-navbar {
+    display: flex;
+    justify-content: space-between;
+  }
+  body.sidebar-is-collapsed .header-flip-clock-wrap {
+    margin: 0 auto;
+  }
+  .user-email-text {
+    max-width: 65px;
+  }
+  .calendar-flip-text {
+    max-width: 90px;
+  }
+}
+
+@media (max-width: 940px) {
+  .dock-meta-group {
+    display: none;
+  }
+  .chrono-seam-divider {
     display: none;
   }
 }
 
-@media (max-width: 1050px) {
-  .nav-quick-jump-btn {
-    display: none !important;
-  }
-  .calendar-flip-text {
-    max-width: 110px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 860px) {
+@media (max-width: 780px) {
   .header-flip-clock-wrap {
     display: none !important;
   }
   .nav-right-zone {
-    gap: 8px;
+    gap: 6px;
   }
 }
 
 @media (max-width: 640px) {
   .main-top-navbar {
-    padding: 8px 12px;
+    padding: 6px 10px;
   }
   .nav-apps-dock {
-    padding: 3px 4px;
+    padding: 2px 4px;
     gap: 2px;
   }
   .btn-app-dock {
-    padding: 5px 7px;
-  }
-  .user-email-text {
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    padding: 4px 6px;
   }
 }
 
@@ -820,15 +794,15 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 
 .flip-digit-tile {
   position: relative;
-  width: 42px;
-  height: 44px;
+  width: 36px;
+  height: 38px;
   background: linear-gradient(180deg, #1b2333 0%, #111723 50%, #0a0d14 51%, #141b29 100%);
   border: 1px solid rgba(56, 189, 248, 0.28);
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
   perspective: 600px;
   overflow: hidden;
   transform-style: preserve-3d;
@@ -837,7 +811,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 }
 
 .flip-digit-val {
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #fff;
@@ -846,7 +820,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
   z-index: 2;
 }
 
@@ -870,7 +844,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 @keyframes flipTilePaper {
   0% {
     transform: perspective(600px) rotateX(0deg);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
     filter: brightness(1);
   }
   48% {
@@ -885,13 +859,13 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   }
   100% {
     transform: perspective(600px) rotateX(0deg);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
     filter: brightness(1);
   }
 }
 
 .flip-colon {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 800;
   color: #38bdf8;
   padding: 0 1px;
@@ -908,7 +882,7 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   color: #f59e0b;
   background: rgba(245, 158, 11, 0.15);
   border: 1px solid rgba(245, 158, 11, 0.3);
-  padding: 2px 6px;
+  padding: 2px 5px;
   border-radius: 4px;
   margin-left: 2px;
 }
@@ -917,13 +891,13 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
 .flip-paper-calendar {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--radius-md);
-  padding: 6px 12px;
+  padding: 4px 10px;
   position: relative;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
   transition: all var(--transition-fast);
 }
 .flip-paper-calendar:hover {
@@ -935,10 +909,14 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   font-size: 13px;
 }
 .calendar-flip-text {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 600;
   color: #fff;
   letter-spacing: 0.01em;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* =====================================================================
@@ -9123,25 +9101,34 @@ body.sidebar-is-collapsed .header-flip-clock-wrap {
   background: rgba(255, 255, 255, 0.06);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  max-width: 170px;
+  gap: 5px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 .btn-dock-user:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(56, 189, 248, 0.4);
+}
+.user-email-text {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
 }
 .btn-dock-logout {
   appearance: none;
