@@ -6033,6 +6033,46 @@ if (btnOpenNewCaseModal) {
 // CASE DETAILS DRAWER & INTERACTIVE SLIDER
 // =============================================================================
 
+// Helper to ensure the Before/Initial photo is represented as Step 1 in walkthroughs
+function getTheaterSteps(c) {
+  if (!c) return [];
+  const rawSteps = Array.isArray(c.steps) ? [...c.steps] : [];
+  const beforeUrl = c.beforeAfter?.beforeImageUrl || (c.photos && c.photos[0]?.url) || '';
+  const beforeLabel = c.beforeAfter?.beforeLabel || 'Initial Presentation / Pre-Op';
+  const beforeDesc = c.diagnosis || c.patientComplaint || 'Baseline clinical condition prior to intervention.';
+
+  // Check if step 0 is already the before image (avoid duplicate)
+  const firstStepHasBefore = rawSteps.length > 0 && rawSteps[0].imageUrl && beforeUrl && rawSteps[0].imageUrl.trim() === beforeUrl.trim();
+
+  const stepsList = [];
+  if (beforeUrl && !firstStepHasBefore) {
+    stepsList.push({
+      isBeforeStep: true,
+      stepNumber: 1,
+      title: beforeLabel,
+      description: beforeDesc,
+      imageUrl: beforeUrl
+    });
+  }
+
+  rawSteps.forEach(s => {
+    stepsList.push({
+      ...s,
+      isBeforeStep: false,
+      title: s.title || 'Clinical Step',
+      description: s.description || '',
+      imageUrl: s.imageUrl || ''
+    });
+  });
+
+  // Re-number sequentially (Step 1, Step 2, Step 3...)
+  stepsList.forEach((s, idx) => {
+    s.stepNumber = idx + 1;
+  });
+
+  return stepsList;
+}
+
 function openDentalCaseDrawer(c) {
   activeDentalCase = c;
   if (!dentalCaseDrawerBackdrop) return;
@@ -6065,7 +6105,8 @@ function openDentalCaseDrawer(c) {
   dentalDrawerTitle.textContent = c.title || 'Clinical Case';
   dentalDrawerPatientCode.textContent = `Patient ID: ${c.patientCode || 'Anonymous'}`;
 
-  const stepCount = c.steps ? c.steps.length : 0;
+  const drawerSteps = getTheaterSteps(c);
+  const stepCount = drawerSteps.length;
   const xrayCount = c.xrays ? c.xrays.length : 0;
   drawerStepsCount.textContent = stepCount;
   drawerXraysCount.textContent = xrayCount;
@@ -6082,8 +6123,8 @@ function openDentalCaseDrawer(c) {
 
   // Render Steps
   if (drawerStepsTimeline) {
-    if (c.steps && c.steps.length) {
-      drawerStepsTimeline.innerHTML = c.steps.map((s, idx) => `
+    if (drawerSteps.length) {
+      drawerStepsTimeline.innerHTML = drawerSteps.map((s, idx) => `
         <div class="dental-step-card">
           ${s.imageUrl ? `
             <div class="step-card-img-wrap">
@@ -6091,7 +6132,9 @@ function openDentalCaseDrawer(c) {
             </div>
           ` : ''}
           <div class="step-card-info">
-            <span class="step-card-num-badge">Step ${s.stepNumber || idx + 1}</span>
+            <span class="step-card-num-badge ${s.isBeforeStep ? 'badge-initial' : ''}">
+              ${s.isBeforeStep ? 'INITIAL STATE · Step 1' : `Step ${s.stepNumber || idx + 1}`}
+            </span>
             <h4 class="step-card-title">${escapeHtml(s.title || `Clinical Step ${idx + 1}`)}</h4>
             <p class="step-card-desc">${escapeHtml(s.description || '')}</p>
           </div>
@@ -6200,35 +6243,130 @@ if (btnXrayEnhance) {
 function setupComparisonSlider(sliderEl, beforeWrapEl, handleEl, initialPct = 50) {
   if (!sliderEl || !beforeWrapEl || !handleEl) return;
 
+  const beforeBadge = sliderEl.querySelector('.dental-ba-badge.badge-before');
+  const afterBadge = sliderEl.querySelector('.dental-ba-badge.badge-after');
+  const handleBtn = handleEl.querySelector('.dental-ba-handle-btn');
+
+  let currentPct = initialPct;
+  let animFrame = null;
+
   function updatePos(pct) {
     const clamped = Math.max(0, Math.min(100, pct));
-    beforeWrapEl.style.width = `${clamped}%`;
+    currentPct = clamped;
+
+    // Both before and after images span 100% width and height of the slider container.
+    // Using clip-path polygon on beforeWrapEl cleanly reveals the before image from x=0 to x=clamped%
+    // At 100% (max right): reveals 100% full width of Before image edge-to-edge with zero distortion
+    // At 0% (max left): reveals 100% full width of After image edge-to-edge with zero distortion
+    beforeWrapEl.style.clipPath = `polygon(0 0, ${clamped}% 0, ${clamped}% 100%, 0 100%)`;
+    beforeWrapEl.style.webkitClipPath = `polygon(0 0, ${clamped}% 0, ${clamped}% 100%, 0 100%)`;
+
+    // Position handle divider line
     handleEl.style.left = `${clamped}%`;
+
+    // Adjust handle button offset at extremes so it stays completely visible within rounded container
+    if (handleBtn) {
+      if (clamped <= 3) {
+        handleBtn.style.transform = 'translate(2px, -50%)';
+      } else if (clamped >= 97) {
+        handleBtn.style.transform = 'translate(-44px, -50%)';
+      } else {
+        handleBtn.style.transform = 'translate(-50%, -50%)';
+      }
+    }
+
+    // Fade opposite badges at extreme ends so the full image is completely unobstructed
+    if (beforeBadge) {
+      beforeBadge.style.opacity = clamped <= 3 ? '0' : '1';
+    }
+    if (afterBadge) {
+      afterBadge.style.opacity = clamped >= 97 ? '0' : '1';
+    }
   }
+
+  function animateTo(targetPct) {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    const startPct = currentPct;
+    const diff = targetPct - startPct;
+    if (Math.abs(diff) < 0.5) {
+      updatePos(targetPct);
+      return;
+    }
+    const startTime = performance.now();
+    const duration = 240;
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      // easeOutCubic
+      const ease = 1 - Math.pow(1 - progress, 3);
+      updatePos(startPct + diff * ease);
+      if (progress < 1) {
+        animFrame = requestAnimationFrame(step);
+      }
+    }
+    animFrame = requestAnimationFrame(step);
+  }
+
+  // Interactive badges: clicking snaps slider to 100% Before or 100% After
+  if (beforeBadge) {
+    beforeBadge.onclick = (e) => {
+      e.stopPropagation();
+      animateTo(100);
+    };
+    beforeBadge.title = 'Click to show 100% Before image';
+  }
+  if (afterBadge) {
+    afterBadge.onclick = (e) => {
+      e.stopPropagation();
+      animateTo(0);
+    };
+    afterBadge.title = 'Click to show 100% After image';
+  }
+
+  // Double click handle to reset to 50%
+  handleEl.ondblclick = (e) => {
+    e.stopPropagation();
+    animateTo(50);
+  };
 
   updatePos(initialPct);
 
   let isDragging = false;
 
   function onPointerDown(e) {
+    if (e.target.closest('.dental-ba-badge')) return;
+    if (animFrame) cancelAnimationFrame(animFrame);
     isDragging = true;
+    try {
+      sliderEl.setPointerCapture?.(e.pointerId);
+    } catch (_) {}
     onPointerMove(e);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
   }
 
   function onPointerMove(e) {
     if (!isDragging) return;
     const rect = sliderEl.getBoundingClientRect();
+    if (rect.width <= 0) return;
     const x = e.clientX - rect.left;
-    const pct = (x / rect.width) * 100;
+    let pct = (x / rect.width) * 100;
+    // Magnetic snap near edges so user easily reaches pure 0% or 100%
+    if (pct <= 2) pct = 0;
+    else if (pct >= 98) pct = 100;
     updatePos(pct);
   }
 
-  function onPointerUp() {
+  function onPointerUp(e) {
+    if (!isDragging) return;
     isDragging = false;
+    try {
+      sliderEl.releasePointerCapture?.(e.pointerId);
+    } catch (_) {}
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
   }
 
   sliderEl.onpointerdown = onPointerDown;
@@ -6239,6 +6377,7 @@ function setupComparisonSlider(sliderEl, beforeWrapEl, handleEl, initialPct = 50
 // =============================================================================
 
 let currentTheaterCase = null;
+let currentTheaterSteps = [];
 let currentTheaterStepIndex = 0;
 let currentTheaterMode = 'step'; // 'step' | 'split'
 let theaterPlaylist = [];
@@ -6272,6 +6411,7 @@ function openPatientPresentation(c, customPlaylist = null) {
 function renderTheaterCase(c) {
   if (!c) return;
   currentTheaterCase = c;
+  currentTheaterSteps = getTheaterSteps(c);
   currentTheaterStepIndex = 0;
 
   // Update Topbar Info
@@ -6318,18 +6458,20 @@ function renderTheaterCase(c) {
     setupComparisonSlider(theaterBaSlider, theaterBaBeforeWrap, theaterBaHandle, 50);
   }
 
-  // Render Stepped Walkthrough Rail
+  // Render Stepped Walkthrough Rail (includes Step 1: Initial Presentation / Pre-Op)
   if (theaterStepsScroll) {
-    const steps = c.steps || [];
-    theaterStepCount.textContent = `${steps.length} Step${steps.length === 1 ? '' : 's'}`;
+    theaterStepCount.textContent = `${currentTheaterSteps.length} Step${currentTheaterSteps.length === 1 ? '' : 's'}`;
 
-    if (steps.length) {
-      theaterStepsScroll.innerHTML = steps.map((s, idx) => `
+    if (currentTheaterSteps.length) {
+      theaterStepsScroll.innerHTML = currentTheaterSteps.map((s, idx) => `
         <div class="theater-step-card ${idx === 0 ? 'active' : ''}" id="theaterStepCard_${idx}" onclick="selectTheaterStep(${idx})">
           ${s.imageUrl ? `
             <img src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(s.title || '')}" class="theater-step-card-img" />
           ` : ''}
-          <div class="theater-step-card-title">Step ${s.stepNumber || idx + 1}: ${escapeHtml(s.title || '')}</div>
+          <div class="theater-step-card-title">
+            ${s.isBeforeStep ? '<span class="step-initial-badge">INITIAL</span>' : ''}
+            Step ${s.stepNumber || idx + 1}: ${escapeHtml(s.title || '')}
+          </div>
           <div class="theater-step-card-desc">${escapeHtml(s.description || '')}</div>
         </div>
       `).join('');
@@ -6339,7 +6481,7 @@ function renderTheaterCase(c) {
   }
 
   // Open in Step Focus View if steps exist, else Split Slider
-  if (c.steps && c.steps.length > 0) {
+  if (currentTheaterSteps.length > 0) {
     displayTheaterStep(0);
   } else {
     displayTheaterSplit();
@@ -6380,7 +6522,7 @@ if (theaterCaseSelect) {
 
 function displayTheaterStep(index = 0) {
   if (!currentTheaterCase) return;
-  const steps = currentTheaterCase.steps || [];
+  const steps = currentTheaterSteps.length > 0 ? currentTheaterSteps : (currentTheaterCase.steps || []);
 
   currentTheaterMode = 'step';
   if (theaterStepFocusWrap) theaterStepFocusWrap.hidden = false;
@@ -6394,7 +6536,10 @@ function displayTheaterStep(index = 0) {
       theaterStepFocusImg.src = casePhoto || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="%230b0e14" width="600" height="400"/><text fill="%2338bdf8" font-family="sans-serif" font-size="20" font-weight="bold" x="50%" y="45%" text-anchor="middle">📸 Step Focus Mode</text><text fill="%2394a3b8" font-family="sans-serif" font-size="14" x="50%" y="55%" text-anchor="middle">No individual procedure steps added yet</text></svg>';
       theaterStepFocusImg.alt = currentTheaterCase.title || 'Case Overview';
     }
-    if (theaterFocusStepBadge) theaterFocusStepBadge.textContent = 'Overview · 0 Steps';
+    if (theaterFocusStepBadge) {
+      theaterFocusStepBadge.className = 'focus-step-badge';
+      theaterFocusStepBadge.textContent = 'Overview · 0 Steps';
+    }
     if (theaterFocusStepTitle) theaterFocusStepTitle.textContent = currentTheaterCase.title || 'Clinical Case';
     if (theaterFocusStepDesc) theaterFocusStepDesc.textContent = currentTheaterCase.diagnosis || 'Add detailed procedure steps in the Case Editor to walkthrough each step.';
     if (btnTheaterPrev) btnTheaterPrev.disabled = true;
@@ -6415,7 +6560,13 @@ function displayTheaterStep(index = 0) {
   }
 
   if (theaterFocusStepBadge) {
-    theaterFocusStepBadge.textContent = `Step ${step.stepNumber || currentTheaterStepIndex + 1} of ${steps.length}`;
+    if (step.isBeforeStep) {
+      theaterFocusStepBadge.className = 'focus-step-badge badge-initial';
+      theaterFocusStepBadge.textContent = `INITIAL STATE · Step 1 of ${steps.length}`;
+    } else {
+      theaterFocusStepBadge.className = 'focus-step-badge';
+      theaterFocusStepBadge.textContent = `Step ${step.stepNumber || currentTheaterStepIndex + 1} of ${steps.length}`;
+    }
   }
   if (theaterFocusStepTitle) {
     theaterFocusStepTitle.textContent = step.title || `Clinical Step ${currentTheaterStepIndex + 1}`;
@@ -6459,7 +6610,7 @@ window.selectTheaterStep = function(stepIdx) {
 
 function theaterNextStep() {
   if (!currentTheaterCase) return;
-  const steps = currentTheaterCase.steps || [];
+  const steps = currentTheaterSteps.length > 0 ? currentTheaterSteps : (currentTheaterCase.steps || []);
   if (currentTheaterMode === 'split') {
     displayTheaterStep(0);
   } else if (currentTheaterStepIndex < steps.length - 1) {
@@ -6542,9 +6693,10 @@ window.addEventListener('keydown', e => {
     e.preventDefault();
     displayTheaterStep(0);
   } else if (e.key === 'End') {
-    if (currentTheaterCase && currentTheaterCase.steps) {
+    const totalSteps = currentTheaterSteps.length > 0 ? currentTheaterSteps.length : (currentTheaterCase?.steps?.length || 0);
+    if (totalSteps > 0) {
       e.preventDefault();
-      displayTheaterStep(currentTheaterCase.steps.length - 1);
+      displayTheaterStep(totalSteps - 1);
     }
   }
 });
@@ -13279,6 +13431,1884 @@ window.initScrollToTop = initScrollToTop;
 })();
 
 // =============================================================================
+// UNIVERSAL BRAIN DUMP QUICK-CAPTURE & NIGHTLY TRIAGE RITUAL
+// =============================================================================
+
+const BD_STORAGE_KEYS = {
+  INBOX: 'antigravity_inbox_items',
+  VAULT: 'antigravity_notes_vault',
+  STATS: 'antigravity_triage_stats',
+  CALENDAR_TASKS: 'antigravity_calendar_tasks',
+  HABITS: 'antigravity_habits',
+};
+
+const BD_STARTER_INBOX = [
+  {
+    id: 'inbox_1',
+    rawText: 'Order restorative composite materials and check matrix bands @tomorrow #work !high',
+    cleanText: 'Order restorative composite materials and check matrix bands',
+    dateStr: 'tomorrow',
+    category: 'Work',
+    priority: 'high',
+    tags: ['work'],
+    createdAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+  },
+  {
+    id: 'inbox_2',
+    rawText: 'Read Deep Work summary chapter on deliberate rest #studies',
+    cleanText: 'Read Deep Work summary chapter on deliberate rest',
+    dateStr: null,
+    category: 'Studies',
+    priority: 'medium',
+    tags: ['studies'],
+    createdAt: new Date(Date.now() - 1000 * 60 * 80).toISOString(),
+  },
+  {
+    id: 'inbox_3',
+    rawText: 'Gift idea for Mom birthday: silk scarf or custom tea set @weekend #personal',
+    cleanText: 'Gift idea for Mom birthday: silk scarf or custom tea set',
+    dateStr: 'weekend',
+    category: 'Personal',
+    priority: 'low',
+    tags: ['personal'],
+    createdAt: new Date(Date.now() - 1000 * 60 * 140).toISOString(),
+  },
+];
+
+const BD_STARTER_VAULT = [
+  {
+    id: 'vault_1',
+    title: 'Rubber dam isolation protocol tips',
+    content: 'Always invert edges into the sulcus with floss ligatures before placing clamp to prevent seepage.',
+    category: 'Work',
+    tags: ['work', 'clinical'],
+    archivedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+  },
+  {
+    id: 'vault_2',
+    title: 'Asset allocation rule',
+    content: 'Maintain 35% physical gold bullion, 40% liquid cash reserves, 25% growth equities.',
+    category: 'Finance',
+    tags: ['finance', 'wealth'],
+    archivedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
+  },
+];
+
+let bdInbox = [];
+let bdVault = [];
+let bdStats = { streak: 3, lastTriageDate: '', totalProcessed: 28 };
+let currentTriageIndex = 0;
+let bdSelectedVaultTag = null;
+
+// Web Audio API tactile sound generator
+let bdAudioCtx = null;
+function getBdAudioContext() {
+  if (typeof window === 'undefined') return null;
+  if (!bdAudioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) bdAudioCtx = new AudioContext();
+  }
+  if (bdAudioCtx && bdAudioCtx.state === 'suspended') {
+    bdAudioCtx.resume().catch(() => {});
+  }
+  return bdAudioCtx;
+}
+
+function playBrainDumpCaptureSound() {
+  try {
+    const ctx = getBdAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(580, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.09);
+  } catch (_) {}
+}
+
+function playBrainDumpShredSound() {
+  try {
+    const ctx = getBdAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(320, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.13);
+  } catch (_) {}
+}
+
+function playBrainDumpChime() {
+  try {
+    const ctx = getBdAudioContext();
+    if (!ctx) return;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const startTime = ctx.currentTime + i * 0.07;
+      gain.gain.setValueAtTime(0.1, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + 0.26);
+    });
+  } catch (_) {}
+}
+
+// Native Canvas Confetti burst
+function fireBrainDumpConfetti() {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'fixed';
+    canvas.style.inset = '0';
+    canvas.style.width = '100vw';
+    canvas.style.height = '100vh';
+    canvas.style.zIndex = '10002';
+    canvas.style.pointerEvents = 'none';
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const colors = ['#38bdf8', '#818cf8', '#34d399', '#fbbf24', '#f43f5e', '#a855f7'];
+    const particles = Array.from({ length: 80 }).map(() => ({
+      x: canvas.width / 2,
+      y: canvas.height * 0.65,
+      vx: (Math.random() - 0.5) * 16,
+      vy: (Math.random() - 0.8) * 18,
+      size: Math.random() * 8 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360,
+      vRot: (Math.random() - 0.5) * 12,
+      alpha: 1,
+    }));
+
+    let animId;
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.45;
+        p.rotation += p.vRot;
+        p.alpha -= 0.014;
+        if (p.alpha > 0) {
+          alive = true;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+          ctx.restore();
+        }
+      });
+      if (alive) {
+        animId = requestAnimationFrame(animate);
+      } else {
+        cancelAnimationFrame(animId);
+        canvas.remove();
+      }
+    }
+    animId = requestAnimationFrame(animate);
+  } catch (_) {}
+}
+
+function parseSmartThought(rawText) {
+  if (!rawText) return { cleanText: '', dateStr: null, category: null, priority: null, tags: [] };
+  let text = rawText.trim();
+  let dateStr = null;
+  let category = null;
+  let priority = null;
+  const tags = [];
+
+  const dateMatch = text.match(/@([a-zA-Z0-9_-]+)/);
+  if (dateMatch) dateStr = dateMatch[1].toLowerCase();
+
+  const catMatch = text.match(/#([a-zA-Z0-9_-]+)/);
+  if (catMatch) {
+    category = catMatch[1].toLowerCase();
+    tags.push(category);
+  }
+
+  const prioMatch = text.match(/!([a-zA-Z0-9_-]+)/);
+  if (prioMatch) {
+    const rawP = prioMatch[1].toLowerCase();
+    if (rawP === 'high' || rawP === 'urgent' || rawP === 'p1') priority = 'high';
+    else if (rawP === 'med' || rawP === 'medium' || rawP === 'p2') priority = 'medium';
+    else if (rawP === 'low' || rawP === 'p3') priority = 'low';
+    else priority = rawP;
+  }
+
+  const cleanText = text
+    .replace(/@([a-zA-Z0-9_-]+)/g, '')
+    .replace(/#([a-zA-Z0-9_-]+)/g, '')
+    .replace(/!([a-zA-Z0-9_-]+)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return { cleanText: cleanText || text, rawText: text, dateStr, category, priority, tags };
+}
+
+function loadBrainDumpState() {
+  try {
+    const rawInbox = localStorage.getItem(BD_STORAGE_KEYS.INBOX);
+    bdInbox = rawInbox ? JSON.parse(rawInbox) : [...BD_STARTER_INBOX];
+  } catch {
+    bdInbox = [...BD_STARTER_INBOX];
+  }
+
+  try {
+    const rawVault = localStorage.getItem(BD_STORAGE_KEYS.VAULT);
+    bdVault = rawVault ? JSON.parse(rawVault) : [...BD_STARTER_VAULT];
+  } catch {
+    bdVault = [...BD_STARTER_VAULT];
+  }
+
+  try {
+    const rawStats = localStorage.getItem(BD_STORAGE_KEYS.STATS);
+    bdStats = rawStats ? JSON.parse(rawStats) : { streak: 3, lastTriageDate: '', totalProcessed: 28 };
+  } catch {
+    bdStats = { streak: 3, lastTriageDate: '', totalProcessed: 28 };
+  }
+
+  updateBrainDumpCounters();
+}
+
+function saveBrainDumpInbox() {
+  try {
+    localStorage.setItem(BD_STORAGE_KEYS.INBOX, JSON.stringify(bdInbox));
+  } catch (_) {}
+  updateBrainDumpCounters();
+}
+
+function saveBrainDumpVault() {
+  try {
+    localStorage.setItem(BD_STORAGE_KEYS.VAULT, JSON.stringify(bdVault));
+  } catch (_) {}
+}
+
+function saveBrainDumpStats() {
+  try {
+    localStorage.setItem(BD_STORAGE_KEYS.STATS, JSON.stringify(bdStats));
+  } catch (_) {}
+}
+
+function updateBrainDumpCounters() {
+  const count = bdInbox.length;
+  const headerBadge = document.getElementById('headerBrainDumpBadge');
+  if (headerBadge) {
+    headerBadge.textContent = count;
+    headerBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+  }
+
+  const floatingBadge = document.getElementById('floatingBrainDumpBadge');
+  if (floatingBadge) {
+    floatingBadge.textContent = count;
+    floatingBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+  }
+
+  const modalCount = document.getElementById('bdModalCount');
+  if (modalCount) {
+    modalCount.textContent = `${count} thought${count === 1 ? '' : 's'}`;
+  }
+
+  const drawerBadge = document.getElementById('bdDrawerCountBadge');
+  if (drawerBadge) {
+    drawerBadge.textContent = count;
+  }
+}
+
+// ── Palette Handlers ──
+function openBrainDumpPalette() {
+  const modal = document.getElementById('brainDumpModal');
+  const input = document.getElementById('brainDumpInput');
+  if (!modal || !input) return;
+
+  modal.hidden = false;
+  input.value = '';
+  const tagsRow = document.getElementById('brainDumpTagsRow');
+  if (tagsRow) tagsRow.style.display = 'none';
+
+  updateBrainDumpCounters();
+  setTimeout(() => input.focus(), 60);
+}
+
+function closeBrainDumpPalette() {
+  const modal = document.getElementById('brainDumpModal');
+  if (modal) modal.hidden = true;
+  const input = document.getElementById('brainDumpInput');
+  if (input) input.value = '';
+  const tagsRow = document.getElementById('brainDumpTagsRow');
+  if (tagsRow) tagsRow.style.display = 'none';
+}
+
+function handleBrainDumpInput() {
+  const input = document.getElementById('brainDumpInput');
+  const tagsRow = document.getElementById('brainDumpTagsRow');
+  if (!input || !tagsRow) return;
+
+  const parsed = parseSmartThought(input.value);
+  const tagDate = document.getElementById('bdTagDate');
+  const tagCat = document.getElementById('bdTagCategory');
+  const tagPrio = document.getElementById('bdTagPriority');
+
+  let hasTag = false;
+  if (parsed.dateStr && tagDate) {
+    tagDate.textContent = `📅 ${parsed.dateStr.toUpperCase()}`;
+    tagDate.style.display = 'inline-flex';
+    hasTag = true;
+  } else if (tagDate) tagDate.style.display = 'none';
+
+  if (parsed.category && tagCat) {
+    tagCat.textContent = `🏷️ #${parsed.category}`;
+    tagCat.style.display = 'inline-flex';
+    hasTag = true;
+  } else if (tagCat) tagCat.style.display = 'none';
+
+  if (parsed.priority && tagPrio) {
+    tagPrio.textContent = `⚡ !${parsed.priority.toUpperCase()}`;
+    tagPrio.style.display = 'inline-flex';
+    hasTag = true;
+  } else if (tagPrio) tagPrio.style.display = 'none';
+
+  tagsRow.style.display = hasTag ? 'flex' : 'none';
+}
+
+function saveBrainDumpThought(keepOpen = false) {
+  const input = document.getElementById('brainDumpInput');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) return;
+
+  const parsed = parseSmartThought(val);
+  const newThought = {
+    id: 'inbox_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    ...parsed,
+    createdAt: new Date().toISOString(),
+  };
+
+  bdInbox.unshift(newThought);
+  saveBrainDumpInbox();
+  playBrainDumpCaptureSound();
+
+  if (keepOpen) {
+    input.value = '';
+    const tagsRow = document.getElementById('brainDumpTagsRow');
+    if (tagsRow) tagsRow.style.display = 'none';
+    showToast('⚡ Captured! Ready for next thought');
+  } else {
+    closeBrainDumpPalette();
+    showToast('⚡ Captured to Brain Dump Inbox');
+  }
+}
+
+// ── Nightly 2-Minute Triage Ritual Handlers ──
+function openEveningTriageModal() {
+  const modal = document.getElementById('eveningTriageModal');
+  if (!modal) return;
+  modal.hidden = false;
+  currentTriageIndex = 0;
+  renderTriageCard(0);
+}
+
+function closeEveningTriageModal() {
+  const modal = document.getElementById('eveningTriageModal');
+  if (modal) modal.hidden = true;
+}
+
+function renderTriageCard(index) {
+  const activeCard = document.getElementById('triageActiveCard');
+  const zenCard = document.getElementById('triageZenCard');
+  if (!activeCard || !zenCard) return;
+
+  if (!bdInbox.length || index >= bdInbox.length) {
+    activeCard.style.display = 'none';
+    zenCard.style.display = 'flex';
+    fireBrainDumpConfetti();
+    playBrainDumpChime();
+
+    const streakText = document.getElementById('zenStreakText');
+    if (streakText) streakText.textContent = `${bdStats.streak || 1}-Day Reset Streak`;
+
+    const processedText = document.getElementById('zenTotalProcessed');
+    if (processedText) processedText.textContent = bdStats.totalProcessed || 0;
+    return;
+  }
+
+  currentTriageIndex = Math.max(0, Math.min(bdInbox.length - 1, index));
+  const item = bdInbox[currentTriageIndex];
+
+  activeCard.style.display = 'flex';
+  zenCard.style.display = 'none';
+
+  const picker = document.getElementById('triageDatePicker');
+  if (picker) picker.style.display = 'none';
+  const actions = document.getElementById('triageActionsWrap');
+  if (actions) actions.style.display = 'flex';
+
+  const counter = document.getElementById('triageCounter');
+  if (counter) counter.textContent = `Thought ${currentTriageIndex + 1} of ${bdInbox.length}`;
+
+  const ts = document.getElementById('triageTimestamp');
+  if (ts) {
+    const d = new Date(item.createdAt);
+    ts.textContent = isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const thoughtText = document.getElementById('triageThoughtText');
+  if (thoughtText) thoughtText.textContent = item.cleanText || item.rawText;
+
+  const tagsRow = document.getElementById('triageTagsRow');
+  if (tagsRow) {
+    let chips = '';
+    if (item.dateStr) chips += `<span class="bd-tag-chip bd-tag-date">📅 ${escapeHtml(item.dateStr)}</span>`;
+    if (item.category) chips += `<span class="bd-tag-chip bd-tag-category">🏷️ #${escapeHtml(item.category)}</span>`;
+    if (item.priority) chips += `<span class="bd-tag-chip bd-tag-priority">⚡ !${escapeHtml(item.priority.toUpperCase())}</span>`;
+    tagsRow.innerHTML = chips;
+  }
+}
+
+function promptTriageTaskDate() {
+  const picker = document.getElementById('triageDatePicker');
+  const actions = document.getElementById('triageActionsWrap');
+  if (picker) picker.style.display = 'block';
+  if (actions) actions.style.display = 'none';
+}
+
+function cancelTriageDatePicker() {
+  const picker = document.getElementById('triageDatePicker');
+  const actions = document.getElementById('triageActionsWrap');
+  if (picker) picker.style.display = 'none';
+  if (actions) actions.style.display = 'flex';
+}
+
+function dispatchTriageTask(dateOption = 'today') {
+  if (!bdInbox.length) return;
+  const item = bdInbox[currentTriageIndex];
+  if (!item) return;
+
+  const today = new Date();
+  let scheduledDate = today.toISOString().split('T')[0];
+
+  if (dateOption === 'tomorrow') {
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    scheduledDate = t.toISOString().split('T')[0];
+  } else if (dateOption === 'weekend') {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = (6 - day + 7) % 7 || 7;
+    d.setDate(d.getDate() + diff);
+    scheduledDate = d.toISOString().split('T')[0];
+  } else if (dateOption === 'nextweek') {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    scheduledDate = d.toISOString().split('T')[0];
+  }
+
+  // Capitalize category properly matching dashboard spaces
+  let cat = item.category ? (item.category.charAt(0).toUpperCase() + item.category.slice(1)) : 'Work';
+  if (cat.toLowerCase() === 'health') cat = 'Workouts';
+
+  // Dispatch to server database tasks API
+  fetch('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({
+      title: item.cleanText || item.rawText,
+      date: scheduledDate,
+      category: cat,
+      priority: item.priority || 'medium',
+      timeEstimateMinutes: 30,
+    }),
+  })
+    .then(() => {
+      loadTasks();
+      loadWeeklyProgress();
+    })
+    .catch(() => {});
+
+  // Cross-system sync for standalone calendar app
+  try {
+    const existing = JSON.parse(localStorage.getItem(BD_STORAGE_KEYS.CALENDAR_TASKS) || '[]');
+    existing.push({
+      id: 'task_' + Date.now(),
+      title: item.cleanText || item.rawText,
+      date: scheduledDate,
+      category: cat.toLowerCase(),
+      priority: item.priority || 'medium',
+      completed: false,
+      source: 'brain_dump',
+      createdAt: new Date().toISOString(),
+    });
+    localStorage.setItem(BD_STORAGE_KEYS.CALENDAR_TASKS, JSON.stringify(existing));
+  } catch (_) {}
+
+  // Remove from inbox & record
+  bdInbox.splice(currentTriageIndex, 1);
+  saveBrainDumpInbox();
+  bdStats.totalProcessed = (bdStats.totalProcessed || 0) + 1;
+  saveBrainDumpStats();
+
+  playBrainDumpCaptureSound();
+  showToast(`☑️ Scheduled task for ${dateOption}`);
+  renderTriageCard(currentTriageIndex);
+}
+
+function dispatchTriageHabit() {
+  if (!bdInbox.length) return;
+  const item = bdInbox[currentTriageIndex];
+  if (!item) return;
+
+  try {
+    const existing = JSON.parse(localStorage.getItem(BD_STORAGE_KEYS.HABITS) || '[]');
+    existing.push({
+      id: 'habit_' + Date.now(),
+      title: item.cleanText || item.rawText,
+      type: 'binary',
+      frequency: 'daily',
+      category: item.category || 'health',
+      streak: 0,
+      createdAt: new Date().toISOString(),
+    });
+    localStorage.setItem(BD_STORAGE_KEYS.HABITS, JSON.stringify(existing));
+  } catch (_) {}
+
+  bdInbox.splice(currentTriageIndex, 1);
+  saveBrainDumpInbox();
+  bdStats.totalProcessed = (bdStats.totalProcessed || 0) + 1;
+  saveBrainDumpStats();
+
+  playBrainDumpCaptureSound();
+  showToast('🔥 Converted thought to Habit');
+  renderTriageCard(currentTriageIndex);
+}
+
+function dispatchTriageVault() {
+  if (!bdInbox.length) return;
+  const item = bdInbox[currentTriageIndex];
+  if (!item) return;
+
+  const note = {
+    id: 'vault_' + Date.now(),
+    title: (item.cleanText || item.rawText).slice(0, 48),
+    content: item.cleanText || item.rawText,
+    category: item.category || 'General',
+    tags: item.tags || [],
+    archivedAt: new Date().toISOString(),
+  };
+
+  bdVault.unshift(note);
+  saveBrainDumpVault();
+
+  bdInbox.splice(currentTriageIndex, 1);
+  saveBrainDumpInbox();
+  bdStats.totalProcessed = (bdStats.totalProcessed || 0) + 1;
+  saveBrainDumpStats();
+
+  playBrainDumpCaptureSound();
+  showToast('📖 Saved thought to Notes Vault');
+  renderTriageCard(currentTriageIndex);
+}
+
+function dispatchTriageDiscard() {
+  if (!bdInbox.length) return;
+  bdInbox.splice(currentTriageIndex, 1);
+  saveBrainDumpInbox();
+  playBrainDumpShredSound();
+  showToast('🗑️ Discarded thought');
+  renderTriageCard(currentTriageIndex);
+}
+
+function skipTriageItem() {
+  if (bdInbox.length > 1) {
+    currentTriageIndex = (currentTriageIndex + 1) % bdInbox.length;
+    renderTriageCard(currentTriageIndex);
+  }
+}
+
+function finishTriageZen() {
+  const today = new Date().toISOString().split('T')[0];
+  if (bdStats.lastTriageDate !== today) {
+    bdStats.streak = (bdStats.streak || 0) + 1;
+    bdStats.lastTriageDate = today;
+    saveBrainDumpStats();
+  }
+  closeEveningTriageModal();
+  showToast('✨ Nightly reset complete! Mind is clear.');
+}
+
+// ── Notes Vault Modal Handlers ──
+function openNotesVaultModal() {
+  const modal = document.getElementById('notesVaultModal');
+  if (!modal) return;
+  modal.hidden = false;
+  bdSelectedVaultTag = null;
+  renderNotesVaultGrid();
+}
+
+function closeNotesVaultModal() {
+  const modal = document.getElementById('notesVaultModal');
+  if (modal) modal.hidden = true;
+}
+
+function renderNotesVaultGrid() {
+  const searchInput = document.getElementById('notesVaultSearchInput');
+  const tagPillsWrap = document.getElementById('notesVaultTagPills');
+  const grid = document.getElementById('notesVaultGrid');
+  const countBadge = document.getElementById('notesVaultCountBadge');
+  if (!grid) return;
+
+  const searchVal = (searchInput?.value || '').toLowerCase().trim();
+
+  // Render tag pills
+  if (tagPillsWrap) {
+    const allTags = Array.from(new Set(bdVault.flatMap(n => n.tags || [])));
+    let pillsHtml = `
+      <span class="vault-tag-pill ${bdSelectedVaultTag === null ? 'active' : ''}" onclick="selectVaultTag(null)">All</span>
+    `;
+    allTags.forEach(tag => {
+      pillsHtml += `
+        <span class="vault-tag-pill ${bdSelectedVaultTag === tag ? 'active' : ''}" onclick="selectVaultTag('${escapeHtml(tag)}')">#${escapeHtml(tag)}</span>
+      `;
+    });
+    tagPillsWrap.innerHTML = pillsHtml;
+  }
+
+  const filtered = bdVault.filter(n => {
+    const matchesSearch = (n.title + ' ' + n.content).toLowerCase().includes(searchVal);
+    const matchesTag = !bdSelectedVaultTag || (n.tags && n.tags.includes(bdSelectedVaultTag));
+    return matchesSearch && matchesTag;
+  });
+
+  if (countBadge) countBadge.textContent = `${filtered.length} note${filtered.length === 1 ? '' : 's'}`;
+
+  if (!filtered.length) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align:center; padding:40px; color:#64748b;">
+        <p style="font-size:14px; margin:0;">No notes found in your vault.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(n => `
+    <div class="vault-note-card">
+      <div>
+        <h4 class="vault-note-title">${escapeHtml(n.title)}</h4>
+        <p class="vault-note-desc">${escapeHtml(n.content)}</p>
+      </div>
+      <div class="vault-note-footer">
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+          ${(n.tags || []).map(t => `<span style="background:rgba(168,85,247,0.15); color:#d8b4fe; border:1px solid rgba(168,85,247,0.3); border-radius:4px; padding:1px 5px; font-size:10px;">#${escapeHtml(t)}</span>`).join('')}
+        </div>
+        <span>${new Date(n.archivedAt).toLocaleDateString()}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.selectVaultTag = function(tag) {
+  bdSelectedVaultTag = tag;
+  renderNotesVaultGrid();
+};
+
+// ── Scratchpad Drawer Handlers ──
+function openBrainDumpDrawer() {
+  const backdrop = document.getElementById('brainDumpDrawerBackdrop');
+  if (!backdrop) return;
+  backdrop.hidden = false;
+  renderBrainDumpDrawerList();
+}
+
+function closeBrainDumpDrawer() {
+  const backdrop = document.getElementById('brainDumpDrawerBackdrop');
+  if (backdrop) backdrop.hidden = true;
+}
+
+function renderBrainDumpDrawerList() {
+  const listEl = document.getElementById('bdDrawerList');
+  if (!listEl) return;
+
+  if (!bdInbox.length) {
+    listEl.innerHTML = `
+      <div style="text-align:center; padding:40px 20px; color:#64748b;">
+        <div style="font-size:28px; margin-bottom:8px;">⚡</div>
+        <strong style="color:#cbd5e1; font-size:14px;">Your inbox is empty</strong>
+        <p style="font-size:12px; margin:4px 0 0;">Press Ctrl + Space anywhere to quick-capture thoughts.</p>
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = bdInbox.map((item, idx) => `
+    <div class="bd-drawer-card">
+      <div class="bd-drawer-card-top">
+        <div class="bd-drawer-card-text">${escapeHtml(item.cleanText || item.rawText)}</div>
+        <div class="bd-drawer-card-actions">
+          <button type="button" class="btn-bd-card-act delete" onclick="deleteDrawerThought('${item.id}')" title="Delete">🗑️</button>
+        </div>
+      </div>
+      <div class="bd-drawer-card-bottom">
+        <span>${new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        <div class="bd-drawer-quick-pills">
+          <span class="bd-quick-pill" onclick="drawerConvertThoughtToTask('${item.id}')">+Task</span>
+          <span class="bd-quick-pill" onclick="drawerConvertThoughtToHabit('${item.id}')" style="color:#fbbf24;">+Habit</span>
+          <span class="bd-quick-pill" onclick="drawerArchiveThoughtToVault('${item.id}')" style="color:#c084fc;">Vault</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.deleteDrawerThought = function(id) {
+  bdInbox = bdInbox.filter(item => item.id !== id);
+  saveBrainDumpInbox();
+  playBrainDumpShredSound();
+  renderBrainDumpDrawerList();
+};
+
+window.drawerConvertThoughtToTask = function(id) {
+  const idx = bdInbox.findIndex(i => i.id === id);
+  if (idx !== -1) {
+    currentTriageIndex = idx;
+    dispatchTriageTask('tomorrow');
+    renderBrainDumpDrawerList();
+  }
+};
+
+window.drawerConvertThoughtToHabit = function(id) {
+  const idx = bdInbox.findIndex(i => i.id === id);
+  if (idx !== -1) {
+    currentTriageIndex = idx;
+    dispatchTriageHabit();
+    renderBrainDumpDrawerList();
+  }
+};
+
+window.drawerArchiveThoughtToVault = function(id) {
+  const idx = bdInbox.findIndex(i => i.id === id);
+  if (idx !== -1) {
+    currentTriageIndex = idx;
+    dispatchTriageVault();
+    renderBrainDumpDrawerList();
+  }
+};
+
+function startTriageFromDrawer() {
+  closeBrainDumpDrawer();
+  openEveningTriageModal();
+}
+
+// ── Global Keyboard Hotkeys & Listeners ──
+function initBrainDump() {
+  loadBrainDumpState();
+
+  const input = document.getElementById('brainDumpInput');
+  if (input) {
+    input.addEventListener('input', handleBrainDumpInput);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        saveBrainDumpThought(e.ctrlKey || e.metaKey);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeBrainDumpPalette();
+      }
+    });
+  }
+
+  // Backdrop click listeners
+  const bdModal = document.getElementById('brainDumpModal');
+  if (bdModal) {
+    bdModal.addEventListener('click', (e) => {
+      if (e.target === bdModal) closeBrainDumpPalette();
+    });
+  }
+
+  const eveningModal = document.getElementById('eveningTriageModal');
+  if (eveningModal) {
+    eveningModal.addEventListener('click', (e) => {
+      if (e.target === eveningModal) closeEveningTriageModal();
+    });
+  }
+
+  const notesModal = document.getElementById('notesVaultModal');
+  if (notesModal) {
+    notesModal.addEventListener('click', (e) => {
+      if (e.target === notesModal) closeNotesVaultModal();
+    });
+  }
+
+  // Global hotkey: Ctrl + Space (or Cmd + Space)
+  window.addEventListener('keydown', (e) => {
+    // Check for Ctrl + Space or Cmd + Space
+    if ((e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ')) {
+      e.preventDefault();
+      const modal = document.getElementById('brainDumpModal');
+      if (modal && !modal.hidden) {
+        closeBrainDumpPalette();
+      } else {
+        openBrainDumpPalette();
+      }
+      return;
+    }
+
+    // Inside Triage Modal Hotkeys
+    const triageModal = document.getElementById('eveningTriageModal');
+    if (triageModal && !triageModal.hidden) {
+      const isInput = ['INPUT', 'TEXTAREA'].includes(e.target.tagName);
+      if (isInput) return;
+
+      if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        promptTriageTaskDate();
+      } else if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        dispatchTriageHabit();
+      } else if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        dispatchTriageVault();
+      } else if (e.key === 'd' || e.key === 'D' || e.key === 'Backspace') {
+        e.preventDefault();
+        dispatchTriageDiscard();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        skipTriageItem();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeEveningTriageModal();
+      }
+    }
+  });
+
+  // Automated 8:00 PM evening check
+  setInterval(() => {
+    const hours = new Date().getHours();
+    if (hours >= 20 && bdInbox.length > 0) {
+      const eveningBanner = document.getElementById('eveningTriageBanner');
+      if (eveningBanner) eveningBanner.style.display = 'flex';
+    }
+  }, 60000);
+}
+
+// Window exports for HTML onclick handlers
+window.openBrainDumpPalette = openBrainDumpPalette;
+window.closeBrainDumpPalette = closeBrainDumpPalette;
+window.openEveningTriageModal = openEveningTriageModal;
+window.closeEveningTriageModal = closeEveningTriageModal;
+window.openNotesVaultModal = openNotesVaultModal;
+window.closeNotesVaultModal = closeNotesVaultModal;
+window.renderNotesVaultGrid = renderNotesVaultGrid;
+window.openBrainDumpDrawer = openBrainDumpDrawer;
+window.closeBrainDumpDrawer = closeBrainDumpDrawer;
+window.promptTriageTaskDate = promptTriageTaskDate;
+window.cancelTriageDatePicker = cancelTriageDatePicker;
+window.dispatchTriageTask = dispatchTriageTask;
+window.dispatchTriageHabit = dispatchTriageHabit;
+window.dispatchTriageVault = dispatchTriageVault;
+window.dispatchTriageDiscard = dispatchTriageDiscard;
+window.skipTriageItem = skipTriageItem;
+window.finishTriageZen = finishTriageZen;
+window.startTriageFromDrawer = startTriageFromDrawer;
+
+// =============================================================================
+// HABITOS PRO BEHAVIORAL HABIT TRACKER ENGINE & GAMIFICATION
+// =============================================================================
+
+const HT_STORAGE_KEYS = {
+  HABITS: 'antigravity_habits',
+  LOGS: 'antigravity_habit_logs',
+  GAMIFICATION: 'antigravity_habit_gamification',
+};
+
+const HT_BADGES_LIST = [
+  { id: 'first_step', name: 'First Step', description: 'Complete your first habit', icon: '✨', xpReward: 25 },
+  { id: 'streak_3', name: '3-Day Spark', description: 'Maintain a 3-day active streak', icon: '🔥', xpReward: 50 },
+  { id: 'streak_7', name: '7-Day Momentum', description: 'Maintain a 7-day active streak', icon: '⚡', xpReward: 100 },
+  { id: 'streak_30', name: '30-Day Master', description: 'Achieve a 30-day streak on any habit', icon: '👑', xpReward: 300 },
+  { id: 'flawless_day', name: 'Flawless Day', description: 'Complete 100% of all habits in a single day', icon: '🎯', xpReward: 75 },
+  { id: 'ice_shield', name: 'Freeze Protector', description: 'Earn and store your first Streak Freeze token', icon: '🛡️', xpReward: 50 },
+  { id: 'centurion', name: 'Century Club', description: 'Log 100 total habit completions', icon: '🏆', xpReward: 500 },
+  { id: 'pomodoro_pro', name: 'Focus Master', description: 'Complete 5 Pomodoro focus sessions', icon: '⏱️', xpReward: 120 },
+  { id: 'break_chain', name: 'Chain Breaker', description: 'Reach 14 days abstained from a negative habit', icon: '⛓️', xpReward: 200 },
+  { id: 'zen_reflector', name: 'Mindful Soul', description: 'Log 5 daily mood reflections', icon: '⭐', xpReward: 80 },
+];
+
+const HT_STARTER_HABITS = [
+  {
+    id: 'habit_water_1',
+    title: 'Hydrate 2,500 ml',
+    type: 'measurable',
+    targetValue: 2500,
+    unit: 'ml',
+    stepIncrement: 250,
+    timeOfDay: 'morning',
+    category: 'health',
+    frequency: 'daily',
+    anchorHabit: 'Waking up & making bed',
+    longestStreak: 12,
+    createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
+  },
+  {
+    id: 'habit_reading_2',
+    title: '25-Min Deep Focus & Clinical Literature',
+    type: 'duration',
+    targetMinutes: 25,
+    timeOfDay: 'afternoon',
+    category: 'learning',
+    frequency: 'daily',
+    anchorHabit: 'After lunch espresso',
+    longestStreak: 9,
+    createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
+  },
+  {
+    id: 'habit_workout_3',
+    title: 'Daily Functional Workout & Mobility',
+    type: 'binary',
+    timeOfDay: 'evening',
+    category: 'health',
+    frequency: 'daily',
+    anchorHabit: 'Shutting down laptop',
+    longestStreak: 14,
+    createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
+  },
+  {
+    id: 'habit_nosugar_4',
+    title: 'No Refined Sugar & Sodas',
+    type: 'break',
+    timeOfDay: 'anytime',
+    category: 'health',
+    frequency: 'daily',
+    anchorHabit: '',
+    longestStreak: 18,
+    lastRelapseDate: new Date(Date.now() - 8 * 86400000).toISOString(),
+    createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
+  },
+];
+
+let htHabits = [];
+let htLogs = {};
+let htGamification = { xp: 285, level: 3, freezeTokens: 1, unlockedBadges: ['first_step', 'streak_3', 'ice_shield'] };
+let htSelectedDate = '';
+let htTimerInterval = null;
+let htTimerSeconds = 25 * 60;
+let htTimerInitialDuration = 25 * 60;
+let htTimerIsRunning = false;
+let htActiveTimerHabit = null;
+let htMoodRating = 5;
+
+function getTodayDateKeyHT() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function calculateHTLevel(totalXp) {
+  const level = Math.floor(Math.sqrt((totalXp || 0) / 50)) + 1;
+  const currentBase = Math.pow(level - 1, 2) * 50;
+  const nextBase = Math.pow(level, 2) * 50;
+  const pct = Math.min(100, Math.max(0, Math.round(((totalXp - currentBase) / Math.max(1, nextBase - currentBase)) * 100)));
+  return { level, progressPct: pct, remainingXp: Math.max(0, nextBase - totalXp) };
+}
+
+function computeHTHabitStreak(habit) {
+  if (!habit) return { currentStreak: 0, longestStreak: 0, usedFreeze: false, missedYesterday: false };
+
+  if (habit.type === 'break') {
+    const lastRelapse = habit.lastRelapseDate ? new Date(habit.lastRelapseDate) : new Date(habit.createdAt || Date.now());
+    const now = new Date();
+    const diffTime = Math.max(0, now.getTime() - lastRelapse.getTime());
+    const daysAbstained = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return {
+      currentStreak: daysAbstained,
+      longestStreak: Math.max(daysAbstained, habit.longestStreak || 0),
+      usedFreeze: false,
+      missedYesterday: false,
+    };
+  }
+
+  let streak = 0;
+  let freezesLeft = htGamification.freezeTokens || 0;
+  let usedFreeze = false;
+  let missedYesterday = false;
+
+  const today = getTodayDateKeyHT();
+  const yDate = new Date();
+  yDate.setDate(yDate.getDate() - 1);
+  const yesterday = `${yDate.getFullYear()}-${String(yDate.getMonth() + 1).padStart(2, '0')}-${String(yDate.getDate()).padStart(2, '0')}`;
+
+  const todayVal = htLogs[today]?.[habit.id]?.completed;
+  const yesterdayVal = htLogs[yesterday]?.[habit.id]?.completed;
+
+  if (!todayVal && !yesterdayVal) {
+    missedYesterday = true;
+  }
+
+  let check = new Date();
+  if (!todayVal) check.setDate(check.getDate() - 1);
+
+  for (let i = 0; i < 365; i++) {
+    const k = `${check.getFullYear()}-${String(check.getMonth() + 1).padStart(2, '0')}-${String(check.getDate()).padStart(2, '0')}`;
+    const dayEntry = htLogs[k]?.[habit.id];
+    if (dayEntry?.completed) {
+      streak++;
+    } else if (freezesLeft > 0 && streak > 0) {
+      freezesLeft--;
+      usedFreeze = true;
+    } else {
+      break;
+    }
+    check.setDate(check.getDate() - 1);
+  }
+
+  return {
+    currentStreak: streak,
+    longestStreak: Math.max(habit.longestStreak || 0, streak),
+    usedFreeze,
+    missedYesterday: !todayVal && missedYesterday,
+  };
+}
+
+function loadHabitTrackerState() {
+  try {
+    const rawH = localStorage.getItem(HT_STORAGE_KEYS.HABITS);
+    htHabits = rawH ? JSON.parse(rawH) : [...HT_STARTER_HABITS];
+  } catch {
+    htHabits = [...HT_STARTER_HABITS];
+  }
+
+  try {
+    const rawL = localStorage.getItem(HT_STORAGE_KEYS.LOGS);
+    if (rawL) {
+      htLogs = JSON.parse(rawL);
+    } else {
+      // Generate initial starter logs
+      htLogs = {};
+      const today = new Date();
+      for (let i = 14; i >= 1; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        htLogs[k] = {
+          habit_water_1: { completed: true, currentValue: 2500 },
+          habit_reading_2: { completed: i % 4 !== 0, elapsedMinutes: i % 4 !== 0 ? 25 : 10 },
+          habit_workout_3: { completed: i % 5 !== 0 },
+        };
+      }
+    }
+  } catch {
+    htLogs = {};
+  }
+
+  try {
+    const rawG = localStorage.getItem(HT_STORAGE_KEYS.GAMIFICATION);
+    htGamification = rawG ? JSON.parse(rawG) : { xp: 285, level: 3, freezeTokens: 1, unlockedBadges: ['first_step', 'streak_3', 'ice_shield'] };
+  } catch {
+    htGamification = { xp: 285, level: 3, freezeTokens: 1, unlockedBadges: ['first_step', 'streak_3', 'ice_shield'] };
+  }
+
+  htSelectedDate = getTodayDateKeyHT();
+  updateHabitCounters();
+}
+
+function saveHabitsHT() {
+  try {
+    localStorage.setItem(HT_STORAGE_KEYS.HABITS, JSON.stringify(htHabits));
+  } catch (_) {}
+  updateHabitCounters();
+}
+
+function saveLogsHT() {
+  try {
+    localStorage.setItem(HT_STORAGE_KEYS.LOGS, JSON.stringify(htLogs));
+  } catch (_) {}
+  updateHabitCounters();
+}
+
+function saveGamificationHT() {
+  try {
+    localStorage.setItem(HT_STORAGE_KEYS.GAMIFICATION, JSON.stringify(htGamification));
+  } catch (_) {}
+  updateHabitCounters();
+}
+
+function awardHabitXp(amount, reason = '') {
+  htGamification.xp = (htGamification.xp || 0) + amount;
+  const { level: newLevel } = calculateHTLevel(htGamification.xp);
+  if (newLevel > (htGamification.level || 1)) {
+    htGamification.level = newLevel;
+    fireBrainDumpConfetti();
+    playBrainDumpChime();
+    showToast(`🎉 Level Up! You reached Mastery Level ${newLevel}!`);
+  }
+  saveGamificationHT();
+}
+
+function updateHabitCounters() {
+  const todayKey = getTodayDateKeyHT();
+  const activeHabits = htHabits.filter(h => h.type !== 'break');
+  const completedCount = activeHabits.filter(h => htLogs[todayKey]?.[h.id]?.completed).length;
+
+  const headerBadge = document.getElementById('headerHabitBadge');
+  if (headerBadge) {
+    headerBadge.textContent = `${completedCount}/${activeHabits.length}`;
+  }
+
+  // Peak streak across habits
+  const peakStreak = Math.max(0, ...htHabits.map(h => computeHTHabitStreak(h).currentStreak));
+  const sidebarStreak = document.getElementById('sidebarHabitStreakBadge');
+  if (sidebarStreak) {
+    sidebarStreak.textContent = `🔥 ${peakStreak}d streak`;
+  }
+}
+
+function openHabitTrackerModal() {
+  const modal = document.getElementById('habitTrackerModal');
+  if (!modal) return;
+  modal.hidden = false;
+  loadHabitTrackerState();
+  renderHabitTracker();
+}
+
+function closeHabitTrackerModal() {
+  const modal = document.getElementById('habitTrackerModal');
+  if (modal) modal.hidden = true;
+}
+
+function shiftHabitDate(deltaDays) {
+  const [y, m, d] = htSelectedDate.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + deltaDays);
+  htSelectedDate = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  renderHabitTracker();
+}
+
+function setHabitDateToday() {
+  htSelectedDate = getTodayDateKeyHT();
+  renderHabitTracker();
+}
+
+function renderHabitTracker() {
+  const todayKey = getTodayDateKeyHT();
+  const isToday = htSelectedDate === todayKey;
+
+  // Update date labels
+  const dateLabel = document.getElementById('htSelectedDateLabel');
+  if (dateLabel) {
+    dateLabel.textContent = isToday ? 'Today' : htSelectedDate;
+  }
+  const heatmapSelLabel = document.getElementById('htHeatmapSelectedLabel');
+  if (heatmapSelLabel) {
+    heatmapSelLabel.textContent = isToday ? 'Today' : htSelectedDate;
+  }
+
+  // Update Gamification header
+  const { level, progressPct } = calculateHTLevel(htGamification.xp);
+  const lvlBadge = document.getElementById('htLevelBadge');
+  if (lvlBadge) lvlBadge.textContent = `Lvl ${level}`;
+  const xpFill = document.getElementById('htXpFill');
+  if (xpFill) xpFill.style.width = `${progressPct}%`;
+  const xpLabel = document.getElementById('htXpLabel');
+  if (xpLabel) xpLabel.textContent = `${htGamification.xp} XP`;
+  const freezeCount = document.getElementById('htFreezeCount');
+  if (freezeCount) freezeCount.textContent = htGamification.freezeTokens || 0;
+
+  // Never Miss Twice Banner
+  const nmtBanner = document.getElementById('htNeverMissTwiceBanner');
+  const nmtText = document.getElementById('htNeverMissTwiceText');
+  const nmtActions = document.getElementById('htNeverMissTwiceActions');
+  const atRisk = htHabits.filter(h => {
+    if (h.type === 'break') return false;
+    const s = computeHTHabitStreak(h);
+    const doneToday = htLogs[htSelectedDate]?.[h.id]?.completed;
+    return s.missedYesterday && !doneToday;
+  });
+
+  if (atRisk.length > 0 && nmtBanner) {
+    nmtBanner.style.display = 'flex';
+    if (nmtText) {
+      nmtText.textContent = `You missed ${atRisk.map(h => `"${h.title}"`).join(', ')} yesterday. Complete it today to defend your neurochemical streak!`;
+    }
+    if (nmtActions) {
+      nmtActions.innerHTML = atRisk.slice(0, 2).map(h => `
+        <button type="button" class="btn-ht-nmt-quick" onclick="toggleHabitHT('${h.id}')">
+          Do "${escapeHtml(h.title.slice(0, 16))}" →
+        </button>
+      `).join('');
+    }
+  } else if (nmtBanner) {
+    nmtBanner.style.display = 'none';
+  }
+
+  // Holistic Momentum Stats
+  let totalCompletions = 0;
+  Object.keys(htLogs).forEach(k => {
+    htHabits.forEach(h => {
+      if (htLogs[k]?.[h.id]?.completed) totalCompletions++;
+    });
+  });
+  const peakStreak = Math.max(0, ...htHabits.map(h => computeHTHabitStreak(h).longestStreak));
+  const activeHabits = htHabits.filter(h => h.type !== 'break');
+  const todayDone = activeHabits.filter(h => htLogs[htSelectedDate]?.[h.id]?.completed).length;
+  const consistencyIndex = activeHabits.length ? Math.round((todayDone / activeHabits.length) * 100) : 100;
+
+  const consVal = document.getElementById('htConsistencyVal');
+  if (consVal) consVal.textContent = `${consistencyIndex}/100`;
+  const peakVal = document.getElementById('htPeakStreakVal');
+  if (peakVal) peakVal.textContent = `${peakStreak} Days`;
+  const totalVal = document.getElementById('htTotalCompletionsVal');
+  if (totalVal) totalVal.textContent = totalCompletions;
+  const activeVal = document.getElementById('htActiveHabitsVal');
+  if (activeVal) activeVal.textContent = htHabits.length;
+
+  // Render Sections (Morning, Afternoon, Evening, Anytime)
+  renderHabitSection('morning', 'htBlockMorning', 'htMorningCount', 'htMorningGrid');
+  renderHabitSection('afternoon', 'htBlockAfternoon', 'htAfternoonCount', 'htAfternoonGrid');
+  renderHabitSection('evening', 'htBlockEvening', 'htEveningCount', 'htEveningGrid');
+  renderHabitSection('anytime', 'htBlockAnytime', 'htAnytimeCount', 'htAnytimeGrid');
+
+  // Render Heatmap Matrix
+  renderHabitHeatmapMatrix();
+}
+
+function renderHabitSection(slot, blockId, countId, gridId) {
+  const block = document.getElementById(blockId);
+  const countEl = document.getElementById(countId);
+  const gridEl = document.getElementById(gridId);
+  if (!gridEl) return;
+
+  const sectionHabits = htHabits.filter(h => {
+    if (slot === 'anytime') return !h.timeOfDay || h.timeOfDay === 'anytime';
+    return h.timeOfDay === slot;
+  });
+
+  if (sectionHabits.length === 0) {
+    if (block) block.style.display = 'none';
+    return;
+  }
+  if (block) block.style.display = 'flex';
+
+  const completed = sectionHabits.filter(h => {
+    if (h.type === 'break') return true;
+    return htLogs[htSelectedDate]?.[h.id]?.completed;
+  }).length;
+
+  if (countEl) countEl.textContent = `${completed}/${sectionHabits.length}`;
+
+  gridEl.innerHTML = sectionHabits.map((h, idx) => {
+    const entry = htLogs[htSelectedDate]?.[h.id] || {};
+    const isCompleted = !!entry.completed;
+    const streak = computeHTHabitStreak(h);
+
+    let interactiveHtml = '';
+
+    if (h.type === 'measurable') {
+      const cur = entry.currentValue || 0;
+      const target = h.targetValue || 100;
+      const pct = Math.min(100, Math.round((cur / target) * 100));
+      interactiveHtml = `
+        <div>
+          <div class="ht-measurable-row">
+            <span>${cur} / ${target} ${escapeHtml(h.unit || '')}</span>
+            <span style="color:#38bdf8; font-weight:bold;">${pct}%</span>
+          </div>
+          <div class="ht-measurable-track">
+            <div class="ht-measurable-fill" style="width: ${pct}%;"></div>
+          </div>
+          <div class="ht-measurable-steppers">
+            <button type="button" class="btn-ht-step" onclick="updateMeasurableHT('${h.id}', -1)">-${h.stepIncrement || 1}</button>
+            <button type="button" class="btn-ht-step plus" onclick="updateMeasurableHT('${h.id}', 1)">+${h.stepIncrement || 1}</button>
+          </div>
+        </div>
+      `;
+    } else if (h.type === 'duration') {
+      const mins = entry.elapsedMinutes || 0;
+      const target = h.targetMinutes || 25;
+      const pct = Math.min(100, Math.round((mins / target) * 100));
+      interactiveHtml = `
+        <div>
+          <div class="ht-measurable-row">
+            <span>${mins} / ${target} min</span>
+            <span style="color:#fbbf24; font-weight:bold;">${pct}%</span>
+          </div>
+          <div class="ht-measurable-track">
+            <div class="ht-measurable-fill" style="width: ${pct}%; background:linear-gradient(90deg, #fbbf24, #f97316);"></div>
+          </div>
+          <button type="button" class="btn-ht-timer-trigger" onclick="openHabitTimerModal('${h.id}')">
+            <span>⏱️ Launch Focus Timer</span>
+          </button>
+        </div>
+      `;
+    } else if (h.type === 'break') {
+      interactiveHtml = `
+        <div class="ht-break-container">
+          <div>
+            <div class="ht-break-digits">${streak.currentStreak} Days</div>
+            <div style="font-size:10px; color:#94a3b8;">Clean Streak Abstained</div>
+          </div>
+          <button type="button" class="btn-ht-relapse" onclick="openHabitRelapseModal('${h.id}')">
+            ⚠️ Log Relapse
+          </button>
+        </div>
+      `;
+    } else {
+      interactiveHtml = `
+        <button type="button" class="btn-ht-check ${isCompleted ? 'done' : ''}" onclick="toggleHabitHT('${h.id}')">
+          <span>${isCompleted ? '✓' : '○'}</span>
+          <span>${isCompleted ? 'Completed' : 'Mark as Done'}</span>
+        </button>
+      `;
+    }
+
+    return `
+      <div class="ht-card ${isCompleted ? 'is-completed' : ''}">
+        <div class="ht-card-top">
+          <div class="ht-card-title-group">
+            <div class="ht-card-title">${escapeHtml(h.title)}</div>
+            ${h.anchorHabit ? `<div class="ht-card-anchor">🔗 After ${escapeHtml(h.anchorHabit)}</div>` : ''}
+          </div>
+          <button type="button" class="ht-card-btn-delete" onclick="deleteHabitHT('${h.id}')" title="Delete Habit">✕</button>
+        </div>
+        ${interactiveHtml}
+        <div class="ht-card-bottom">
+          <span class="ht-card-streak">🔥 ${streak.currentStreak} streak (best: ${streak.longestStreak})</span>
+          ${streak.usedFreeze ? '<span style="color:#22d3ee; font-size:10px;">🛡️ Shield Protected</span>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleHabitHT(habitId) {
+  const habit = htHabits.find(h => h.id === habitId);
+  if (!habit) return;
+
+  const dayLogs = htLogs[htSelectedDate] || {};
+  const currentEntry = dayLogs[habitId] || { completed: false };
+  const nextVal = !currentEntry.completed;
+
+  dayLogs[habitId] = {
+    ...currentEntry,
+    completed: nextVal,
+  };
+  htLogs[htSelectedDate] = dayLogs;
+  saveLogsHT();
+
+  if (nextVal) {
+    playBrainDumpCaptureSound();
+    awardHabitXp(15, `Completed ${habit.title}`);
+
+    // Check if 100% completed
+    const activeHabits = htHabits.filter(h => h.type !== 'break');
+    const allDone = activeHabits.every(h => htLogs[htSelectedDate]?.[h.id]?.completed);
+    if (allDone && activeHabits.length > 0) {
+      fireBrainDumpConfetti();
+      playBrainDumpChime();
+      showToast('🌟 Flawless Day! 100% of all habits completed!');
+    }
+  }
+
+  renderHabitTracker();
+}
+
+function updateMeasurableHT(habitId, delta) {
+  const habit = htHabits.find(h => h.id === habitId);
+  if (!habit) return;
+
+  const dayLogs = htLogs[htSelectedDate] || {};
+  const currentEntry = dayLogs[habitId] || { completed: false, currentValue: 0 };
+  const step = habit.stepIncrement || 1;
+  const target = habit.targetValue || 100;
+  const nextVal = Math.max(0, (currentEntry.currentValue || 0) + delta * step);
+  const isDone = nextVal >= target;
+
+  dayLogs[habitId] = {
+    ...currentEntry,
+    currentValue: nextVal,
+    completed: isDone,
+  };
+  htLogs[htSelectedDate] = dayLogs;
+  saveLogsHT();
+
+  if (delta > 0) {
+    playBrainDumpCaptureSound();
+    awardHabitXp(5, `Progress on ${habit.title}`);
+    if (isDone && !currentEntry.completed) {
+      playBrainDumpChime();
+      awardHabitXp(15, `Reached target for ${habit.title}`);
+    }
+  }
+
+  renderHabitTracker();
+}
+
+function openHabitTimerModal(habitId) {
+  htActiveTimerHabit = htHabits.find(h => h.id === habitId);
+  if (!htActiveTimerHabit) return;
+
+  const modal = document.getElementById('habitTimerModal');
+  const title = document.getElementById('htTimerHabitTitle');
+  const sub = document.getElementById('htTimerHabitSub');
+  if (title) title.textContent = htActiveTimerHabit.title;
+  if (sub) sub.textContent = `Target: ${htActiveTimerHabit.targetMinutes || 25} minutes`;
+
+  htTimerInitialDuration = (htActiveTimerHabit.targetMinutes || 25) * 60;
+  htTimerSeconds = htTimerInitialDuration;
+  htTimerIsRunning = false;
+  updateTimerDisplay();
+
+  const playBtn = document.getElementById('htTimerPlayBtn');
+  if (playBtn) playBtn.textContent = '▶';
+
+  if (modal) modal.hidden = false;
+}
+
+function closeHabitTimerModal() {
+  if (htTimerInterval) clearInterval(htTimerInterval);
+  htTimerInterval = null;
+  htTimerIsRunning = false;
+  const modal = document.getElementById('habitTimerModal');
+  if (modal) modal.hidden = true;
+}
+
+function updateTimerDisplay() {
+  const digits = document.getElementById('htTimerDigits');
+  if (!digits) return;
+  const m = Math.floor(htTimerSeconds / 60);
+  const s = htTimerSeconds % 60;
+  digits.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function toggleHabitTimer() {
+  const playBtn = document.getElementById('htTimerPlayBtn');
+  if (htTimerIsRunning) {
+    clearInterval(htTimerInterval);
+    htTimerInterval = null;
+    htTimerIsRunning = false;
+    if (playBtn) playBtn.textContent = '▶';
+  } else {
+    htTimerIsRunning = true;
+    if (playBtn) playBtn.textContent = '⏸';
+    htTimerInterval = setInterval(() => {
+      if (htTimerSeconds > 0) {
+        htTimerSeconds--;
+        updateTimerDisplay();
+      } else {
+        clearInterval(htTimerInterval);
+        completeHabitTimerNow();
+      }
+    }, 1000);
+  }
+}
+
+function resetHabitTimer() {
+  if (htTimerInterval) clearInterval(htTimerInterval);
+  htTimerInterval = null;
+  htTimerIsRunning = false;
+  htTimerSeconds = htTimerInitialDuration;
+  updateTimerDisplay();
+  const playBtn = document.getElementById('htTimerPlayBtn');
+  if (playBtn) playBtn.textContent = '▶';
+}
+
+function completeHabitTimerNow() {
+  if (!htActiveTimerHabit) return;
+  const elapsedMinutes = Math.max(1, Math.round((htTimerInitialDuration - htTimerSeconds) / 60));
+
+  const dayLogs = htLogs[htSelectedDate] || {};
+  const currentEntry = dayLogs[htActiveTimerHabit.id] || { completed: false, elapsedMinutes: 0 };
+  const nextMin = (currentEntry.elapsedMinutes || 0) + elapsedMinutes;
+  const isDone = nextMin >= (htActiveTimerHabit.targetMinutes || 25);
+
+  dayLogs[htActiveTimerHabit.id] = {
+    ...currentEntry,
+    elapsedMinutes: nextMin,
+    completed: isDone,
+  };
+  htLogs[htSelectedDate] = dayLogs;
+  saveLogsHT();
+
+  playBrainDumpChime();
+  awardHabitXp(20, `Completed focus session`);
+  showToast(`⏱️ Logged ${elapsedMinutes} minutes focus time!`);
+
+  closeHabitTimerModal();
+  renderHabitTracker();
+}
+
+function openHabitRelapseModal(habitId) {
+  const habit = htHabits.find(h => h.id === habitId);
+  if (!habit) return;
+  const modal = document.getElementById('habitRelapseModal');
+  const title = document.getElementById('htRelapseHabitTitle');
+  const hidInput = document.getElementById('htRelapseHabitId');
+  if (title) title.textContent = `Resetting streak for "${habit.title}"`;
+  if (hidInput) hidInput.value = habitId;
+  if (modal) modal.hidden = false;
+}
+
+function closeHabitRelapseModal() {
+  const modal = document.getElementById('habitRelapseModal');
+  if (modal) modal.hidden = true;
+}
+
+function handleConfirmHabitRelapse(e) {
+  e.preventDefault();
+  const hidInput = document.getElementById('htRelapseHabitId');
+  const triggerNote = document.getElementById('htRelapseTriggerNote');
+  const habitId = hidInput?.value;
+  if (!habitId) return;
+
+  const nowIso = new Date().toISOString();
+  htHabits = htHabits.map(h => {
+    if (h.id === habitId) {
+      return {
+        ...h,
+        lastRelapseDate: nowIso,
+        relapseHistory: [...(h.relapseHistory || []), { date: nowIso, note: triggerNote?.value || '' }],
+      };
+    }
+    return h;
+  });
+  saveHabitsHT();
+  closeHabitRelapseModal();
+  showToast('🤝 Streak reset. Begin Day 1 with fresh resolve!');
+  renderHabitTracker();
+}
+
+function openHabitCreateModal() {
+  const modal = document.getElementById('habitCreateEditModal');
+  const form = document.getElementById('htHabitForm');
+  const title = document.getElementById('htFormModalTitle');
+  const idInput = document.getElementById('htFormHabitId');
+  if (form) form.reset();
+  if (title) title.textContent = 'Create New Habit';
+  if (idInput) idInput.value = '';
+  handleHabitTypeChange('binary');
+  if (modal) modal.hidden = false;
+}
+
+function closeHabitCreateEditModal() {
+  const modal = document.getElementById('habitCreateEditModal');
+  if (modal) modal.hidden = true;
+}
+
+function handleHabitTypeChange(type) {
+  const mBox = document.getElementById('htMeasurableConfig');
+  const dBox = document.getElementById('htDurationConfig');
+  if (mBox) mBox.style.display = type === 'measurable' ? 'grid' : 'none';
+  if (dBox) dBox.style.display = type === 'duration' ? 'grid' : 'none';
+}
+
+function handleSaveHabitForm(e) {
+  e.preventDefault();
+  const titleInput = document.getElementById('htFormTitle');
+  const idInput = document.getElementById('htFormHabitId');
+  const timeSelect = document.getElementById('htFormTimeOfDay');
+  const catSelect = document.getElementById('htFormCategory');
+  const anchorInput = document.getElementById('htFormAnchor');
+  const targetValInput = document.getElementById('htFormTargetVal');
+  const unitInput = document.getElementById('htFormUnit');
+  const stepInput = document.getElementById('htFormStepVal');
+  const durInput = document.getElementById('htFormTargetMinutes');
+
+  const selectedTypeRadio = document.querySelector('input[name="htTypeRadio"]:checked');
+  const type = selectedTypeRadio ? selectedTypeRadio.value : 'binary';
+
+  const title = titleInput?.value.trim();
+  if (!title) return;
+
+  const existingId = idInput?.value;
+
+  if (existingId) {
+    htHabits = htHabits.map(h => {
+      if (h.id === existingId) {
+        return {
+          ...h,
+          title,
+          type,
+          timeOfDay: timeSelect?.value || 'morning',
+          category: catSelect?.value || 'health',
+          anchorHabit: anchorInput?.value.trim() || '',
+          targetValue: Number(targetValInput?.value) || 2500,
+          unit: unitInput?.value.trim() || 'ml',
+          stepIncrement: Number(stepInput?.value) || 250,
+          targetMinutes: Number(durInput?.value) || 25,
+        };
+      }
+      return h;
+    });
+    showToast('Habit updated.');
+  } else {
+    htHabits.push({
+      id: 'habit_' + Date.now(),
+      title,
+      type,
+      timeOfDay: timeSelect?.value || 'morning',
+      category: catSelect?.value || 'health',
+      anchorHabit: anchorInput?.value.trim() || '',
+      targetValue: Number(targetValInput?.value) || 2500,
+      unit: unitInput?.value.trim() || 'ml',
+      stepIncrement: Number(stepInput?.value) || 250,
+      targetMinutes: Number(durInput?.value) || 25,
+      longestStreak: 0,
+      createdAt: new Date().toISOString(),
+    });
+    awardHabitXp(10, 'Created new habit');
+    showToast('✨ New habit added to routine!');
+  }
+
+  saveHabitsHT();
+  closeHabitCreateEditModal();
+  renderHabitTracker();
+}
+
+function deleteHabitHT(habitId) {
+  if (!confirm('Are you sure you want to delete this habit?')) return;
+  htHabits = htHabits.filter(h => h.id !== habitId);
+  saveHabitsHT();
+  showToast('Habit removed.');
+  renderHabitTracker();
+}
+
+function openHabitBadgesModal() {
+  const modal = document.getElementById('habitBadgesModal');
+  const grid = document.getElementById('htBadgesGrid');
+  const countEl = document.getElementById('htBadgesUnlockedCount');
+  if (!modal || !grid) return;
+
+  const unlocked = htGamification.unlockedBadges || [];
+  if (countEl) countEl.textContent = `Unlocked ${unlocked.length} of ${HT_BADGES_LIST.length} Badges`;
+
+  grid.innerHTML = HT_BADGES_LIST.map(b => {
+    const isUnlocked = unlocked.includes(b.id);
+    return `
+      <div class="ht-badge-card ${isUnlocked ? 'unlocked' : ''}">
+        <div class="ht-badge-icon">${b.icon}</div>
+        <div class="ht-badge-meta">
+          <h4>${escapeHtml(b.name)} ${isUnlocked ? '✓' : ''}</h4>
+          <p>${escapeHtml(b.description)} (+${b.xpReward} XP)</p>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  modal.hidden = false;
+}
+
+function closeHabitBadgesModal() {
+  const modal = document.getElementById('habitBadgesModal');
+  if (modal) modal.hidden = true;
+}
+
+function openHabitMoodModal() {
+  const modal = document.getElementById('habitMoodModal');
+  if (!modal) return;
+  const existing = htLogs[htSelectedDate]?._reflections;
+  htMoodRating = existing?.mood || 5;
+  const noteInput = document.getElementById('htMoodNoteInput');
+  if (noteInput) noteInput.value = existing?.note || '';
+  updateMoodStarUI();
+  modal.hidden = false;
+}
+
+function closeHabitMoodModal() {
+  const modal = document.getElementById('habitMoodModal');
+  if (modal) modal.hidden = true;
+}
+
+function setHabitMoodRating(rating) {
+  htMoodRating = rating;
+  updateMoodStarUI();
+}
+
+function updateMoodStarUI() {
+  const stars = document.querySelectorAll('.btn-ht-star');
+  stars.forEach((btn, idx) => {
+    btn.classList.toggle('active', idx < htMoodRating);
+  });
+}
+
+function handleSaveHabitMood(e) {
+  e.preventDefault();
+  const noteInput = document.getElementById('htMoodNoteInput');
+  const dayLogs = htLogs[htSelectedDate] || {};
+  dayLogs._reflections = {
+    mood: htMoodRating,
+    note: noteInput?.value.trim() || '',
+    loggedAt: new Date().toISOString(),
+  };
+  htLogs[htSelectedDate] = dayLogs;
+  saveLogsHT();
+  awardHabitXp(10, 'Daily reflection logged');
+  closeHabitMoodModal();
+  showToast('⭐ Daily reflection saved! (+10 XP)');
+}
+
+function openHabitPrintModal() {
+  const modal = document.getElementById('habitPrintModal');
+  const container = document.getElementById('htPrintSheetContent');
+  if (!modal || !container) return;
+
+  const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+
+  let rowsHtml = htHabits.map(h => `
+    <tr>
+      <td>
+        <strong>${escapeHtml(h.title)}</strong>
+        ${h.anchorHabit ? `<br><small style="color:#64748b;">After: ${escapeHtml(h.anchorHabit)}</small>` : ''}
+      </td>
+      ${days.map(() => '<td style="text-align:center;"><div style="width:12px; height:12px; border:1px solid #94a3b8; border-radius:2px; margin:auto;"></div></td>').join('')}
+    </tr>
+  `).join('');
+
+  container.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #0f172a; padding-bottom:8px; margin-bottom:12px;">
+      <div>
+        <h2 style="margin:0; font-size:18px; text-transform:uppercase; font-weight:900;">HabitOS Tracker Sheet</h2>
+        <span style="font-size:12px; font-weight:bold; color:#475569;">${currentMonth}</span>
+      </div>
+      <span style="font-size:11px; font-family:monospace; color:#64748b;">Never Miss Twice • Discipline = Freedom</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:180px; text-align:left;">Habit Name</th>
+          ${days.map(d => `<th style="width:20px; text-align:center; font-family:monospace; font-size:9px;">${d}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        <tr>
+          <td style="color:#94a3b8; font-style:italic;">Custom Habit...</td>
+          ${days.map(() => '<td style="text-align:center;"><div style="width:12px; height:12px; border:1px solid #cbd5e1; border-radius:2px; margin:auto;"></div></td>').join('')}
+        </tr>
+      </tbody>
+    </table>
+  `;
+
+  modal.hidden = false;
+}
+
+function closeHabitPrintModal() {
+  const modal = document.getElementById('habitPrintModal');
+  if (modal) modal.hidden = true;
+}
+
+function renderHabitHeatmapMatrix() {
+  const wrap = document.getElementById('htHeatmapMatrixWrap');
+  if (!wrap) return;
+
+  const today = new Date();
+  const cells = [];
+  const activeHabits = htHabits.filter(h => h.type !== 'break');
+
+  // 52 weeks = 364 days
+  for (let i = 363; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const dayEntry = htLogs[key] || {};
+    const done = activeHabits.filter(h => dayEntry[h.id]?.completed).length;
+    const pct = activeHabits.length ? Math.round((done / activeHabits.length) * 100) : 0;
+    const lvl = pct === 0 ? 0 : pct <= 35 ? 1 : pct <= 70 ? 2 : pct < 100 ? 3 : 4;
+    const isSel = key === htSelectedDate;
+
+    cells.push(`
+      <div
+        class="ht-matrix-cell lvl-${lvl} ${isSel ? 'selected' : ''}"
+        onclick="selectHeatmapDateHT('${key}')"
+        title="${key}: ${pct}% completed"
+      ></div>
+    `);
+  }
+
+  wrap.innerHTML = `<div class="ht-matrix-grid">${cells.join('')}</div>`;
+}
+
+function selectHeatmapDateHT(key) {
+  htSelectedDate = key;
+  renderHabitTracker();
+}
+
+function exportHabitDataHT() {
+  const data = {
+    version: '1.0',
+    exportDate: new Date().toISOString(),
+    habits: htHabits,
+    logs: htLogs,
+    gamification: htGamification,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `habitos-backup-${getTodayDateKeyHT()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function initHabitTracker() {
+  loadHabitTrackerState();
+
+  const mainModal = document.getElementById('habitTrackerModal');
+  if (mainModal) {
+    mainModal.addEventListener('click', (e) => {
+      if (e.target === mainModal) closeHabitTrackerModal();
+    });
+  }
+}
+
+// Window Exports for HabitOS
+window.openHabitTrackerModal = openHabitTrackerModal;
+window.closeHabitTrackerModal = closeHabitTrackerModal;
+window.shiftHabitDate = shiftHabitDate;
+window.setHabitDateToday = setHabitDateToday;
+window.toggleHabitHT = toggleHabitHT;
+window.updateMeasurableHT = updateMeasurableHT;
+window.openHabitTimerModal = openHabitTimerModal;
+window.closeHabitTimerModal = closeHabitTimerModal;
+window.toggleHabitTimer = toggleHabitTimer;
+window.resetHabitTimer = resetHabitTimer;
+window.completeHabitTimerNow = completeHabitTimerNow;
+window.openHabitRelapseModal = openHabitRelapseModal;
+window.closeHabitRelapseModal = closeHabitRelapseModal;
+window.handleConfirmHabitRelapse = handleConfirmHabitRelapse;
+window.openHabitCreateModal = openHabitCreateModal;
+window.closeHabitCreateEditModal = closeHabitCreateEditModal;
+window.handleHabitTypeChange = handleHabitTypeChange;
+window.handleSaveHabitForm = handleSaveHabitForm;
+window.deleteHabitHT = deleteHabitHT;
+window.openHabitBadgesModal = openHabitBadgesModal;
+window.closeHabitBadgesModal = closeHabitBadgesModal;
+window.openHabitMoodModal = openHabitMoodModal;
+window.closeHabitMoodModal = closeHabitMoodModal;
+window.setHabitMoodRating = setHabitMoodRating;
+window.handleSaveHabitMood = handleSaveHabitMood;
+window.openHabitPrintModal = openHabitPrintModal;
+window.closeHabitPrintModal = closeHabitPrintModal;
+window.selectHeatmapDateHT = selectHeatmapDateHT;
+window.exportHabitDataHT = exportHabitDataHT;
+
+// =============================================================================
 // INIT
 // =============================================================================
 
@@ -13287,6 +15317,8 @@ initAuthEvents();
 initSidebarState();
 initTopNavScroll();
 initScrollToTop();
+initBrainDump();
+initHabitTracker();
 
 if (authToken && currentUser) {
   document.body.classList.remove('is-unauthenticated');

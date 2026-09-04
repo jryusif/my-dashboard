@@ -306,6 +306,12 @@
           <button type="button" class="routine-btn" id="eveningRoutineBtn" aria-haspopup="dialog">
             <span class="routine-btn-icon">🌙</span> Evening Routine
           </button>
+          <button type="button" class="routine-btn habit-quick-btn" id="sidebarHabitTrackerBtn" onclick="openHabitTrackerModal()" style="grid-column: 1 / -1; background: rgba(249, 115, 22, 0.1); border-color: rgba(249, 115, 22, 0.35);" title="HabitOS Behavioral Habit Tracker">
+            <span class="routine-btn-icon">🔥</span> Habit Tracker Hub <span class="sidebar-habit-streak" id="sidebarHabitStreakBadge" style="margin-left:auto; font-size:10.5px; color:#fb923c; font-family:monospace; background:rgba(0,0,0,0.3); padding:1px 6px; border-radius:4px;">🔥 0d streak</span>
+          </button>
+          <button type="button" class="routine-btn braindump-quick-btn" id="sidebarBrainDumpBtn" onclick="openBrainDumpPalette()" style="grid-column: 1 / -1; background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.35);" title="Universal Brain Dump (Ctrl+Space)">
+            <span class="routine-btn-icon">⚡</span> Quick Brain Dump <span style="margin-left:auto; font-size:10.5px; opacity:0.75; font-family:monospace; background:rgba(0,0,0,0.3); padding:1px 6px; border-radius:4px;">Ctrl+Space</span>
+          </button>
           <button type="button" class="routine-btn analytics-quick-btn" id="sidebarAnalyticsBtn" style="grid-column: 1 / -1; background: rgba(56, 189, 248, 0.08); border-color: rgba(56, 189, 248, 0.3);">
             <span class="routine-btn-icon">📊</span> Progress &amp; Charts Hub
           </button>
@@ -389,6 +395,31 @@
               </button>
               <button type="button" class="btn-dock-settings" id="btnHeaderNotificationSettings" title="Reminder Settings">
                 <span>⚙️</span>
+              </button>
+            </div>
+
+            <div class="dock-divider"></div>
+
+            <!-- Brain Dump Quick Capture & Triage Dock Capsule -->
+            <div class="dock-braindump-group">
+              <button type="button" class="btn-dock-braindump" id="btnHeaderBrainDump" onclick="openBrainDumpPalette()" title="Universal Brain Dump Quick-Capture (Ctrl + Space)">
+                <span class="dock-braindump-icon">⚡</span>
+                <span class="dock-braindump-label">Brain Dump</span>
+                <span class="dock-braindump-badge" id="headerBrainDumpBadge">0</span>
+              </button>
+              <button type="button" class="btn-dock-triage" id="btnHeaderTriage" onclick="openEveningTriageModal()" title="2-Minute Nightly Triage Ritual (8 PM)">
+                <span class="dock-triage-icon">🌙</span>
+              </button>
+            </div>
+
+            <div class="dock-divider"></div>
+
+            <!-- HabitOS Behavioral Habit Tracker Dock Capsule -->
+            <div class="dock-habit-group">
+              <button type="button" class="btn-dock-habit" id="btnHeaderHabitTracker" onclick="openHabitTrackerModal()" title="HabitOS Behavioral Habit Tracker & Streaks">
+                <span class="dock-habit-icon">🔥</span>
+                <span class="dock-habit-label">Habits</span>
+                <span class="dock-habit-badge" id="headerHabitBadge">0/0</span>
               </button>
             </div>
 
@@ -3684,6 +3715,640 @@
       </form>
     </div>
   </div>
+
+  <!-- ===================================================================
+       UNIVERSAL "BRAIN DUMP" QUICK-CAPTURE COMMAND PALETTE (Raycast / Spotlight)
+       =================================================================== -->
+  <div class="brain-dump-backdrop" id="brainDumpModal" hidden>
+    <div class="brain-dump-palette" id="brainDumpPalette">
+      <!-- Top Meta Header -->
+      <div class="brain-dump-header">
+        <div class="brain-dump-title-wrap">
+          <span class="brain-dump-icon-badge">⚡</span>
+          <strong class="brain-dump-title">Universal Brain Dump</strong>
+          <span class="brain-dump-badge-pill">Raycast Core</span>
+        </div>
+        <div class="brain-dump-header-right">
+          <button type="button" class="btn-bd-drawer-link" onclick="openBrainDumpDrawer()" title="View All Thoughts in Scratchpad">
+            <span>📥</span> <span id="bdModalCount">0 thoughts</span>
+          </button>
+          <button type="button" class="btn-bd-close" onclick="closeBrainDumpPalette()" aria-label="Close">✕</button>
+        </div>
+      </div>
+
+      <!-- Main Input Field -->
+      <div class="brain-dump-body">
+        <textarea
+          id="brainDumpInput"
+          class="brain-dump-textarea"
+          rows="3"
+          placeholder="What's on your mind? e.g. Finish endo obturation @tomorrow #work !urgent"
+          autocomplete="off"
+          spellcheck="false"
+        ></textarea>
+
+        <!-- Live Parsed Tags Preview Row -->
+        <div class="brain-dump-tags-row" id="brainDumpTagsRow" style="display: none;">
+          <span class="bd-tag-chip bd-tag-date" id="bdTagDate" style="display: none;">📅 Tomorrow</span>
+          <span class="bd-tag-chip bd-tag-category" id="bdTagCategory" style="display: none;">🏷️ #work</span>
+          <span class="bd-tag-chip bd-tag-priority" id="bdTagPriority" style="display: none;">⚡ !HIGH</span>
+        </div>
+      </div>
+
+      <!-- Bottom Keyboard Hints Footer -->
+      <div class="brain-dump-footer">
+        <div class="bd-kbd-hints">
+          <span><kbd>Enter</kbd> Save &amp; Close</span>
+          <span><kbd>Ctrl+Enter</kbd> Quick Next</span>
+          <span><kbd>Esc</kbd> Dismiss</span>
+        </div>
+        <div class="bd-syntax-hint">
+          Supports <strong>@date</strong>, <strong>#category</strong>, <strong>!priority</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       NIGHTLY 2-MINUTE INBOX ZERO TRIAGE RITUAL MODAL
+       =================================================================== -->
+  <div class="triage-modal-backdrop" id="eveningTriageModal" hidden>
+    <div class="triage-modal-container">
+      <!-- Top Status Bar -->
+      <div class="triage-topbar">
+        <div class="triage-top-left">
+          <span class="triage-moon-icon">🌙</span>
+          <span class="triage-heading">2-Minute Nightly Triage Ritual</span>
+        </div>
+        <button type="button" class="btn-triage-close" onclick="closeEveningTriageModal()" aria-label="Exit Triage">✕</button>
+      </div>
+
+      <!-- Main Card Stage -->
+      <div class="triage-stage" id="triageCardStage">
+        <div class="triage-card" id="triageActiveCard">
+          <div class="triage-card-header">
+            <span class="triage-step-counter" id="triageCounter">Thought 1 of 3</span>
+            <span class="triage-time-stamp" id="triageTimestamp">10:45 PM</span>
+          </div>
+
+          <div class="triage-card-body">
+            <p class="triage-thought-text" id="triageThoughtText">Sample thought text...</p>
+            <div class="triage-tags-row" id="triageTagsRow"></div>
+          </div>
+
+          <!-- Quick Date Picker (Conditionally shown if user clicks Task or presses T) -->
+          <div class="triage-date-picker" id="triageDatePicker" style="display: none;">
+            <div class="triage-picker-title">Schedule Task For:</div>
+            <div class="triage-picker-grid">
+              <button type="button" class="btn-picker-opt" onclick="dispatchTriageTask('today')">
+                <span class="picker-opt-icon">☀️</span>
+                <div><strong>Today</strong><span>Do before sleep</span></div>
+              </button>
+              <button type="button" class="btn-picker-opt" onclick="dispatchTriageTask('tomorrow')">
+                <span class="picker-opt-icon">⏰</span>
+                <div><strong>Tomorrow</strong><span>First thing morning</span></div>
+              </button>
+              <button type="button" class="btn-picker-opt" onclick="dispatchTriageTask('weekend')">
+                <span class="picker-opt-icon">📅</span>
+                <div><strong>This Weekend</strong><span>Saturday / Sunday</span></div>
+              </button>
+              <button type="button" class="btn-picker-opt" onclick="dispatchTriageTask('nextweek')">
+                <span class="picker-opt-icon">🧭</span>
+                <div><strong>Next Week</strong><span>7 days from now</span></div>
+              </button>
+            </div>
+            <button type="button" class="btn-picker-cancel" onclick="cancelTriageDatePicker()">Cancel</button>
+          </div>
+
+          <!-- 4 Instant Triage Action Buttons -->
+          <div class="triage-actions-wrap" id="triageActionsWrap">
+            <div class="triage-actions-grid">
+              <button type="button" class="btn-triage-act act-task" onclick="promptTriageTaskDate()" title="Convert to Task (Shortcut: T)">
+                <span class="triage-act-icon">☑️</span>
+                <span class="triage-act-label">Task</span>
+                <kbd>T</kbd>
+              </button>
+
+              <button type="button" class="btn-triage-act act-habit" onclick="dispatchTriageHabit()" title="Convert to Habit (Shortcut: H)">
+                <span class="triage-act-icon">🔥</span>
+                <span class="triage-act-label">Habit</span>
+                <kbd>H</kbd>
+              </button>
+
+              <button type="button" class="btn-triage-act act-vault" onclick="dispatchTriageVault()" title="Archive to Notes Vault (Shortcut: N)">
+                <span class="triage-act-icon">📖</span>
+                <span class="triage-act-label">Note Vault</span>
+                <kbd>N</kbd>
+              </button>
+
+              <button type="button" class="btn-triage-act act-discard" onclick="dispatchTriageDiscard()" title="Discard / Shred (Shortcut: D or Backspace)">
+                <span class="triage-act-icon">🗑️</span>
+                <span class="triage-act-label">Discard</span>
+                <kbd>D</kbd>
+              </button>
+            </div>
+
+            <button type="button" class="btn-triage-skip" onclick="skipTriageItem()">
+              <span>Skip for later</span> &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- Inbox Zero Zen Celebration View -->
+        <div class="triage-zen-card" id="triageZenCard" style="display: none;">
+          <div class="zen-trophy-ring">✨</div>
+          <h2 class="zen-title">Inbox Zero Achieved!</h2>
+          <p class="zen-subtitle">Your mind is clear, calm, and ready for tomorrow.</p>
+          <div class="zen-streak-capsule">
+            <span>🔥</span> <span id="zenStreakText">4-Day Reset Streak</span>
+          </div>
+          <p class="zen-meta-text">Total thoughts processed to date: <strong id="zenTotalProcessed">28</strong></p>
+          <button type="button" class="btn-zen-done" onclick="finishTriageZen()">Finish &amp; Unwind</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       NOTES & IDEAS VAULT MODAL (Searchable Reference Storage)
+       =================================================================== -->
+  <div class="modal-backdrop" id="notesVaultModal" hidden>
+    <div class="modal-content notes-vault-modal">
+      <div class="notes-vault-header">
+        <div class="notes-vault-title-wrap">
+          <span class="vault-icon">📖</span>
+          <h3>Notes &amp; Ideas Vault</h3>
+          <span class="vault-count-badge" id="notesVaultCountBadge">0 notes</span>
+        </div>
+        <button type="button" class="btn-modal-close" onclick="closeNotesVaultModal()">✕</button>
+      </div>
+
+      <div class="notes-vault-search-row">
+        <div class="vault-search-box">
+          <span class="search-glass-icon">🔍</span>
+          <input type="text" id="notesVaultSearchInput" placeholder="Search reference ideas, clinical protocols, notes..." oninput="renderNotesVaultGrid()" />
+        </div>
+        <div class="vault-tag-pills" id="notesVaultTagPills">
+          <!-- tag filter pills rendered by app.js -->
+        </div>
+      </div>
+
+      <div class="notes-vault-grid" id="notesVaultGrid">
+        <!-- archived note cards rendered by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       BRAIN DUMP SCRATCHPAD DRAWER
+       =================================================================== -->
+  <div class="brain-dump-drawer-backdrop" id="brainDumpDrawerBackdrop" hidden onclick="closeBrainDumpDrawer()">
+    <aside class="brain-dump-drawer" id="brainDumpDrawer" onclick="event.stopPropagation()">
+      <div class="bd-drawer-header">
+        <div class="bd-drawer-title-group">
+          <span class="bd-drawer-icon">⚡</span>
+          <h3>Brain Dump Inbox</h3>
+          <span class="bd-drawer-count" id="bdDrawerCountBadge">0</span>
+        </div>
+        <button type="button" class="btn-bd-drawer-close" onclick="closeBrainDumpDrawer()">✕</button>
+      </div>
+
+      <!-- Quick Triage Trigger Bar in Drawer -->
+      <div class="bd-drawer-triage-cta" id="bdDrawerTriageCta">
+        <button type="button" class="btn-drawer-start-triage" onclick="startTriageFromDrawer()">
+          <span>🌙</span> Start 2-Minute Evening Triage
+        </button>
+      </div>
+
+      <!-- List of Raw Thoughts -->
+      <div class="bd-drawer-list" id="bdDrawerList">
+        <!-- rendered by app.js -->
+      </div>
+
+      <div class="bd-drawer-footer">
+        <button type="button" class="btn-drawer-quick-capture" onclick="closeBrainDumpDrawer(); openBrainDumpPalette();">
+          <span>➕</span> New Thought <kbd>Ctrl+Space</kbd>
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===================================================================
+       HABITOS BEHAVIORAL HABIT TRACKER COMMAND CENTER MODAL
+       =================================================================== -->
+  <div class="habit-modal-backdrop" id="habitTrackerModal" hidden>
+    <div class="habit-tracker-modal-container">
+      <!-- Top Sticky Header -->
+      <div class="ht-header">
+        <div class="ht-header-brand">
+          <div class="ht-brand-badge">🔥</div>
+          <div>
+            <div class="ht-brand-title-row">
+              <h2 class="ht-brand-title">HabitOS Pro</h2>
+              <span class="ht-brand-pill">Behavioral Engine</span>
+            </div>
+            <p class="ht-brand-subtitle">Momentum, habit stacking &amp; gamified discipline</p>
+          </div>
+        </div>
+
+        <!-- Center Date Switcher -->
+        <div class="ht-date-nav">
+          <button type="button" class="btn-ht-date-nav" onclick="shiftHabitDate(-1)" title="Previous Day">◀</button>
+          <button type="button" class="btn-ht-date-today" id="htDateTodayBtn" onclick="setHabitDateToday()">
+            <span>📅</span> <span id="htSelectedDateLabel">Today</span>
+          </button>
+          <button type="button" class="btn-ht-date-nav" onclick="shiftHabitDate(1)" title="Next Day">▶</button>
+        </div>
+
+        <!-- Right Quick Actions -->
+        <div class="ht-header-actions">
+          <!-- Level & XP Capsule -->
+          <button type="button" class="ht-xp-capsule" onclick="openHabitBadgesModal()" title="View Achievements &amp; Level">
+            <span class="ht-lvl-tag" id="htLevelBadge">Lvl 3</span>
+            <div class="ht-xp-track">
+              <div class="ht-xp-fill" id="htXpFill" style="width: 45%;"></div>
+            </div>
+            <span class="ht-xp-text" id="htXpLabel">285 XP</span>
+          </button>
+
+          <!-- Streak Freeze Capsule -->
+          <div class="ht-freeze-capsule" id="htFreezeCapsule" title="Streak Freeze Shields: Automatically defends your streak on missed days">
+            <span>🛡️</span> <span id="htFreezeCount">1</span>
+          </div>
+
+          <!-- Badges Gallery Button -->
+          <button type="button" class="btn-ht-tool" onclick="openHabitBadgesModal()" title="Achievements &amp; Badges">
+            <span>🏆</span>
+          </button>
+
+          <!-- Daily Reflection / Mood -->
+          <button type="button" class="btn-ht-tool" onclick="openHabitMoodModal()" title="Daily Reflection &amp; Mood Rating">
+            <span>⭐</span>
+          </button>
+
+          <!-- Printable Sheet -->
+          <button type="button" class="btn-ht-tool" onclick="openHabitPrintModal()" title="Printable Bullet Journal Sheet">
+            <span>🖨️</span>
+          </button>
+
+          <!-- Export JSON Backup -->
+          <button type="button" class="btn-ht-tool" onclick="exportHabitDataHT()" title="Download JSON Backup">
+            <span>💾</span>
+          </button>
+
+          <!-- New Habit Button -->
+          <button type="button" class="btn-ht-new-habit" onclick="openHabitCreateModal()">
+            <span>+</span> <span>New Habit</span>
+          </button>
+
+          <!-- Close Modal -->
+          <button type="button" class="btn-ht-close" onclick="closeHabitTrackerModal()" aria-label="Close">✕</button>
+        </div>
+      </div>
+
+      <!-- Main Scrollable Body -->
+      <div class="ht-body">
+        <!-- Behavioral Psychology: Never Miss Twice Banner -->
+        <div class="ht-never-miss-twice-banner" id="htNeverMissTwiceBanner" style="display: none;">
+          <div class="ht-nmt-left">
+            <span class="ht-nmt-icon">⚠️</span>
+            <div>
+              <strong>Behavioral Rule: Never Miss Twice</strong>
+              <p id="htNeverMissTwiceText">You skipped a habit yesterday. Complete it today to defend your neurochemical momentum!</p>
+            </div>
+          </div>
+          <div class="ht-nmt-actions" id="htNeverMissTwiceActions"></div>
+        </div>
+
+        <!-- Holistic Momentum Stats -->
+        <div class="ht-stats-grid">
+          <div class="ht-stat-card">
+            <div class="ht-stat-top">
+              <span>⚡</span> <span>Consistency Index</span>
+            </div>
+            <div class="ht-stat-val" id="htConsistencyVal">85/100</div>
+            <div class="ht-stat-sub">Holistic discipline rating</div>
+          </div>
+          <div class="ht-stat-card">
+            <div class="ht-stat-top">
+              <span>🔥</span> <span>Peak Streak</span>
+            </div>
+            <div class="ht-stat-val text-orange" id="htPeakStreakVal">14 Days</div>
+            <div class="ht-stat-sub">Longest unbroken chain</div>
+          </div>
+          <div class="ht-stat-card">
+            <div class="ht-stat-top">
+              <span>✅</span> <span>Total Logs</span>
+            </div>
+            <div class="ht-stat-val text-emerald" id="htTotalCompletionsVal">58</div>
+            <div class="ht-stat-sub">Habits checked off to date</div>
+          </div>
+          <div class="ht-stat-card">
+            <div class="ht-stat-top">
+              <span>🎯</span> <span>Active Habits</span>
+            </div>
+            <div class="ht-stat-val text-sky" id="htActiveHabitsVal">4</div>
+            <div class="ht-stat-sub">Currently in your routine</div>
+          </div>
+        </div>
+
+        <!-- Routine Time Sections -->
+        <div class="ht-sections-wrap">
+          <!-- 🌅 Morning Routine -->
+          <div class="ht-section-block" id="htBlockMorning">
+            <div class="ht-section-header">
+              <div class="ht-sec-title-group">
+                <span class="ht-sec-icon text-amber">🌅</span>
+                <h3>Morning Routine</h3>
+                <span class="ht-sec-count" id="htMorningCount">0/0</span>
+              </div>
+            </div>
+            <div class="ht-cards-grid" id="htMorningGrid"></div>
+          </div>
+
+          <!-- ☀️ Afternoon Focus -->
+          <div class="ht-section-block" id="htBlockAfternoon">
+            <div class="ht-section-header">
+              <div class="ht-sec-title-group">
+                <span class="ht-sec-icon text-sky">☀️</span>
+                <h3>Afternoon Focus</h3>
+                <span class="ht-sec-count" id="htAfternoonCount">0/0</span>
+              </div>
+            </div>
+            <div class="ht-cards-grid" id="htAfternoonGrid"></div>
+          </div>
+
+          <!-- 🌙 Evening Wind-down -->
+          <div class="ht-section-block" id="htBlockEvening">
+            <div class="ht-section-header">
+              <div class="ht-sec-title-group">
+                <span class="ht-sec-icon text-indigo">🌙</span>
+                <h3>Evening Wind-down</h3>
+                <span class="ht-sec-count" id="htEveningCount">0/0</span>
+              </div>
+            </div>
+            <div class="ht-cards-grid" id="htEveningGrid"></div>
+          </div>
+
+          <!-- ⚡ Anytime & Lifelong Habits -->
+          <div class="ht-section-block" id="htBlockAnytime">
+            <div class="ht-section-header">
+              <div class="ht-sec-title-group">
+                <span class="ht-sec-icon text-emerald">⚡</span>
+                <h3>Anytime Habits</h3>
+                <span class="ht-sec-count" id="htAnytimeCount">0/0</span>
+              </div>
+            </div>
+            <div class="ht-cards-grid" id="htAnytimeGrid"></div>
+          </div>
+        </div>
+
+        <!-- GitHub-Style Contribution Heatmap Matrix -->
+        <div class="ht-heatmap-card">
+          <div class="ht-heatmap-top">
+            <div class="ht-heatmap-title">
+              <span>📅</span>
+              <strong>52-Week Consistency Matrix</strong>
+              <span class="ht-matrix-badge">GitHub Style</span>
+            </div>
+            <div class="ht-heatmap-legend">
+              <span>Less</span>
+              <span class="ht-cell lvl-0"></span>
+              <span class="ht-cell lvl-1"></span>
+              <span class="ht-cell lvl-2"></span>
+              <span class="ht-cell lvl-3"></span>
+              <span class="ht-cell lvl-4"></span>
+              <span>More</span>
+            </div>
+          </div>
+          <div class="ht-heatmap-matrix-wrap" id="htHeatmapMatrixWrap">
+            <!-- Rendered by app.js -->
+          </div>
+          <div class="ht-heatmap-bottom">
+            <span>Click any day cell to travel back and view historical habit checks</span>
+            <span>Viewing: <strong id="htHeatmapSelectedLabel">Today</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create / Edit Habit Sub-Modal -->
+  <div class="modal-backdrop ht-submodal-backdrop" id="habitCreateEditModal" hidden>
+    <div class="modal-content ht-form-modal">
+      <div class="ht-submodal-header">
+        <h3 id="htFormModalTitle">Create New Habit</h3>
+        <button type="button" class="btn-modal-close" onclick="closeHabitCreateEditModal()">✕</button>
+      </div>
+      <form id="htHabitForm" onsubmit="handleSaveHabitForm(event)" class="ht-submodal-form">
+        <input type="hidden" id="htFormHabitId" value="" />
+        
+        <div>
+          <label class="ht-label">Habit Name *</label>
+          <input type="text" id="htFormTitle" required placeholder="e.g. 2,500 ml water, Read 25 mins, Cold shower" class="ht-input" />
+        </div>
+
+        <div>
+          <label class="ht-label">Engine Type</label>
+          <div class="ht-type-selector-grid">
+            <label class="ht-type-pill">
+              <input type="radio" name="htTypeRadio" value="binary" checked onchange="handleHabitTypeChange('binary')" />
+              <div>✓ Checkbox<span>Yes/No binary</span></div>
+            </label>
+            <label class="ht-type-pill">
+              <input type="radio" name="htTypeRadio" value="measurable" onchange="handleHabitTypeChange('measurable')" />
+              <div>📊 Measurable<span>Target numeric</span></div>
+            </label>
+            <label class="ht-type-pill">
+              <input type="radio" name="htTypeRadio" value="duration" onchange="handleHabitTypeChange('duration')" />
+              <div>⏱️ Timer<span>Focus session</span></div>
+            </label>
+            <label class="ht-type-pill">
+              <input type="radio" name="htTypeRadio" value="break" onchange="handleHabitTypeChange('break')" />
+              <div>🚫 Break Habit<span>Days abstained</span></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Measurable Fields -->
+        <div class="ht-type-config-box" id="htMeasurableConfig" style="display: none;">
+          <div>
+            <label class="ht-label">Target</label>
+            <input type="number" id="htFormTargetVal" value="2500" class="ht-input" />
+          </div>
+          <div>
+            <label class="ht-label">Unit</label>
+            <input type="text" id="htFormUnit" value="ml" placeholder="ml, pages" class="ht-input" />
+          </div>
+          <div>
+            <label class="ht-label">Step (+/-)</label>
+            <input type="number" id="htFormStepVal" value="250" class="ht-input" />
+          </div>
+        </div>
+
+        <!-- Duration Fields -->
+        <div class="ht-type-config-box" id="htDurationConfig" style="display: none;">
+          <div style="grid-column: 1 / -1;">
+            <label class="ht-label">Target Duration (Minutes)</label>
+            <input type="number" id="htFormTargetMinutes" value="25" class="ht-input" />
+          </div>
+        </div>
+
+        <div class="ht-form-row-2">
+          <div>
+            <label class="ht-label">Routine Time</label>
+            <select id="htFormTimeOfDay" class="ht-input">
+              <option value="morning">🌅 Morning Routine</option>
+              <option value="afternoon">☀️ Afternoon Focus</option>
+              <option value="evening">🌙 Evening Wind-down</option>
+              <option value="anytime">⚡ Anytime</option>
+            </select>
+          </div>
+          <div>
+            <label class="ht-label">Category</label>
+            <select id="htFormCategory" class="ht-input">
+              <option value="health">Health &amp; Fitness</option>
+              <option value="focus">Deep Work &amp; Career</option>
+              <option value="mindfulness">Mind &amp; Rest</option>
+              <option value="learning">Studies &amp; Reading</option>
+              <option value="finance">Wealth &amp; Capital</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="ht-label">Habit Stacking Anchor (Optional)</label>
+          <input type="text" id="htFormAnchor" placeholder="e.g. After I pour morning coffee / After closing laptop" class="ht-input" />
+          <span class="ht-hint">Connects this habit to an established daily action for instant behavioral lock-in.</span>
+        </div>
+
+        <div class="ht-modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeHabitCreateEditModal()">Cancel</button>
+          <button type="submit" class="btn-primary" id="htFormSubmitBtn">Save Habit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Focus Timer Sub-Modal -->
+  <div class="modal-backdrop ht-submodal-backdrop" id="habitTimerModal" hidden>
+    <div class="modal-content ht-timer-dialog">
+      <div class="ht-submodal-header">
+        <span class="ht-brand-pill">⏱️ Focus Engine</span>
+        <button type="button" class="btn-modal-close" onclick="closeHabitTimerModal()">✕</button>
+      </div>
+      <h3 id="htTimerHabitTitle" style="font-size:16px; margin:8px 0 2px;">Focus Session</h3>
+      <p id="htTimerHabitSub" style="font-size:12px; color:#94a3b8; margin-bottom:16px;">Target: 25 minutes</p>
+
+      <div class="ht-timer-dial">
+        <div class="ht-timer-clock-digits" id="htTimerDigits">25:00</div>
+      </div>
+
+      <div class="ht-timer-controls">
+        <button type="button" class="ht-btn-ctrl" onclick="resetHabitTimer()" title="Reset">🔄</button>
+        <button type="button" class="ht-btn-play" id="htTimerPlayBtn" onclick="toggleHabitTimer()" title="Start / Pause">▶</button>
+        <button type="button" class="ht-btn-ctrl" onclick="completeHabitTimerNow()" title="Complete Now">✓</button>
+      </div>
+
+      <button type="button" class="btn-primary" style="width:100%;" onclick="completeHabitTimerNow()">Save &amp; Log to Habit</button>
+    </div>
+  </div>
+
+  <!-- Relapse Reflection Sub-Modal -->
+  <div class="modal-backdrop ht-submodal-backdrop" id="habitRelapseModal" hidden>
+    <div class="modal-content ht-relapse-dialog">
+      <div class="ht-submodal-header">
+        <span class="ht-brand-pill" style="color:#f87171; border-color:rgba(248,113,113,0.3); background:rgba(248,113,113,0.1);">🤝 Compassionate Reset</span>
+        <button type="button" class="btn-modal-close" onclick="closeHabitRelapseModal()">✕</button>
+      </div>
+      <h3 id="htRelapseHabitTitle" style="font-size:15px; margin:8px 0 4px;">Reset Streak</h3>
+      <div class="ht-compassion-box">
+        <p><strong>Growth is non-linear.</strong> Relapses are diagnostic insights, not failures. Acknowledge what occurred and restart with pride today.</p>
+      </div>
+      <form onsubmit="handleConfirmHabitRelapse(event)">
+        <input type="hidden" id="htRelapseHabitId" value="" />
+        <label class="ht-label">What triggered this? (Optional reflection)</label>
+        <textarea id="htRelapseTriggerNote" rows="3" class="ht-input" placeholder="e.g. Fatigue, social friction, late screen time..."></textarea>
+        <div class="ht-modal-footer" style="margin-top:12px;">
+          <button type="button" class="btn-secondary" onclick="closeHabitRelapseModal()">Cancel</button>
+          <button type="submit" class="btn-primary" style="background:#ef4444;">Reset Streak &amp; Begin Day 1</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Badges & Achievements Gallery Sub-Modal -->
+  <div class="modal-backdrop ht-submodal-backdrop" id="habitBadgesModal" hidden>
+    <div class="modal-content ht-badges-dialog">
+      <div class="ht-submodal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:20px;">🏆</span>
+          <div>
+            <h3 style="margin:0; font-size:16px;">Achievements &amp; Milestones</h3>
+            <p style="margin:0; font-size:11.5px; color:#94a3b8;" id="htBadgesUnlockedCount">Unlocked 3 of 10 Badges</p>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close" onclick="closeHabitBadgesModal()">✕</button>
+      </div>
+      <div class="ht-badges-grid" id="htBadgesGrid">
+        <!-- Rendered by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Mood & Daily Reflection Sub-Modal -->
+  <div class="modal-backdrop ht-submodal-backdrop" id="habitMoodModal" hidden>
+    <div class="modal-content ht-mood-dialog">
+      <div class="ht-submodal-header">
+        <span class="ht-brand-pill" style="color:#fbbf24; border-color:rgba(251,191,36,0.3); background:rgba(251,191,36,0.1);">⭐ Daily Reflection</span>
+        <button type="button" class="btn-modal-close" onclick="closeHabitMoodModal()">✕</button>
+      </div>
+      <h3 style="margin:8px 0 2px; font-size:15px; text-align:center;">Rate Today's Discipline</h3>
+      <div class="ht-star-rating-row" id="htStarRatingRow">
+        <button type="button" class="btn-ht-star active" onclick="setHabitMoodRating(1)">★</button>
+        <button type="button" class="btn-ht-star active" onclick="setHabitMoodRating(2)">★</button>
+        <button type="button" class="btn-ht-star active" onclick="setHabitMoodRating(3)">★</button>
+        <button type="button" class="btn-ht-star active" onclick="setHabitMoodRating(4)">★</button>
+        <button type="button" class="btn-ht-star active" onclick="setHabitMoodRating(5)">★</button>
+      </div>
+      <form onsubmit="handleSaveHabitMood(event)">
+        <label class="ht-label">Daily Win or Lesson (Optional)</label>
+        <textarea id="htMoodNoteInput" rows="3" class="ht-input" placeholder="What unlocked momentum today? What distracted you?"></textarea>
+        <div class="ht-modal-footer" style="margin-top:12px;">
+          <button type="button" class="btn-secondary" onclick="closeHabitMoodModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Reflection (+10 XP)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Printable Sheet Sub-Modal -->
+  <div class="modal-backdrop ht-submodal-backdrop" id="habitPrintModal" hidden>
+    <div class="modal-content ht-print-dialog">
+      <div class="ht-submodal-header no-print">
+        <div>
+          <h3 style="margin:0; font-size:16px;">Printable Habit Sheet</h3>
+          <p style="margin:0; font-size:11.5px; color:#94a3b8;">Physical bullet journal checklist for desk discipline</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-primary" onclick="window.print()">🖨️ Print Now</button>
+          <button type="button" class="btn-modal-close" onclick="closeHabitPrintModal()">✕</button>
+        </div>
+      </div>
+      <div class="ht-print-sheet-content" id="htPrintSheetContent">
+        <!-- Rendered by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       UNIVERSAL FLOATING BRAIN DUMP TRIGGER BUTTON (FAB)
+       =================================================================== -->
+  <button type="button" class="btn-floating-braindump" id="btnFloatingBrainDump" onclick="openBrainDumpPalette()" title="Universal Brain Dump Quick-Capture (Ctrl + Space)">
+    <span class="floating-bd-icon">⚡</span>
+    <span class="floating-bd-label">Brain Dump</span>
+    <span class="floating-bd-badge" id="floatingBrainDumpBadge">0</span>
+  </button>
 
   <!-- ===================================================================
        SCROLL TO TOP DYNAMIC FLOATING ACTION BUTTON
