@@ -209,8 +209,8 @@ body.sidebar-is-collapsed .main-content {
   margin-right: auto;
   max-width: 1400px;
   width: 100%;
-  padding-left: 48px;
-  padding-right: 48px;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 /* Sidebar Backdrop Overlay (Mobile & Tablet) */
@@ -273,10 +273,10 @@ body.sidebar-mobile-open .sidebar-backdrop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 6px 14px;
   margin-bottom: 24px;
-  min-height: 54px;
+  min-height: 52px;
   box-sizing: border-box;
   background: rgba(6, 8, 13, 0.45);
   backdrop-filter: blur(20px) saturate(180%);
@@ -425,40 +425,24 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
   z-index: 5;
 }
 
-body.sidebar-is-collapsed .main-top-navbar {
-  display: grid;
-  grid-template-columns: minmax(42px, 1fr) auto minmax(auto, 1fr);
-  align-items: center;
-  gap: 12px;
-}
-
-body.sidebar-is-collapsed .nav-left-zone {
-  grid-column: 1;
-  justify-self: start;
-}
-
 body.sidebar-is-collapsed .header-flip-clock-wrap {
-  grid-column: 2;
-  justify-self: center;
   display: flex;
-  margin: 0 auto;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   animation: flipClockFlyIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-body.sidebar-is-collapsed .nav-right-zone {
-  grid-column: 3;
-  justify-self: end;
+  pointer-events: auto;
 }
 
 @keyframes flipClockFlyIn {
   0% {
     opacity: 0;
-    transform: translateY(-10px) scale(0.96) rotateX(10deg);
+    transform: translateX(-50%) translateY(-10px) scale(0.96) rotateX(10deg);
     filter: blur(4px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1) rotateX(0deg);
+    transform: translateX(-50%) translateY(0) scale(1) rotateX(0deg);
     filter: blur(0);
   }
 }
@@ -495,22 +479,21 @@ body.sidebar-is-collapsed .nav-right-zone {
 .nav-right-zone {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
   z-index: 10;
-  flex-shrink: 1;
-  min-width: 0;
+  flex: 0 0 auto;
 }
 
 /* Sub-Island A: Productivity Suite Island */
 .nav-apps-dock {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   background: linear-gradient(135deg, rgba(15, 22, 36, 0.88) 0%, rgba(10, 14, 24, 0.94) 100%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  padding: 3px 5px;
+  padding: 2px 4px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
@@ -528,11 +511,11 @@ body.sidebar-is-collapsed .nav-right-zone {
   background: transparent;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
+  gap: 5px;
+  padding: 4px 8px;
   border-radius: 999px;
   color: #cbd5e1;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -559,7 +542,7 @@ body.sidebar-is-collapsed .nav-right-zone {
 }
 
 .app-dock-icon {
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -569,13 +552,13 @@ body.sidebar-is-collapsed .nav-right-zone {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3.5px;
   border-radius: 999px;
   background: #38bdf8;
   color: #0b1120;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
   font-family: var(--font-mono, monospace);
   line-height: 1;
@@ -590,16 +573,16 @@ body.sidebar-is-collapsed .nav-right-zone {
   border: 1px solid rgba(168, 85, 247, 0.25);
   background: rgba(168, 85, 247, 0.1);
   color: #d8b4fe;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  margin-left: 2px;
+  margin-left: 1px;
   flex-shrink: 0;
 }
 .btn-app-dock-triage:hover {
@@ -614,11 +597,11 @@ body.sidebar-is-collapsed .nav-right-zone {
 .nav-system-dock {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: linear-gradient(135deg, rgba(15, 22, 36, 0.88) 0%, rgba(10, 14, 24, 0.94) 100%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  padding: 3px 6px 3px 6px;
+  padding: 2px 5px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
@@ -626,33 +609,31 @@ body.sidebar-is-collapsed .nav-right-zone {
 }
 
 /* Responsive Ergonomics for Top Navbar */
-@media (max-width: 1250px) {
+@media (max-width: 1350px) {
   .app-dock-label {
     display: none;
   }
   .btn-app-dock {
-    padding: 5px 8px;
-    gap: 4px;
+    padding: 4px 7px;
+    gap: 3px;
   }
 }
 
-@media (max-width: 1100px) {
-  body.sidebar-is-collapsed .main-top-navbar {
-    display: flex;
-    justify-content: space-between;
-  }
+@media (max-width: 1120px) {
   body.sidebar-is-collapsed .header-flip-clock-wrap {
+    position: static;
+    transform: none;
     margin: 0 auto;
   }
-  .user-email-text {
-    max-width: 65px;
-  }
   .calendar-flip-text {
-    max-width: 90px;
+    max-width: 80px;
+  }
+  .user-email-text {
+    max-width: 60px;
   }
 }
 
-@media (max-width: 940px) {
+@media (max-width: 920px) {
   .dock-meta-group {
     display: none;
   }
@@ -666,20 +647,23 @@ body.sidebar-is-collapsed .nav-right-zone {
     display: none !important;
   }
   .nav-right-zone {
-    gap: 6px;
+    gap: 4px;
   }
 }
 
 @media (max-width: 640px) {
   .main-top-navbar {
-    padding: 6px 10px;
+    padding: 5px 8px;
   }
   .nav-apps-dock {
-    padding: 2px 4px;
+    padding: 2px 3px;
     gap: 2px;
   }
   .btn-app-dock {
-    padding: 4px 6px;
+    padding: 3px 5px;
+  }
+  .user-email-text {
+    display: none;
   }
 }
 
@@ -708,14 +692,16 @@ body.sidebar-is-collapsed .nav-right-zone {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #fff;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  flex-shrink: 0;
 }
 .btn-dock-notification:hover {
   background: rgba(255, 255, 255, 0.15);
@@ -724,7 +710,7 @@ body.sidebar-is-collapsed .nav-right-zone {
   transform: translateY(-1px);
 }
 .dock-bell-icon {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
 }
 
@@ -734,15 +720,15 @@ body.sidebar-is-collapsed .nav-right-zone {
   right: -5px;
   background: #ef4444;
   color: #fff;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
-  min-width: 17px;
-  height: 17px;
+  min-width: 15px;
+  height: 15px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 3px;
   border: 2px solid #0d1117;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
   animation: notifPulse 2s infinite;
@@ -753,15 +739,17 @@ body.sidebar-is-collapsed .nav-right-zone {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--ink-soft);
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  flex-shrink: 0;
 }
 .btn-dock-settings:hover {
   background: rgba(255, 255, 255, 0.12);
@@ -9101,15 +9089,15 @@ body.sidebar-is-collapsed .nav-right-zone {
   background: rgba(255, 255, 255, 0.06);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  max-width: 140px;
+  gap: 4px;
+  max-width: 125px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -9123,7 +9111,7 @@ body.sidebar-is-collapsed .nav-right-zone {
   border-color: rgba(56, 189, 248, 0.4);
 }
 .user-email-text {
-  max-width: 90px;
+  max-width: 75px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -10427,17 +10415,18 @@ body.is-authenticated .auth-gateway-screen {
 .btn-dock-admin-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.28));
   border: 1px solid rgba(245, 158, 11, 0.45);
   color: #fbbf24;
-  padding: 5px 12px;
+  padding: 3px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
 }
 .btn-dock-admin-pill:hover {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(217, 119, 6, 0.4));
@@ -10446,7 +10435,7 @@ body.is-authenticated .auth-gateway-screen {
   box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
 }
 .admin-crown-icon {
-  font-size: 14px;
+  font-size: 13px;
 }
 .dock-admin-badge {
   background: #ef4444;
