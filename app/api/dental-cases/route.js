@@ -1,18 +1,17 @@
 import { prisma } from '@/lib/prisma.js';
 import { getAuthUser, errorResponse, successResponse } from '@/lib/auth.js';
+import { buildPhotosJson, formatCaseOutput } from '@/lib/dental.js';
 
 async function resolveAndCheckDentalUser(req) {
   const auth = await getAuthUser(req);
   if (!auth || !auth.authenticated || !auth.userId) return { error: 'Unauthorized', status: 401 };
   const user = await prisma.user.findUnique({
     where: { id: auth.userId },
-    select: { id: true, role: true, persona: true, dentalApproved: true }
+    select: { id: true, role: true, persona: true, dentalApproved: true, status: true }
   });
   if (!user) return { error: 'User not found', status: 404 };
-  const isMasterAdmin = user.role === 'ADMIN';
-  const isApproved = Boolean(user.dentalApproved);
-  if (!isMasterAdmin && !isApproved) {
-    return { error: 'Dental Cases archive is locked. Administrator approval required.', status: 403 };
+  if (user.status === 'REJECTED') {
+    return { error: 'Account suspended. Please contact administrator.', status: 403 };
   }
   return { userId: user.id };
 }
@@ -47,7 +46,8 @@ export async function GET(req) {
       );
     }
 
-    return successResponse({ count: cases.length, cases });
+    const formattedCases = cases.map(formatCaseOutput);
+    return successResponse({ count: formattedCases.length, cases: formattedCases });
   } catch (err) {
     console.error('Error fetching dental cases:', err);
     return errorResponse('Could not fetch dental cases.');
@@ -74,7 +74,6 @@ export async function POST(req) {
       status,
       showcaseForPatients,
       date,
-      photos,
       steps
     } = body;
 
@@ -97,14 +96,14 @@ export async function POST(req) {
         status: status || 'In Progress',
         showcaseForPatients: Boolean(showcaseForPatients),
         date: date || new Date().toISOString().split('T')[0],
-        photos: Array.isArray(photos) ? photos : [],
+        photos: buildPhotosJson(body),
         steps: Array.isArray(steps) ? steps : []
       }
     });
 
-    return successResponse(dentalCase, 201);
+    return successResponse(formatCaseOutput(dentalCase), 201);
   } catch (err) {
     console.error('Error creating dental case:', err);
-    return errorResponse('Could not create dental case.');
+    return errorResponse(err.message || 'Could not create dental case.');
   }
 }

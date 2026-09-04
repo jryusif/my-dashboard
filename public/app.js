@@ -6738,13 +6738,16 @@ if (dentalCaseForm) {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error('failed');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || errJson.message || `Server error (${res.status})`);
+      }
       closeDentalCaseFormModal();
       showToast(caseId ? 'Clinical case updated.' : 'New clinical case saved to archive.');
       await loadDentalCases();
     } catch (err) {
       console.error('Error saving dental case:', err);
-      showToast('Could not save case — please try again.');
+      showToast(err.message || 'Could not save case — please try again.');
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Save Clinical Case';
