@@ -7315,11 +7315,11 @@ async function selectDay(index) {
     btn.classList.toggle('is-active', i === index);
     btn.setAttribute('aria-selected', String(i === index));
   });
-  if (weekDates && weekDates[index] && typeof calState === 'object') {
+  if (weekDates && weekDates[index] && typeof window !== 'undefined' && window.calState) {
     const sel = weekDates[index];
-    calState.activeDate = new Date(sel);
-    calState.activeDateKey = toISODate(sel);
-    calState.miniDate = new Date(sel);
+    window.calState.activeDate = new Date(sel);
+    window.calState.activeDateKey = toISODate(sel);
+    window.calState.miniDate = new Date(sel);
   }
   await loadWeekDay();
 }
@@ -15583,6 +15583,21 @@ window.closeHabitPrintModal = closeHabitPrintModal;
 window.selectHeatmapDateHT = selectHeatmapDateHT;
 window.exportHabitDataHT = exportHabitDataHT;
 
+// Pre-initialize Calendar state on window for early hooks (e.g. initWeekTabs)
+window.calState = window.calState || {
+  activeDate: new Date(),
+  activeDateKey: new Date().toISOString().split('T')[0],
+  currentView: 'month', // 'month' | 'week' | 'day'
+  searchQuery: '',
+  selectedCategory: 'all',
+  selectedPriority: 'all',
+  selectedStatus: 'all',
+  showStats: false,
+  editingTaskId: null,
+  subtasksBuffer: [],
+  miniDate: new Date(),
+};
+
 // =============================================================================
 // INIT
 // =============================================================================
@@ -15629,19 +15644,7 @@ if (authToken && currentUser) {
 // 📅 SMART CALENDAR OS — LOCAL-FIRST ENGINE & TIME-BLOCKING SUITE
 // =============================================================================
 
-const calState = {
-  activeDate: new Date(),
-  activeDateKey: new Date().toISOString().split('T')[0],
-  currentView: 'month', // 'month' | 'week' | 'day'
-  searchQuery: '',
-  selectedCategory: 'all',
-  selectedPriority: 'all',
-  selectedStatus: 'all',
-  showStats: false,
-  editingTaskId: null,
-  subtasksBuffer: [],
-  miniDate: new Date(),
-};
+const calState = window.calState;
 
 // ── Date Utility Helpers ──
 function getCalDateKey(date) {
