@@ -47,6 +47,7 @@ model User {
   workoutSplits           WorkoutSplit[]
   workoutExercises        WorkoutExercise[]
   exerciseWeightLogs      ExerciseWeightLog[]
+  workoutExerciseLogs     WorkoutExerciseLog[]
   roadmapMilestones       RoadmapMilestone[]
   financialTransactions   FinancialTransaction[]
   financialGoals          FinancialGoal[]
@@ -187,6 +188,23 @@ model ExerciseWeightLog {
   @@index([userId, exerciseName])
   @@index([userId, date])
   @@map("exercise_weight_logs")
+}
+
+model WorkoutExerciseLog {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  exerciseId    String   @map("exercise_id")
+  date          String   // 'YYYY-MM-DD'
+  completed     Boolean  @default(false)
+  completedSets Json?    @map("completed_sets")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exerciseId, date])
+  @@index([userId, date])
+  @@map("workout_exercise_logs")
 }
 
 model RoadmapMilestone {

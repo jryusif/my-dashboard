@@ -2054,6 +2054,12 @@ async function loadWorkoutsPage(forceDayId = null) {
 
     if (workoutProgramData) {
       workoutProgramData.todayDayId = clientToday;
+      if (workoutProgramData.todaySets) {
+        const clientDate = toISODate(new Date());
+        const localSets = getStoredCompletedSets(clientDate);
+        const mergedSets = { ...localSets, ...workoutProgramData.todaySets };
+        saveStoredCompletedSets(clientDate, mergedSets);
+      }
     }
 
     if (forceDayId) {
@@ -2074,31 +2080,94 @@ async function loadWorkoutsPage(forceDayId = null) {
   }
 }
 
+function updateTodaySessionProgress() {
+  if (!workoutProgramData || !workoutProgramData.days) return;
+  const clientToday = getClientTodayDayId();
+  const todayDay = workoutProgramData.days.find(d => d.id === (workoutProgramData.todayDayId || clientToday)) || workoutProgramData.days[0];
+  if (!todayDay) return;
+
+  const todayDate = toISODate(new Date());
+  const storedSets = getStoredCompletedSets(todayDate);
+  const todayExercises = todayDay.exercises || [];
+  const todayExCount = todayExercises.length;
+
+  const doneExercises = todayExercises.filter(ex => {
+    const totalSets = parseInt(ex.sets || ex.targetSets || 4, 10) || 4;
+    const sets = Array.isArray(storedSets[ex.id]) ? storedSets[ex.id] : [];
+    const isDoneFromSets = totalSets > 0 && sets.length >= totalSets;
+    const isDoneFromApi = workoutProgramData.todayCompleted && workoutProgramData.todayCompleted.includes(ex.id);
+    return isDoneFromSets || isDoneFromApi;
+  });
+
+  const todayDoneCount = doneExercises.length;
+  const isAllDone = todayDoneCount === todayExCount && todayExCount > 0;
+
+  // 1. Live update "Today's Session" stat card
+  const statValEl = document.getElementById('todaySessionStatValue');
+  if (statValEl) {
+    statValEl.textContent = todayDay.isRestDay ? '🌴 Rest Day' : `${todayDoneCount}/${todayExCount} Done`;
+    statValEl.className = `cat-stat-value ${isAllDone ? 'is-done' : 'is-pending'}`;
+  }
+
+  // 2. Live update Category Completion bar
+  const catProgPctEl = document.getElementById('catProgressPct');
+  const catProgFillEl = document.getElementById('catProgressFill');
+  if (catProgPctEl && catProgFillEl) {
+    const pct = todayExCount > 0 ? Math.round((todayDoneCount / todayExCount) * 100) : 0;
+    catProgPctEl.textContent = todayExCount === 0 ? '0% · 0 exercises' : `${pct}% · ${todayDoneCount}/${todayExCount} done`;
+    catProgFillEl.style.width = `${pct}%`;
+    catProgFillEl.style.background = 'var(--workouts)';
+    catProgPctEl.style.color = 'var(--workouts)';
+  }
+
+  return { todayDoneCount, todayExCount };
+}
+
 function renderWorkoutsView() {
   const clientToday = getClientTodayDayId();
   if (workoutProgramData) {
     workoutProgramData.todayDayId = clientToday;
   }
-  const { days, todayDayId = clientToday, todayDate, todayCompleted } = workoutProgramData;
+  const { days, todayDayId = clientToday, todayDate = toISODate(new Date()), todayCompleted } = workoutProgramData;
   const currentDay = days.find(d => d.id === selectedWorkoutDayId) || days.find(d => d.id === clientToday) || days[0];
   const todayDay = days.find(d => d.id === todayDayId) || days[0];
 
   // Automated Active & Rest Day Calculation
   const activeDaysCount = days.filter(d => !d.isRestDay && ((d.exercises && d.exercises.length > 0) || (d.title && !d.title.toLowerCase().includes('rest')))).length;
   const restDaysCount = 7 - activeDaysCount;
-  const todayExCount = todayDay.exercises ? todayDay.exercises.length : 0;
-  const todayDoneCount = todayCompleted ? todayCompleted.length : 0;
+  const todayExercises = todayDay.exercises || [];
+  const todayExCount = todayExercises.length;
+
+  const storedTodaySets = getStoredCompletedSets(todayDate);
+  const todayDoneCount = todayExercises.filter(ex => {
+    const totalSets = parseInt(ex.sets || ex.targetSets || 4, 10) || 4;
+    const sets = Array.isArray(storedTodaySets[ex.id]) ? storedTodaySets[ex.id] : [];
+    const isDoneFromSets = totalSets > 0 && sets.length >= totalSets;
+    const isDoneFromApi = todayCompleted && todayCompleted.includes(ex.id);
+    return isDoneFromSets || isDoneFromApi;
+  }).length;
 
   categoryStats.innerHTML = [
     { label: 'Weekly Split', value: `${activeDaysCount} Active &middot; ${restDaysCount} Rest`, cls: '' },
     { label: "Today's Focus", value: todayDay.isRestDay ? '🌴 Rest &amp; Recovery' : escapeHtml(todayDay.title.split('—')[0] || todayDay.title), cls: '' },
-    { label: "Today's Session", value: todayDay.isRestDay ? '🌴 Rest Day' : `${todayDoneCount}/${todayExCount} Done`, cls: todayDoneCount === todayExCount && todayExCount > 0 ? 'is-done' : 'is-pending' },
+    { label: "Today's Session", value: todayDay.isRestDay ? '🌴 Rest Day' : `${todayDoneCount}/${todayExCount} Done`, cls: todayDoneCount === todayExCount && todayExCount > 0 ? 'is-done' : 'is-pending', id: 'todaySessionStatValue' },
   ].map(s => `
     <div class="cat-stat">
       <div class="cat-stat-label">${s.label}</div>
-      <div class="cat-stat-value ${s.cls}">${s.value}</div>
+      <div class="cat-stat-value ${s.cls}" ${s.id ? `id="${s.id}"` : ''}>${s.value}</div>
     </div>
   `).join('');
+
+  // Update Category Completion bar
+  const catProgPctEl = document.getElementById('catProgressPct');
+  const catProgFillEl = document.getElementById('catProgressFill');
+  if (catProgPctEl && catProgFillEl) {
+    const pct = todayExCount > 0 ? Math.round((todayDoneCount / todayExCount) * 100) : 0;
+    catProgPctEl.textContent = todayExCount === 0 ? '0% · 0 exercises' : `${pct}% · ${todayDoneCount}/${todayExCount} done`;
+    catProgFillEl.style.width = `${pct}%`;
+    catProgFillEl.style.background = 'var(--workouts)';
+    catProgPctEl.style.color = 'var(--workouts)';
+  }
 
   // Top Switcher & Action Bar
   categoryTaskArea.innerHTML = `
@@ -2275,7 +2344,7 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
       const setIdx = parseInt(btn.dataset.setIndex, 10);
       const totalSets = parseInt(btn.dataset.totalSets, 10) || 4;
       
-      const { isSetDone, isAllSetsDone, completedCount } = toggleSetCompletion(todayDate, exId, setIdx, totalSets);
+      const { isSetDone, isAllSetsDone, completedCount, exSets } = toggleSetCompletion(todayDate, exId, setIdx, totalSets);
 
       btn.classList.toggle('is-filled', isSetDone);
       btn.textContent = isSetDone ? '✓' : String(setIdx + 1);
@@ -2286,14 +2355,24 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
         card.classList.toggle('is-completed', isAllSetsDone);
       }
 
+      if (!workoutProgramData.todayCompleted) workoutProgramData.todayCompleted = [];
       if (isAllSetsDone) {
-        toggleExerciseCheck(exId, true, todayDate, false);
+        if (!workoutProgramData.todayCompleted.includes(exId)) {
+          workoutProgramData.todayCompleted.push(exId);
+        }
+      } else {
+        workoutProgramData.todayCompleted = workoutProgramData.todayCompleted.filter(id => id !== exId);
+      }
+
+      // Live update "Today's Session" stat card and Category Completion bar in real time!
+      updateTodaySessionProgress();
+
+      // Persist to database in background
+      toggleExerciseCheck(exId, isAllSetsDone, todayDate, exSets);
+
+      if (isAllSetsDone) {
         showToast(`🎉 Exercise complete! (${completedCount}/${totalSets} sets) 💪`);
       } else {
-        const isDoneFromApi = workoutProgramData?.todayCompleted?.includes(exId);
-        if (isDoneFromApi) {
-          toggleExerciseCheck(exId, false, todayDate, false);
-        }
         showToast(isSetDone ? `⚡ Set ${setIdx + 1} marked complete! (${completedCount}/${totalSets})` : `Set ${setIdx + 1} unmarked.`);
       }
     });
@@ -2363,7 +2442,9 @@ function saveStoredCompletedSets(dateStr, setsData) {
 
 function toggleSetCompletion(dateStr, exerciseId, setIndex, totalSets) {
   const data = getStoredCompletedSets(dateStr);
-  let exSets = Array.isArray(data[exerciseId]) ? [...data[exerciseId]] : [];
+  let exSets = Array.isArray(data[exerciseId]) 
+    ? [...data[exerciseId]] 
+    : ((workoutProgramData?.todayCompleted?.includes(exerciseId)) ? Array.from({ length: totalSets }, (_, i) => i) : []);
   
   if (exSets.includes(setIndex)) {
     exSets = exSets.filter(i => i !== setIndex);
@@ -2375,7 +2456,7 @@ function toggleSetCompletion(dateStr, exerciseId, setIndex, totalSets) {
   saveStoredCompletedSets(dateStr, data);
 
   const isAllSetsDone = exSets.length >= totalSets && totalSets > 0;
-  return { isSetDone: exSets.includes(setIndex), isAllSetsDone, completedCount: exSets.length };
+  return { isSetDone: exSets.includes(setIndex), isAllSetsDone, completedCount: exSets.length, exSets };
 }
 
 function renderExerciseCard(ex, isSelectedToday, todayCompleted, index, totalCount, dayId) {
@@ -2579,24 +2660,28 @@ function renderWorkoutTasksView(container) {
 }
 
 // Exercise Actions
-async function toggleExerciseCheck(exerciseId, completed, date, shouldRerender = true) {
+async function toggleExerciseCheck(exerciseId, completed, date, completedSetsOrShouldRerender = null) {
   try {
+    const completedSets = Array.isArray(completedSetsOrShouldRerender) ? completedSetsOrShouldRerender : null;
+    const shouldRerender = typeof completedSetsOrShouldRerender === 'boolean' ? completedSetsOrShouldRerender : false;
+
     const res = await fetch('/api/workout-program/check', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ exerciseId, completed, date }),
+      body: JSON.stringify({ exerciseId, completed, date, completedSets }),
     });
     if (!res.ok) throw new Error('failed');
-    const { completedExercises } = await res.json();
-    if (workoutProgramData) {
-      workoutProgramData.todayCompleted = completedExercises || [];
+    const data = await res.json();
+    if (workoutProgramData && data.completedExercises) {
+      workoutProgramData.todayCompleted = data.completedExercises;
+      updateTodaySessionProgress();
     }
     if (shouldRerender) {
       showToast(completed ? 'Exercise marked complete! 💪' : 'Marked incomplete.');
       renderWorkoutsView();
     }
-  } catch {
-    showToast('Could not update exercise completion.');
+  } catch (err) {
+    console.warn('Could not update exercise completion:', err);
   }
 }
 

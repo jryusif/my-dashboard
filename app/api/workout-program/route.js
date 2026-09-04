@@ -14,6 +14,7 @@ export async function GET(req) {
   let splits = [];
   let exercises = [];
   let weightLogs = [];
+  let todayExerciseLogs = [];
 
   if (userId) {
     splits = await prisma.workoutSplit.findMany({
@@ -27,6 +28,9 @@ export async function GET(req) {
     weightLogs = await prisma.exerciseWeightLog.findMany({
       where: { userId },
       orderBy: { date: 'desc' }
+    });
+    todayExerciseLogs = await prisma.workoutExerciseLog.findMany({
+      where: { userId, date: todayDate }
     });
   }
 
@@ -126,11 +130,18 @@ export async function GET(req) {
   const activeDaysCount = days.filter(d => !d.isRestDay).length;
   const restDaysCount = days.filter(d => d.isRestDay).length;
 
+  const todayCompleted = todayExerciseLogs.filter(l => l.completed).map(l => l.exerciseId);
+  const todaySets = {};
+  todayExerciseLogs.forEach(l => {
+    if (l.completedSets) todaySets[l.exerciseId] = l.completedSets;
+  });
+
   return NextResponse.json({
     days,
     todayDayId,
     todayDate,
-    todayCompleted: [],
+    todayCompleted,
+    todaySets,
     activeDaysCount,
     restDaysCount
   });
