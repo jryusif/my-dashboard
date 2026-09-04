@@ -568,19 +568,19 @@
       const allTasks = TasksRepository.getAll(true);
       const pendingTasks = allTasks.filter(t => t.sync_status === 'pending_sync');
 
+      // 1. Push pending tasks to backend
       if (pendingTasks.length > 0) {
-        // Opportunistically push to backend without blocking UI
         for (const task of pendingTasks) {
           try {
             if (task.deleted_at) {
-              // Soft-deleted: delete on backend if existing
               await fetch(`/api/tasks/${task.id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
               });
+              // Remove hard locally once synced deletion
+              TasksRepository.delete(task.id, true);
             } else {
-              // Upsert task on backend
-              await fetch('/api/tasks', {
+              const postRes = await fetch('/api/tasks', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -596,12 +596,59 @@
                   completed: task.completed,
                 })
               });
+              if (postRes.ok) {
+                TasksRepository.update(task.id, { sync_status: 'synced' });
+              }
             }
-            // Mark as synced locally
-            TasksRepository.update(task.id, { sync_status: 'synced' });
           } catch (itemErr) {
             // Silently retain pending_sync for next opportunity
           }
+        }
+      }
+
+      // 2. Pull remote tasks across all dates and reconcile
+      const fetchRes = await fetch('/api/tasks', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (fetchRes.ok) {
+        const data = await fetchRes.json();
+        const serverTasks = data.tasks || [];
+        if (Array.isArray(serverTasks)) {
+          const localTasks = TasksRepository.getAll(true);
+          const localMap = new Map(localTasks.map(t => [String(t.id), t]));
+
+          serverTasks.forEach(st => {
+            const match = localMap.get(String(st.id));
+            if (!match) {
+              TasksRepository.create({
+                id: String(st.id),
+                title: st.title || st.task || 'Untitled Task',
+                date: st.date || st.dueDate,
+                time: st.timeBlock || '10:00',
+                category: st.category || 'Work',
+                priority: (st.priority || 'medium').toLowerCase(),
+                completed: Boolean(st.completed),
+                sync_status: 'synced',
+              });
+            } else if (match.sync_status !== 'pending_sync') {
+              if (
+                match.completed !== Boolean(st.completed) ||
+                match.title !== (st.title || st.task) ||
+                match.date !== (st.date || st.dueDate) ||
+                match.category !== (st.category || 'Work')
+              ) {
+                TasksRepository.update(match.id, {
+                  completed: Boolean(st.completed),
+                  title: st.title || st.task,
+                  date: st.date || st.dueDate,
+                  time: st.timeBlock || match.time,
+                  category: st.category || match.category,
+                  priority: (st.priority || match.priority || 'medium').toLowerCase(),
+                  sync_status: 'synced',
+                });
+              }
+            }
+          });
         }
       }
     } catch (syncErr) {

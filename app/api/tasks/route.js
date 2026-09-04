@@ -101,17 +101,25 @@ export async function POST(req) {
       return errorResponse('Title is required.', 400);
     }
 
-    const task = await prisma.task.create({
-      data: {
-        userId: user.id,
-        title: title.trim(),
-        category,
-        segment: segment || null,
-        date,
-        completed: Boolean(completed),
-        timeBlock: timeBlock || null
-      }
-    });
+    const taskData = {
+      userId: user.id,
+      title: title.trim(),
+      category,
+      segment: segment || null,
+      date,
+      completed: Boolean(completed),
+      timeBlock: timeBlock || null
+    };
+
+    const task = body.id
+      ? await prisma.task.upsert({
+          where: { id: body.id },
+          update: taskData,
+          create: { id: body.id, ...taskData }
+        }).catch(async () => {
+          return await prisma.task.create({ data: taskData });
+        })
+      : await prisma.task.create({ data: taskData });
 
     return successResponse({
       id: task.id,

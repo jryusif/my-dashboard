@@ -449,22 +449,35 @@ app.get('/api/tasks', authMiddleware, async (req, res) => {
 // POST /api/tasks — Create task
 app.post('/api/tasks', authMiddleware, async (req, res) => {
   try {
-    const { title, category, segment, date, completed, timeBlock } = req.body;
-    if (!title || !title.trim()) {
+    const { id, title, task: taskName, category, segment, date, dueDate, completed, timeBlock, order } = req.body;
+    const cleanTitle = (title || taskName || '').trim();
+    if (!cleanTitle) {
       return res.status(400).json({ error: 'Title is required.' });
     }
 
-    const task = await prisma.task.create({
-      data: {
-        userId: req.user.id,
-        title: title.trim(),
-        category: category || 'Work',
-        segment: segment || null,
-        date: date || new Date().toISOString().split('T')[0],
-        completed: Boolean(completed),
-        timeBlock: timeBlock || null
-      }
-    });
+    const taskData = {
+      userId: req.user.id,
+      title: cleanTitle,
+      category: category || 'Work',
+      segment: segment || null,
+      date: date || dueDate || new Date().toISOString().split('T')[0],
+      completed: Boolean(completed),
+      timeBlock: timeBlock || null,
+      order: typeof order === 'number' ? order : 0,
+    };
+
+    let task;
+    if (id) {
+      task = await prisma.task.upsert({
+        where: { id },
+        update: taskData,
+        create: { id, ...taskData }
+      }).catch(async () => {
+        return await prisma.task.create({ data: taskData });
+      });
+    } else {
+      task = await prisma.task.create({ data: taskData });
+    }
 
     res.status(201).json(task);
   } catch (err) {
@@ -485,9 +498,21 @@ app.patch('/api/tasks/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Task not found or access denied.' });
     }
 
+    const { title, task: taskName, category, segment, date, dueDate, completed, timeBlock, order } = req.body;
+    const data = {};
+    if (title !== undefined) data.title = title.trim();
+    else if (taskName !== undefined) data.title = taskName.trim();
+    if (category !== undefined) data.category = category;
+    if (segment !== undefined) data.segment = segment;
+    if (date !== undefined) data.date = date;
+    else if (dueDate !== undefined) data.date = dueDate;
+    if (completed !== undefined) data.completed = Boolean(completed);
+    if (timeBlock !== undefined) data.timeBlock = timeBlock;
+    if (order !== undefined) data.order = Number(order);
+
     const updated = await prisma.task.update({
       where: { id },
-      data: req.body
+      data
     });
 
     res.json(updated);

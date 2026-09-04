@@ -15863,6 +15863,9 @@ body.is-unauthenticated .btn-floating-braindump {
 .dot-health { background: #f43f5e; }
 .dot-study { background: #f59e0b; }
 .dot-finance { background: #06b6d4; }
+.dot-habits { background: #f97316; }
+.dot-routines { background: #8b5cf6; }
+.dot-dental { background: #0ea5e9; }
 
 .cal-dropdown-filters {
   display: flex;
@@ -16324,6 +16327,21 @@ body.is-unauthenticated .btn-floating-braindump {
   background: rgba(148, 163, 184, 0.2);
   color: #e2e8f0;
   border: 1px solid rgba(148, 163, 184, 0.35);
+}
+.cal-pill-habits {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fed7aa;
+  border: 1px solid rgba(249, 115, 22, 0.35);
+}
+.cal-pill-routines {
+  background: rgba(139, 92, 246, 0.2);
+  color: #ddd6fe;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+}
+.cal-pill-dental {
+  background: rgba(14, 165, 233, 0.2);
+  color: #bae6fd;
+  border: 1px solid rgba(14, 165, 233, 0.35);
 }
 
 .cal-more-events-badge {

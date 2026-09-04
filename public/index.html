@@ -4424,6 +4424,9 @@
           <button type="button" class="cal-filter-chip" data-cat="Health" onclick="setCalCategoryFilter('Health')"><span class="cal-cat-dot dot-health"></span>Health</button>
           <button type="button" class="cal-filter-chip" data-cat="Study" onclick="setCalCategoryFilter('Study')"><span class="cal-cat-dot dot-study"></span>Study</button>
           <button type="button" class="cal-filter-chip" data-cat="Finance" onclick="setCalCategoryFilter('Finance')"><span class="cal-cat-dot dot-finance"></span>Finance</button>
+          <button type="button" class="cal-filter-chip" data-cat="Habits" onclick="setCalCategoryFilter('Habits')"><span class="cal-cat-dot dot-habits"></span>🔥 Habits</button>
+          <button type="button" class="cal-filter-chip" data-cat="Routines" onclick="setCalCategoryFilter('Routines')"><span class="cal-cat-dot dot-routines"></span>🌅 Routines</button>
+          <button type="button" class="cal-filter-chip" data-cat="Dental Cases" onclick="setCalCategoryFilter('Dental Cases')"><span class="cal-cat-dot dot-dental"></span>🦷 Dental</button>
         </div>
 
         <!-- Priority & Status Dropdowns -->
@@ -4534,7 +4537,10 @@
                 <span class="cal-day-hero-weekday" id="calDayHeroWeekday">Friday</span>
                 <h3 class="cal-day-hero-date" id="calDayHeroDate">September 4, 2026</h3>
               </div>
-              <div class="cal-day-hero-right">
+              <div class="cal-day-hero-right" style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" class="btn-secondary" style="font-size: 11.5px; padding: 7px 12px; border-radius: 9px;" onclick="jumpToWeeklyPlannerDate(calState.activeDateKey)">
+                  🗓️ View in Weekly Planner
+                </button>
                 <button type="button" class="cal-btn-day-add" onclick="openCalNewTaskModal(calState.activeDateKey)">
                   <span>+</span> Schedule Event for This Day
                 </button>
@@ -4569,6 +4575,17 @@
       </div>
 
       <form class="cal-task-form" id="calTaskForm" onsubmit="handleCalTaskFormSubmit(event)">
+        <!-- Brain Dump Inbox Quick Import Bar -->
+        <div class="cal-braindump-import-bar" id="calBrainDumpImportBar" style="display: none; margin: 0 0 14px 0; padding: 10px 14px; background: rgba(99, 102, 241, 0.1); border: 1px dashed rgba(99, 102, 241, 0.35); border-radius: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; margin-bottom: 6px;">
+            <span style="color: #c7d2fe; font-weight: 600;">📥 Schedule from Brain Dump Inbox</span>
+            <span id="calBrainDumpInboxCount" style="color: #a5b4fc; font-size: 10.5px;">0 triage items</span>
+          </div>
+          <select id="calBrainDumpInboxSelect" class="cal-select" style="font-size: 11px; padding: 5px 10px; width: 100%;" onchange="handleSelectBrainDumpIntoCal(this.value)">
+            <option value="">-- Choose an item to auto-fill this task --</option>
+          </select>
+        </div>
+
         <!-- Hidden Task ID for Editing -->
         <input type="hidden" id="calTaskId" value="" />
 
