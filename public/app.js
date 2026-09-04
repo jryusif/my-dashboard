@@ -4332,30 +4332,28 @@ async function openFinancePage(view = null) {
   }
 }
 
-// Month navigator
-function renderMonthNav() {
-  financeMonthNav.innerHTML = `
-    <button type="button" class="month-nav-btn" id="monthNavPrev" aria-label="Previous month">&#8592;</button>
-    <span class="month-nav-label" id="monthNavLabel">${escapeHtml(currentFinanceMonth)}</span>
-    <button type="button" class="month-nav-btn" id="monthNavNext" aria-label="Next month">&#8594;</button>
-    <button type="button" class="month-nav-today-btn" id="monthNavToday">This Month</button>
-  `;
+// Month navigator actions & state handlers
+function handleShiftFinanceMonth(delta) {
+  currentFinanceMonth = shiftMonth(currentFinanceMonth, delta);
+  loadFinancePage();
+}
+window.handleShiftFinanceMonth = handleShiftFinanceMonth;
 
-  document.getElementById('monthNavPrev').addEventListener('click', () => {
-    currentFinanceMonth = shiftMonth(currentFinanceMonth, -1);
-    document.getElementById('monthNavLabel').textContent = currentFinanceMonth;
-    loadFinancePage();
-  });
-  document.getElementById('monthNavNext').addEventListener('click', () => {
-    currentFinanceMonth = shiftMonth(currentFinanceMonth, +1);
-    document.getElementById('monthNavLabel').textContent = currentFinanceMonth;
-    loadFinancePage();
-  });
-  document.getElementById('monthNavToday').addEventListener('click', () => {
-    currentFinanceMonth = monthTitleForDate(new Date());
-    document.getElementById('monthNavLabel').textContent = currentFinanceMonth;
-    loadFinancePage();
-  });
+function handleResetFinanceMonthToToday() {
+  currentFinanceMonth = monthTitleForDate(new Date());
+  loadFinancePage();
+}
+window.handleResetFinanceMonthToToday = handleResetFinanceMonthToToday;
+
+function renderMonthNav() {
+  if (!financeMonthNav) return;
+  const isCurrentMonth = currentFinanceMonth === monthTitleForDate(new Date());
+  financeMonthNav.innerHTML = `
+    <button type="button" class="month-nav-btn" id="monthNavPrev" onclick="handleShiftFinanceMonth(-1)" aria-label="Previous month">&#8592;</button>
+    <span class="month-nav-label" id="monthNavLabel">${escapeHtml(currentFinanceMonth)}</span>
+    <button type="button" class="month-nav-btn" id="monthNavNext" onclick="handleShiftFinanceMonth(1)" aria-label="Next month">&#8594;</button>
+    <button type="button" class="month-nav-today-btn ${isCurrentMonth ? 'is-active' : ''}" id="monthNavToday" onclick="handleResetFinanceMonthToToday()">${isCurrentMonth ? 'Current Month' : '⟲ This Month'}</button>
+  `;
 }
 
 function shiftMonth(monthTitle, delta) {
@@ -4390,9 +4388,8 @@ async function loadFinancePage() {
 
     lastLoadedFinanceMonth = overview.budget?.month || month;
 
-    // Update month nav label in case it changed
-    const navLabel = document.getElementById('monthNavLabel');
-    if (navLabel) navLabel.textContent = currentFinanceMonth;
+    // Synchronize month nav label in case it changed
+    renderMonthNav();
 
     renderFinancePage(overview, incomeItems, expenseItems, breakdown);
   } catch {
@@ -4572,6 +4569,7 @@ function setupIncomeForm() {
 
 function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
   const { budget, goals, netWorth } = overview;
+  const isCurrentMonth = currentFinanceMonth === monthTitleForDate(new Date());
 
   // Mini Glass Finance Progress Bar update
   const financeProgFill = document.getElementById('financeProgressFill');
@@ -4669,12 +4667,45 @@ function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
       <h2 class="finance-block-title">🪙 Gold &amp; Assets</h2>
       <div id="financeAssetsQuickGlance">${renderQuickGlanceLoading()}</div>
     </section>
-    <section>
-      <h2 class="finance-block-title">📅 ${escapeHtml(currentFinanceMonth)}</h2>
+    <section class="finance-month-section" id="financeMonthlyBudgetSection">
+      <div class="finance-month-nav-bar">
+        <div class="finance-month-info">
+          <span class="finance-month-icon">🗓️</span>
+          <h2 class="finance-block-title finance-month-title">${escapeHtml(currentFinanceMonth)}</h2>
+          ${isCurrentMonth
+            ? `<span class="finance-month-badge is-current" title="Active current month numbers">Current Month</span>`
+            : `<span class="finance-month-badge is-history" title="Archived monthly numbers">Archive Period</span>`}
+        </div>
+
+        <div class="finance-month-actions">
+          <button type="button" class="fin-nav-btn" onclick="handleShiftFinanceMonth(-1)" title="Previous Month (${escapeHtml(shiftMonth(currentFinanceMonth, -1))})">
+            <span class="fin-nav-arrow">&#8592;</span>
+            <span class="fin-nav-text">Previous</span>
+          </button>
+
+          ${!isCurrentMonth ? `
+            <button type="button" class="fin-nav-btn fin-nav-today-btn" onclick="handleResetFinanceMonthToToday()" title="Jump back to current month (${escapeHtml(monthTitleForDate(new Date()))})">
+              <span>&#8635; This Month</span>
+            </button>
+          ` : `
+            <button type="button" class="fin-nav-btn fin-nav-today-btn is-active" disabled title="Currently viewing active month">
+              <span>&#10003; This Month</span>
+            </button>
+          `}
+
+          <button type="button" class="fin-nav-btn" onclick="handleShiftFinanceMonth(1)" title="Next Month (${escapeHtml(shiftMonth(currentFinanceMonth, 1))})">
+            <span class="fin-nav-text">Next</span>
+            <span class="fin-nav-arrow">&#8594;</span>
+          </button>
+        </div>
+      </div>
+
       ${overviewHtml}
     </section>
     <section>
-      <h2 class="finance-block-title">📊 This Month's Breakdown</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;">
+        <h2 class="finance-block-title" style="margin:0;">📊 ${escapeHtml(currentFinanceMonth)} Breakdown</h2>
+      </div>
       ${breakdownHtml}
     </section>
     <section>
