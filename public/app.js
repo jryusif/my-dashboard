@@ -16752,7 +16752,17 @@ function renderCalDayView() {
   const overdueTasks = filtered.filter(t => isCalTaskOverdue(t) && t.date <= activeKey);
   if (overdueBanner && overdueList) {
     if (overdueTasks.length > 0) {
-      overdueBanner.style.display = 'block';
+      overdueBanner.style.display = 'flex';
+      const badgeEl = overdueBanner.querySelector('.cal-overdue-badge');
+      if (badgeEl) {
+        badgeEl.innerHTML = `
+          <span>⚠️ Action Required (${overdueTasks.length} overdue task${overdueTasks.length === 1 ? '' : 's'})</span>
+          <button type="button" class="btn-ghost" id="btnToggleOverdueList" style="font-size: 11px; padding: 2px 8px; color: #fca5a5; cursor: pointer; border-radius: 6px; background: rgba(239, 68, 68, 0.15);" onclick="toggleCalDayOverdueList()">
+            ${calState.hideDayOverdueList ? '▼ Show' : '▲ Collapse'}
+          </button>
+        `;
+      }
+      overdueList.style.display = calState.hideDayOverdueList ? 'none' : 'flex';
       overdueList.innerHTML = overdueTasks.map(t => `
         <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); gap: 10px;">
           <span style="color: #fecdd3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">⚠️ <strong>${escapeHtml(t.title)}</strong> <span style="opacity: 0.75; font-size: 11px;">(Due: ${t.date}${t.time ? ' ' + t.time : ''})</span></span>
@@ -16820,6 +16830,12 @@ function renderCalDayView() {
 
   slotsContainer.innerHTML = hoursHtml.join('');
 }
+
+function toggleCalDayOverdueList() {
+  calState.hideDayOverdueList = !calState.hideDayOverdueList;
+  renderCalDayView();
+}
+window.toggleCalDayOverdueList = toggleCalDayOverdueList;
 
 // ── 4. Mini Calendar Sidebar Renderer ──
 function renderCalMiniCalendar() {
