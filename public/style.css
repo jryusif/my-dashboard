@@ -120,41 +120,8 @@ html {
 
 /* Modal Open Scroll Locking — Freezes the background page whenever any popup/modal is open */
 html.modal-open,
-body.modal-open,
-html:has(
-  .modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .video-overlay-backdrop:not([hidden]):not([style*="display: none"]),
-  .dental-drawer-backdrop:not([hidden]):not([style*="display: none"]),
-  .dental-theater-backdrop:not([hidden]):not([style*="display: none"]),
-  .brain-dump-backdrop:not([hidden]):not([style*="display: none"]),
-  .triage-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .brain-dump-drawer-backdrop:not([hidden]):not([style*="display: none"]),
-  .habit-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .calendar-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .cal-task-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .cal-export-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .ht-submodal-backdrop:not([hidden]):not([style*="display: none"]),
-  .notification-center-backdrop:not([hidden]):not([style*="display: none"]),
-  dialog[open]
-),
-body:has(
-  .modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .video-overlay-backdrop:not([hidden]):not([style*="display: none"]),
-  .dental-drawer-backdrop:not([hidden]):not([style*="display: none"]),
-  .dental-theater-backdrop:not([hidden]):not([style*="display: none"]),
-  .brain-dump-backdrop:not([hidden]):not([style*="display: none"]),
-  .triage-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .brain-dump-drawer-backdrop:not([hidden]):not([style*="display: none"]),
-  .habit-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .calendar-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .cal-task-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .cal-export-modal-backdrop:not([hidden]):not([style*="display: none"]),
-  .ht-submodal-backdrop:not([hidden]):not([style*="display: none"]),
-  .notification-center-backdrop:not([hidden]):not([style*="display: none"]),
-  dialog[open]
-) {
+body.modal-open {
   overflow: hidden !important;
-  overscroll-behavior: contain !important;
 }
 
 body {
