@@ -115,6 +115,46 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+/* Modal Open Scroll Locking — Freezes the background page whenever any popup/modal is open */
+html.modal-open,
+body.modal-open,
+html:has(
+  .modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .video-overlay-backdrop:not([hidden]):not([style*="display: none"]),
+  .dental-drawer-backdrop:not([hidden]):not([style*="display: none"]),
+  .dental-theater-backdrop:not([hidden]):not([style*="display: none"]),
+  .brain-dump-backdrop:not([hidden]):not([style*="display: none"]),
+  .triage-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .brain-dump-drawer-backdrop:not([hidden]):not([style*="display: none"]),
+  .habit-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .calendar-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .cal-task-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .cal-export-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .ht-submodal-backdrop:not([hidden]):not([style*="display: none"]),
+  .notification-center-backdrop:not([hidden]):not([style*="display: none"]),
+  dialog[open]
+),
+body:has(
+  .modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .video-overlay-backdrop:not([hidden]):not([style*="display: none"]),
+  .dental-drawer-backdrop:not([hidden]):not([style*="display: none"]),
+  .dental-theater-backdrop:not([hidden]):not([style*="display: none"]),
+  .brain-dump-backdrop:not([hidden]):not([style*="display: none"]),
+  .triage-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .brain-dump-drawer-backdrop:not([hidden]):not([style*="display: none"]),
+  .habit-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .calendar-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .cal-task-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .cal-export-modal-backdrop:not([hidden]):not([style*="display: none"]),
+  .ht-submodal-backdrop:not([hidden]):not([style*="display: none"]),
+  .notification-center-backdrop:not([hidden]):not([style*="display: none"]),
+  dialog[open]
+) {
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
 }
 
 body {
@@ -2546,8 +2586,59 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
 .fab-icon { font-size: 17px; line-height: 1; }
 
 /* =====================================================================
-   MODALS
+   MODALS & POPUPS — SCROLL CONTAINMENT
    ===================================================================== */
+/* Universal overscroll containment for all dialogs, modals, drawers, and backdrops */
+.modal-backdrop,
+.video-overlay-backdrop,
+.dental-drawer-backdrop,
+.dental-theater-backdrop,
+.brain-dump-backdrop,
+.triage-modal-backdrop,
+.brain-dump-drawer-backdrop,
+.habit-modal-backdrop,
+.calendar-modal-backdrop,
+.cal-task-modal-backdrop,
+.cal-export-modal-backdrop,
+.ht-submodal-backdrop,
+.notification-center-backdrop,
+[class*="-backdrop"]:not(.sidebar-backdrop),
+[class*="-overlay"]:not(.face-scanner-overlay),
+.modal,
+.routine-modal,
+.routine-customizer-modal,
+.dental-drawer,
+.dental-drawer-body,
+.dental-form-modal,
+.weekly-template-modal,
+.notification-center-modal,
+.notification-settings-modal,
+.exercise-weight-modal,
+.auth-modal,
+.oauth-provider-modal,
+.pending-approval-modal,
+.onboarding-wizard-modal,
+.custom-space-modal,
+.brain-dump-modal,
+.brain-dump-palette,
+.triage-modal,
+.triage-modal-container,
+.brain-dump-drawer,
+.notes-vault-modal,
+.habit-tracker-modal-container,
+.calendar-modal-container,
+.cal-dialog,
+.cal-scroll-area,
+.cal-day-timeline-scroll,
+.cal-overdue-list,
+.tag-chips-container,
+[role="dialog"],
+[aria-modal="true"] {
+  overscroll-behavior: contain !important;
+  overscroll-behavior-y: contain !important;
+  -ms-scroll-chaining: none;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -2560,6 +2651,7 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   animation: backdrop-in 0.2s ease;
+  overscroll-behavior: contain;
 }
 @keyframes backdrop-in {
   from { opacity: 0; }
@@ -2578,6 +2670,8 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
   max-width: 460px;
   max-height: 90vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
   gap: 4px;

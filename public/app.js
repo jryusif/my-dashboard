@@ -17828,5 +17828,205 @@ function initCalendar() {
 
 initCalendar();
 
+// =============================================================================
+// 🛑 UNIVERSAL MODAL SCROLL SUPERVISOR & BACKGROUND SCROLL FREEZER
+// Fixes bug where page in background scrolls when scrolling inside popups or reaching ends
+// =============================================================================
+(function initModalScrollSupervisor() {
+  const BACKDROP_SELECTOR = [
+    '.modal-backdrop',
+    '.video-overlay-backdrop',
+    '.dental-drawer-backdrop',
+    '.dental-theater-backdrop',
+    '.brain-dump-backdrop',
+    '.triage-modal-backdrop',
+    '.brain-dump-drawer-backdrop',
+    '.habit-modal-backdrop',
+    '.calendar-modal-backdrop',
+    '.cal-task-modal-backdrop',
+    '.cal-export-modal-backdrop',
+    '.ht-submodal-backdrop',
+    '.notification-center-backdrop',
+    '[class*="-backdrop"]:not(.sidebar-backdrop)',
+    '[class*="-overlay"]:not(.face-scanner-overlay)',
+    'dialog[open]'
+  ].join(', ');
 
+  const MODAL_DIALOG_SELECTOR = [
+    '.modal',
+    '.dental-drawer',
+    '.video-overlay-inner',
+    '.brain-dump-palette',
+    '.triage-modal-container',
+    '.brain-dump-drawer',
+    '.habit-tracker-modal-container',
+    '.calendar-modal-container',
+    '.cal-dialog',
+    '[role="dialog"]',
+    '[aria-modal="true"]'
+  ].join(', ');
 
+  let isLocked = false;
+
+  function isModalVisible(el) {
+    if (!el) return false;
+    if (el.hidden || el.getAttribute('aria-hidden') === 'true') return false;
+    if (el.style.display === 'none') return false;
+    if (el.classList.contains('sidebar-backdrop') && !document.body.classList.contains('sidebar-mobile-open')) {
+      return false;
+    }
+    const comp = window.getComputedStyle(el);
+    return comp.display !== 'none' && comp.visibility !== 'hidden' && comp.opacity !== '0';
+  }
+
+  function getActiveModalBackdrop() {
+    const candidates = document.querySelectorAll(BACKDROP_SELECTOR);
+    for (let i = 0; i < candidates.length; i++) {
+      if (isModalVisible(candidates[i])) return candidates[i];
+    }
+    return null;
+  }
+
+  function syncScrollLock() {
+    const hasActiveModal = Boolean(getActiveModalBackdrop());
+    if (hasActiveModal && !isLocked) {
+      isLocked = true;
+      document.documentElement.classList.add('modal-open');
+      document.body.classList.add('modal-open');
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    } else if (!hasActiveModal && isLocked) {
+      isLocked = false;
+      document.documentElement.classList.remove('modal-open');
+      document.body.classList.remove('modal-open');
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Find scrollable ancestor inside modal
+  function getScrollableAncestor(el, modalRoot) {
+    let curr = el;
+    while (curr && curr !== modalRoot && curr !== document.body && curr !== document.documentElement) {
+      const style = window.getComputedStyle(curr);
+      const oy = style.overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && curr.scrollHeight > curr.clientHeight) {
+        return curr;
+      }
+      curr = curr.parentElement;
+    }
+    if (modalRoot && (modalRoot.scrollHeight > modalRoot.clientHeight)) {
+      const style = window.getComputedStyle(modalRoot);
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+        return modalRoot;
+      }
+    }
+    return null;
+  }
+
+  // Intercept wheel events to stop overscroll chain to background
+  function onWheel(e) {
+    if (!isLocked) return;
+
+    const modalRoot = e.target.closest(MODAL_DIALOG_SELECTOR);
+    // If wheel is directly on backdrop / outside modal content, block background scroll
+    if (!modalRoot) {
+      e.preventDefault();
+      return;
+    }
+
+    const scrollable = getScrollableAncestor(e.target, modalRoot);
+    if (!scrollable) {
+      // Content does not scroll: block wheel to prevent background scroll
+      e.preventDefault();
+      return;
+    }
+
+    const delta = e.deltaY;
+    const atTop = scrollable.scrollTop <= 0;
+    const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
+
+    // If scrolling up at top or scrolling down at bottom, stop background scroll
+    if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+      e.preventDefault();
+    }
+  }
+
+  // Touch tracking for mobile/touchpads
+  let touchStartY = 0;
+  function onTouchStart(e) {
+    if (e.touches && e.touches.length) {
+      touchStartY = e.touches[0].clientY;
+    }
+  }
+
+  function onTouchMove(e) {
+    if (!isLocked) return;
+    if (!e.touches || !e.touches.length) return;
+
+    const modalRoot = e.target.closest(MODAL_DIALOG_SELECTOR);
+    if (!modalRoot) {
+      e.preventDefault();
+      return;
+    }
+
+    const scrollable = getScrollableAncestor(e.target, modalRoot);
+    if (!scrollable) {
+      e.preventDefault();
+      return;
+    }
+
+    const currentY = e.touches[0].clientY;
+    const deltaY = touchStartY - currentY; // positive = scroll down, negative = scroll up
+    const atTop = scrollable.scrollTop <= 0;
+    const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
+
+    if ((deltaY < 0 && atTop) || (deltaY > 0 && atBottom)) {
+      e.preventDefault();
+    }
+  }
+
+  window.addEventListener('wheel', onWheel, { passive: false });
+  window.addEventListener('touchstart', onTouchStart, { passive: true });
+  window.addEventListener('touchmove', onTouchMove, { passive: false });
+
+  // Observe DOM for any modal being shown or hidden
+  const observer = new MutationObserver(() => {
+    syncScrollLock();
+  });
+
+  if (document.body) {
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['hidden', 'style', 'class', 'open']
+    });
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['hidden', 'style', 'class', 'open']
+      });
+      syncScrollLock();
+    });
+  }
+
+  // Expose global lock/unlock helpers for manual triggers
+  window.lockBodyScroll = function() {
+    isLocked = true;
+    document.documentElement.classList.add('modal-open');
+    document.body.classList.add('modal-open');
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.unlockBodyScroll = function() {
+    syncScrollLock();
+  };
+
+  // Initial check in case a modal is already open on script load
+  syncScrollLock();
+})();
