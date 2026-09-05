@@ -818,7 +818,10 @@ async function syncBoards() {
   await loadTasks();
   await loadWeekDay();
   loadWeeklyProgress();
-  loadCardBadges();
+  await loadCardBadges();
+  if (typeof updateWeekTabBadges === 'function') {
+    updateWeekTabBadges();
+  }
   // Step 3: Reload open category page (reads from DB directly)
   if (currentCategoryPage) {
     await loadCategoryPage(currentCategoryPage);
@@ -7718,6 +7721,7 @@ function initWeekTabs(baseDate = null) {
 
   updateIndicator();
   selectDay(selectedDayIndex);
+  updateWeekTabBadges();
 }
 
 function updateIndicator() {
@@ -7730,6 +7734,37 @@ function updateTodayMarkers() {
     btn.classList.toggle('is-today', isSameDate(weekDates[i], today));
   });
 }
+
+function updateWeekTabBadges() {
+  if (!weekTabs || !Array.isArray(weekDates)) return;
+  const allTasks = (window.calTasksCache && window.calTasksCache.length)
+    ? window.calTasksCache
+    : (window.StorageService ? window.StorageService.tasks.getAll(false) : []);
+  const countsByDate = {};
+  allTasks.forEach(t => {
+    if (t.date && !t.deleted_at) {
+      countsByDate[t.date] = (countsByDate[t.date] || 0) + 1;
+    }
+  });
+
+  weekTabs.querySelectorAll('.day-tab').forEach((btn, i) => {
+    if (!weekDates[i]) return;
+    const dStr = toISODate(weekDates[i]);
+    const count = countsByDate[dStr] || 0;
+    let dot = btn.querySelector('.day-tab-badge');
+    if (count > 0) {
+      if (!dot) {
+        dot = document.createElement('span');
+        dot.className = 'day-tab-badge';
+        btn.appendChild(dot);
+      }
+      dot.title = `${count} task${count === 1 ? '' : 's'}`;
+    } else if (dot) {
+      dot.remove();
+    }
+  });
+}
+window.updateWeekTabBadges = updateWeekTabBadges;
 
 async function selectDay(index) {
   selectedDayIndex = index;
@@ -7744,6 +7779,7 @@ async function selectDay(index) {
     window.calState.activeDateKey = toISODate(sel);
     window.calState.miniDate = new Date(sel);
   }
+  updateWeekTabBadges();
   await loadWeekDay();
 }
 
@@ -16463,6 +16499,18 @@ function closeCalendarModal() {
   const modal = document.getElementById('calendarModal');
   if (modal) modal.hidden = true;
   closeCalDayPopover();
+  if (typeof syncBoards === 'function') {
+    syncBoards().catch(() => {});
+  }
+  if (typeof loadCardBadges === 'function') {
+    loadCardBadges().catch(() => {});
+  }
+  if (typeof updateWeekTabBadges === 'function') {
+    updateWeekTabBadges();
+  }
+  if (currentCategoryPage && typeof loadCategoryPage === 'function') {
+    loadCategoryPage(currentCategoryPage).catch(() => {});
+  }
 }
 window.closeCalendarModal = closeCalendarModal;
 
@@ -16972,9 +17020,10 @@ function openCalNewTaskModal(initialDateKey = '', initialTimeStr = '') {
   if (idInput) idInput.value = '';
   if (titleInput) titleInput.value = '';
   if (descInput) descInput.value = '';
-  if (dateInput) dateInput.value = initialDateKey || calState.activeDateKey || getCalDateKey(new Date());
+  const defaultDateKey = initialDateKey || calState.activeDateKey || (weekDates && weekDates[selectedDayIndex] ? toISODate(weekDates[selectedDayIndex]) : '') || getCalDateKey(new Date());
+  if (dateInput) dateInput.value = defaultDateKey;
   if (timeInput) timeInput.value = initialTimeStr || '10:00';
-  if (catSelect) catSelect.value = 'Work';
+  if (catSelect) catSelect.value = currentCategoryPage || 'Work';
   if (prioSelect) prioSelect.value = 'medium';
   if (recSelect) recSelect.value = 'none';
   if (btnDelete) btnDelete.style.display = 'none';
@@ -17328,9 +17377,26 @@ async function handleCalTaskFormSubmit(e) {
   renderCalendar();
   if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
 
-  // Non-blocking sync of all views (sidebar, weekly planner, category page)
+  // If the scheduled task date is in the weekly view, align the active day in weekly planner
+  if (date && Array.isArray(weekDates)) {
+    const targetIdx = weekDates.findIndex(d => toISODate(d) === date);
+    if (targetIdx !== -1 && typeof selectDay === 'function') {
+      await selectDay(targetIdx);
+    }
+  }
+
+  // Synchronize all dashboard views, category pages & badge counts
   if (typeof syncBoards === 'function') {
-    syncBoards().catch(() => {});
+    await syncBoards();
+  }
+  if (typeof loadCardBadges === 'function') {
+    await loadCardBadges();
+  }
+  if (typeof updateWeekTabBadges === 'function') {
+    updateWeekTabBadges();
+  }
+  if (currentCategoryPage && typeof loadCategoryPage === 'function') {
+    await loadCategoryPage(currentCategoryPage);
   }
 }
 window.handleCalTaskFormSubmit = handleCalTaskFormSubmit;
@@ -17362,7 +17428,16 @@ async function handleCalDeleteTask() {
 
   if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
   if (typeof syncBoards === 'function') {
-    syncBoards().catch(() => {});
+    await syncBoards();
+  }
+  if (typeof loadCardBadges === 'function') {
+    await loadCardBadges();
+  }
+  if (typeof updateWeekTabBadges === 'function') {
+    updateWeekTabBadges();
+  }
+  if (currentCategoryPage && typeof loadCategoryPage === 'function') {
+    await loadCategoryPage(currentCategoryPage);
   }
 }
 window.handleCalDeleteTask = handleCalDeleteTask;

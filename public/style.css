@@ -2904,6 +2904,15 @@ body.sidebar-is-collapsed .btn-sidebar-toggle {
 .day-tab .day-num { font-size: 15px; font-weight: 600; }
 .day-tab.is-active { color: var(--ink); }
 .day-tab.is-today .day-name { color: var(--success); }
+.day-tab-badge {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-cyan, #06b6d4);
+  box-shadow: 0 0 6px var(--accent-cyan, #06b6d4);
+  margin-top: 1px;
+}
 
 .weekly-board { min-height: 80px; transition: opacity 0.2s ease; }
 .weekly-board.is-loading { opacity: 0.4; }
