@@ -15814,15 +15814,41 @@ body.is-unauthenticated .btn-floating-braindump {
 }
 
 .cal-brand-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 10px;
   text-transform: uppercase;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.05em;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  transition: all 0.2s ease;
+}
+
+.cal-brand-pill.is-syncing {
   background: rgba(99, 102, 241, 0.2);
-  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-color: rgba(99, 102, 241, 0.4);
   color: #a5b4fc;
+}
+
+.cal-sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  display: inline-block;
+  animation: calPulse 2s infinite;
+}
+
+@keyframes calPulse {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 10px #34d399; }
+  100% { transform: scale(0.95); opacity: 0.7; }
 }
 
 .cal-brand-subtitle {

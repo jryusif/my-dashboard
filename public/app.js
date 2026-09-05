@@ -2,21 +2,35 @@
 // 🔐 JWT AUTHENTICATION & MULTI-TENANT CLIENT INTERCEPTOR
 // =============================================================================
 
-let authToken = localStorage.getItem('antigravity_token') || null;
+let authToken = localStorage.getItem('antigravity_token') || sessionStorage.getItem('antigravity_token') || null;
 let currentUser = null;
 try {
-  currentUser = JSON.parse(localStorage.getItem('antigravity_user') || 'null');
+  currentUser = JSON.parse(localStorage.getItem('antigravity_user') || sessionStorage.getItem('antigravity_user') || 'null');
 } catch {
   currentUser = null;
 }
 
+function getAuthToken() {
+  return authToken || localStorage.getItem('antigravity_token') || sessionStorage.getItem('antigravity_token') || null;
+}
+window.getAuthToken = getAuthToken;
+
+function getAuthHeaders() {
+  const token = getAuthToken();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+window.getAuthHeaders = getAuthHeaders;
+
+// In-Memory Live Calendar Tasks Cache (direct reflection of active DB tasks)
+window.calTasksCache = window.calTasksCache || [];
+
 // Universal authenticated fetch interceptor
 const _origFetch = window.fetch;
 window.fetch = function (resource, init) {
-  const token = authToken || localStorage.getItem('antigravity_token');
+  const token = getAuthToken();
   if (token) {
     const urlStr = typeof resource === 'string' ? resource : (resource && resource.url) || '';
-    if (urlStr.startsWith('/api/')) {
+    if (urlStr.startsWith('/api/') || urlStr.includes('/api/')) {
       const clonedInit = init ? { ...init } : {};
       const headers = new Headers(clonedInit.headers || {});
       if (!headers.has('Authorization') && !headers.has('authorization')) {
@@ -1564,22 +1578,33 @@ async function loadCategoryPage(category) {
         });
         if (!res.ok) throw new Error('failed');
         const createdTask = await res.json();
-        if (window.StorageService && createdTask) {
-          window.StorageService.tasks.create({
+        if (createdTask) {
+          const calRecord = {
             id: String(createdTask.id),
             title: createdTask.title || name,
+            description: segment ? `Segment: ${segment}` : '',
             date: createdTask.date || dueDate || toISODate(new Date()),
             time: createdTask.timeBlock || '10:00',
             category: createdTask.category || category,
             priority: (createdTask.priority || priority || 'medium').toLowerCase(),
             completed: Boolean(createdTask.completed),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            deleted_at: null,
             sync_status: 'synced',
-          });
+          };
+          if (!Array.isArray(window.calTasksCache)) window.calTasksCache = [];
+          window.calTasksCache.unshift(calRecord);
+          if (window.StorageService) {
+            window.StorageService.tasks.bulkUpsert([calRecord]);
+          }
         }
         showToast('Task added.');
         document.getElementById('catQuickName').value = '';
         await loadCategoryPage(category);
         await syncBoards();
+        if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+        if (typeof renderCalendar === 'function') renderCalendar();
       } catch {
         showToast('Could not add that task — please try again.');
       } finally {
@@ -2765,21 +2790,32 @@ function renderWorkoutTasksView(container) {
       });
       if (!res.ok) throw new Error('failed');
       const createdTask = await res.json();
-      if (window.StorageService && createdTask) {
-        window.StorageService.tasks.create({
+      if (createdTask) {
+        const calRecord = {
           id: String(createdTask.id),
           title: createdTask.title || name,
+          description: segment ? `Segment: ${segment}` : '',
           date: createdTask.date || dueDate || toISODate(new Date()),
           time: createdTask.timeBlock || '10:00',
           category: 'Workouts',
           priority: (createdTask.priority || priority || 'medium').toLowerCase(),
           completed: Boolean(createdTask.completed),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          deleted_at: null,
           sync_status: 'synced',
-        });
+        };
+        if (!Array.isArray(window.calTasksCache)) window.calTasksCache = [];
+        window.calTasksCache.unshift(calRecord);
+        if (window.StorageService) {
+          window.StorageService.tasks.bulkUpsert([calRecord]);
+        }
       }
       showToast('Workout task added.');
       await loadWorkoutsPage();
       await syncBoards();
+      if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+      if (typeof renderCalendar === 'function') renderCalendar();
     } catch {
       showToast('Could not add that task — please try again.');
     } finally {
@@ -7798,22 +7834,33 @@ taskForm.addEventListener('submit', async e => {
     });
     if (!res.ok) throw new Error('failed');
     const createdTask = await res.json();
-    if (window.StorageService && createdTask) {
-      window.StorageService.tasks.create({
+    if (createdTask) {
+      const calRecord = {
         id: String(createdTask.id),
         title: createdTask.title || payload.task,
+        description: payload.segment ? `Segment: ${payload.segment}` : '',
         date: createdTask.date || payload.dueDate || toISODate(new Date()),
         time: createdTask.timeBlock || '10:00',
         category: createdTask.category || payload.category,
         priority: (createdTask.priority || payload.priority || 'medium').toLowerCase(),
         completed: Boolean(createdTask.completed),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted_at: null,
         sync_status: 'synced',
-      });
+      };
+      if (!Array.isArray(window.calTasksCache)) window.calTasksCache = [];
+      window.calTasksCache.unshift(calRecord);
+      if (window.StorageService) {
+        window.StorageService.tasks.bulkUpsert([calRecord]);
+      }
     }
     closeAddModal();
     showToast('Task added.');
     await syncBoards();
     loadCardBadges();
+    if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+    if (typeof renderCalendar === 'function') renderCalendar();
   } catch { showToast('Could not add that task — please try again.'); }
 });
 
@@ -16113,88 +16160,65 @@ function isCalCategoryMatch(taskCat, filterCat) {
 
 // ── Universal Multi-Day Task Synchronizer (Database <-> Local-First Storage) ──
 async function syncAllWebsiteTasksWithCalendar() {
-  if (!currentUser || !authToken) return;
+  const token = getAuthToken();
+  if (!token) return;
+
+  const pill = document.getElementById('calSyncStatusPill');
+  if (pill) {
+    pill.classList.add('is-syncing');
+    pill.innerHTML = '<span class="cal-sync-dot"></span> Syncing…';
+  }
+
   try {
     const authHeaders = {
-      'Authorization': `Bearer ${authToken}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
 
     // 1. Fetch all user tasks from the database (all categories: Work, Studies, Us stocks trading, Religion, Finance, Dental Cases, etc.)
-    const res = await fetch('/api/tasks', { headers: { 'Authorization': `Bearer ${authToken}` } });
+    const res = await fetch('/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } });
     if (res.ok) {
       const data = await res.json();
       const serverTasks = data.tasks || [];
 
-      if (window.StorageService && Array.isArray(serverTasks)) {
-        const mappedServerTasks = serverTasks.map(apiTask => ({
-          id: String(apiTask.id),
-          title: apiTask.title || apiTask.task || 'Untitled Task',
-          description: apiTask.segment ? `Segment: ${apiTask.segment}` : '',
-          date: apiTask.date || apiTask.dueDate || toISODate(new Date()),
-          time: apiTask.timeBlock || '10:00',
-          category: apiTask.category || 'Work',
-          priority: (apiTask.priority || 'medium').toLowerCase(),
-          completed: Boolean(apiTask.completed),
-          sync_status: 'synced',
-        }));
+      const mappedServerTasks = serverTasks.map(apiTask => ({
+        id: String(apiTask.id),
+        title: apiTask.title || apiTask.task || 'Untitled Task',
+        description: apiTask.segment ? `Segment: ${apiTask.segment}` : '',
+        date: apiTask.date || apiTask.dueDate || toISODate(new Date()),
+        time: apiTask.timeBlock || '10:00',
+        category: apiTask.category || 'Work',
+        priority: (apiTask.priority || 'medium').toLowerCase(),
+        completed: Boolean(apiTask.completed),
+        created_at: apiTask.createdAt || new Date().toISOString(),
+        updated_at: apiTask.updatedAt || new Date().toISOString(),
+        deleted_at: null,
+        sync_status: 'synced',
+      }));
 
+      // Cache directly in memory
+      window.calTasksCache = mappedServerTasks;
+
+      // Sync into StorageService
+      if (window.StorageService && Array.isArray(mappedServerTasks)) {
         window.StorageService.tasks.bulkUpsert(mappedServerTasks);
-
-        // Opportunistically push any pending local tasks to server
-        const localTasks = window.StorageService.tasks.getAll(true);
-        const pending = localTasks.filter(t => t.sync_status === 'pending_sync');
-        for (const p of pending) {
-          if (p.deleted_at) {
-            try {
-              await fetch(`/api/tasks/${p.id}`, { method: 'DELETE', headers: authHeaders });
-            } catch (_) {}
-            window.StorageService.tasks.delete(p.id, true);
-          } else {
-            try {
-              const createRes = await fetch('/api/tasks', {
-                method: 'POST',
-                headers: authHeaders,
-                body: JSON.stringify({
-                  id: p.id,
-                  title: p.title,
-                  task: p.title,
-                  date: p.date,
-                  dueDate: p.date,
-                  timeBlock: p.time,
-                  category: p.category,
-                  priority: p.priority === 'high' ? 'High' : p.priority === 'low' ? 'Low' : 'Medium',
-                  completed: p.completed,
-                })
-              });
-              if (createRes.ok) {
-                const created = await createRes.json();
-                if (created && created.id && String(created.id) !== String(p.id)) {
-                  window.StorageService.tasks.delete(p.id, true);
-                  window.StorageService.tasks.create({
-                    ...p,
-                    id: String(created.id),
-                    sync_status: 'synced',
-                  });
-                } else {
-                  window.StorageService.tasks.update(p.id, { sync_status: 'synced' });
-                }
-              }
-            } catch (_) {}
-          }
-        }
       }
     }
 
     // 2. Fetch and synchronize Dental Clinical Cases (if user has access)
     if (typeof userCanAccessDental === 'function' && userCanAccessDental()) {
       try {
-        const dentalRes = await fetch('/api/dental-cases', { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const dentalRes = await fetch('/api/dental-cases', { headers: { 'Authorization': `Bearer ${token}` } });
         if (dentalRes.ok) {
           const dentalData = await dentalRes.json();
           loadedDentalCases = dentalData.cases || [];
         }
       } catch (_) {}
+    }
+
+    if (pill) {
+      pill.classList.remove('is-syncing');
+      pill.innerHTML = '<span class="cal-sync-dot"></span> Live Synced';
     }
 
     if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
@@ -16210,14 +16234,33 @@ async function syncAllWebsiteTasksWithCalendar() {
     }
   } catch (err) {
     console.warn('[syncAllWebsiteTasksWithCalendar] Error syncing tasks:', err);
+    if (pill) {
+      pill.classList.remove('is-syncing');
+      pill.innerHTML = '<span class="cal-sync-dot"></span> Offline';
+    }
   }
 }
 window.syncAllWebsiteTasksWithCalendar = syncAllWebsiteTasksWithCalendar;
 
 // ── Filtered Tasks Query (Includes Database Tasks, Dental Cases, and Dental Procedure Step Tasks) ──
 function getCalFilteredTasks() {
-  const repo = window.StorageService ? window.StorageService.tasks : null;
-  const allTasks = repo ? repo.getAll(false) : [];
+  let allTasks = [];
+  if (Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0) {
+    allTasks = [...window.calTasksCache];
+    // Merge any pending local tasks from StorageService
+    if (window.StorageService) {
+      const localTasks = window.StorageService.tasks.getAll(false);
+      const cacheIds = new Set(allTasks.map(t => String(t.id)));
+      localTasks.forEach(lt => {
+        if (!cacheIds.has(String(lt.id))) {
+          allTasks.push(lt);
+        }
+      });
+    }
+  } else if (window.StorageService) {
+    allTasks = window.StorageService.tasks.getAll(false);
+  }
+
   const allEvents = [...allTasks];
 
   // Inject Dental Clinical Cases & Dental Procedure Step Tasks (if user has access)
@@ -16806,7 +16849,10 @@ function renderCalMiniAgenda() {
   if (!list) return;
 
   const todayKey = getCalDateKey(new Date());
-  const tasks = (window.StorageService ? window.StorageService.tasks.getAll(false) : []).filter(t => t.date === todayKey);
+  const allTasks = (Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0)
+    ? window.calTasksCache
+    : (window.StorageService ? window.StorageService.tasks.getAll(false) : []);
+  const tasks = allTasks.filter(t => t.date === todayKey && !t.deleted_at);
 
   if (badge) badge.textContent = `${tasks.filter(t => t.completed).length}/${tasks.length}`;
 
@@ -16827,8 +16873,11 @@ function renderCalMiniAgenda() {
 function renderCalStats() {
   const month = calState.activeDate.getMonth();
   const year = calState.activeDate.getFullYear();
-  const tasks = (window.StorageService ? window.StorageService.tasks.getAll(false) : []).filter(t => {
-    if (!t.date) return false;
+  const allTasks = (Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0)
+    ? window.calTasksCache
+    : (window.StorageService ? window.StorageService.tasks.getAll(false) : []);
+  const tasks = allTasks.filter(t => {
+    if (!t.date || t.deleted_at) return false;
     const [y, m] = t.date.split('-').map(Number);
     return y === year && (m - 1) === month;
   });
@@ -16855,10 +16904,12 @@ function renderCalStats() {
   // Streak calculation (consecutive days with completed task leading up to today)
   let streak = 0;
   const check = new Date();
-  const allTasks = window.StorageService ? window.StorageService.tasks.getAll(false) : [];
+  const allTasksStreak = (Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0)
+    ? window.calTasksCache
+    : (window.StorageService ? window.StorageService.tasks.getAll(false) : []);
   for (let i = 0; i < 45; i++) {
     const key = getCalDateKey(check);
-    const hasCompleted = allTasks.some(t => t.date === key && t.completed);
+    const hasCompleted = allTasksStreak.some(t => t.date === key && t.completed && !t.deleted_at);
     if (hasCompleted) {
       streak++;
       check.setDate(check.getDate() - 1);
@@ -17026,16 +17077,18 @@ function openCalEditTaskModal(taskId) {
     return;
   }
 
-  // 2. Fetch task from StorageService
-  let task = window.StorageService ? window.StorageService.tasks.getById(taskId) : null;
-
-  // Fallback 1: search in in-memory filtered events
+  // 2. Fetch task: check in-memory cache first, then StorageService, then filtered
+  let task = null;
+  if (Array.isArray(window.calTasksCache)) {
+    task = window.calTasksCache.find(t => String(t.id) === String(taskId));
+  }
+  if (!task && window.StorageService) {
+    task = window.StorageService.tasks.getById(taskId);
+  }
   if (!task && typeof getCalFilteredTasks === 'function') {
     const all = getCalFilteredTasks();
     task = all.find(t => String(t.id) === String(taskId));
   }
-
-  // Fallback 2: check all local storage tasks including deleted or legacy
   if (!task && window.StorageService) {
     const allRaw = window.StorageService.tasks.getAll(true);
     task = allRaw.find(t => String(t.id) === String(taskId));
@@ -17105,30 +17158,38 @@ function closeCalTaskModal() {
 window.closeCalTaskModal = closeCalTaskModal;
 
 async function rescheduleCalTaskToToday(taskId) {
-  if (!taskId || !window.StorageService) return;
+  if (!taskId) return;
   const todayKey = getCalDateKey(new Date());
-  const updated = window.StorageService.tasks.update(taskId, { date: todayKey });
-  if (updated) {
-    showToast(`🗓️ Rescheduled "${updated.title}" to Today!`);
-    if (authToken) {
-      try {
-        await fetch(`/api/tasks/${taskId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-          body: JSON.stringify({ date: todayKey, dueDate: todayKey })
-        });
-      } catch (_) {}
-    }
-    renderCalendar();
-    if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
-    if (typeof syncBoards === 'function') await syncBoards();
+  const token = getAuthToken();
+
+  if (Array.isArray(window.calTasksCache)) {
+    const item = window.calTasksCache.find(t => String(t.id) === String(taskId));
+    if (item) item.date = todayKey;
   }
+
+  let updated = null;
+  if (window.StorageService) {
+    updated = window.StorageService.tasks.update(taskId, { date: todayKey });
+  }
+
+  showToast(`🗓️ Rescheduled task to Today!`);
+  if (token) {
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ date: todayKey, dueDate: todayKey })
+      });
+    } catch (_) {}
+  }
+  renderCalendar();
+  if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+  if (typeof syncBoards === 'function') await syncBoards();
 }
 window.rescheduleCalTaskToToday = rescheduleCalTaskToToday;
 
 async function handleCalTaskFormSubmit(e) {
   e.preventDefault();
-  if (!window.StorageService) return;
 
   const taskId = document.getElementById('calTaskId')?.value;
   const title = document.getElementById('calTaskTitleInput')?.value.trim();
@@ -17155,20 +17216,20 @@ async function handleCalTaskFormSubmit(e) {
     subtasks: calState.subtasksBuffer || [],
   };
 
-  const submitBtn = document.getElementById('calTaskSubmitBtn') ||
+  const submitBtn = document.getElementById('calBtnSaveTask') ||
+    document.getElementById('calTaskSubmitBtn') ||
     document.querySelector('#calTaskModal [type="submit"]');
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
 
-  let savedTask = null;
+  const token = getAuthToken();
   try {
     if (taskId) {
       // --- EDIT existing task ---
-      savedTask = window.StorageService.tasks.update(taskId, taskPayload);
-      if (authToken) {
+      if (token) {
         try {
           await fetch(`/api/tasks/${taskId}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({
               title,
               task: title,
@@ -17179,18 +17240,40 @@ async function handleCalTaskFormSubmit(e) {
               priority: priority === 'high' ? 'High' : priority === 'low' ? 'Low' : 'Medium',
             })
           });
-          if (savedTask) window.StorageService.tasks.update(savedTask.id, { sync_status: 'synced' });
-        } catch (_) {}
+        } catch (err) {
+          console.warn('[Calendar] PATCH /api/tasks failed:', err);
+        }
+      }
+
+      const updatedCalTask = {
+        ...taskPayload,
+        id: String(taskId),
+        updated_at: new Date().toISOString(),
+        deleted_at: null,
+        sync_status: 'synced',
+      };
+
+      if (Array.isArray(window.calTasksCache)) {
+        const idx = window.calTasksCache.findIndex(t => String(t.id) === String(taskId));
+        if (idx >= 0) {
+          window.calTasksCache[idx] = { ...window.calTasksCache[idx], ...updatedCalTask };
+        } else {
+          window.calTasksCache.unshift(updatedCalTask);
+        }
+      }
+
+      if (window.StorageService) {
+        window.StorageService.tasks.update(taskId, taskPayload);
       }
       showToast('Task updated in schedule.');
     } else {
       // --- CREATE new task ---
       let dbTask = null;
-      if (authToken) {
+      if (token) {
         try {
           const res = await fetch('/api/tasks', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({
               title,
               task: title,
@@ -17206,30 +17289,39 @@ async function handleCalTaskFormSubmit(e) {
             dbTask = await res.json();
           }
         } catch (err) {
-          console.warn('[Calendar] POST /api/tasks failed, creating offline copy:', err);
+          console.warn('[Calendar] POST /api/tasks failed, creating local copy:', err);
         }
       }
 
-      const recordToSave = {
+      const finalId = dbTask && dbTask.id ? String(dbTask.id) : (window.StorageService ? window.StorageService.generateUUID() : 'task_' + Date.now());
+      const newCalTask = {
         ...taskPayload,
-        id: dbTask && dbTask.id ? String(dbTask.id) : undefined,
+        id: finalId,
         title: (dbTask && (dbTask.title || dbTask.task)) || title,
         date: (dbTask && (dbTask.dueDate || dbTask.date)) || date,
-        time: (dbTask && dbTask.timeBlock) || time,
+        time: (dbTask && (dbTask.timeBlock) || time),
         category: (dbTask && dbTask.category) || category,
         priority: ((dbTask && dbTask.priority) || priority || 'medium').toLowerCase(),
         completed: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted_at: null,
         sync_status: dbTask && dbTask.id ? 'synced' : 'pending_sync',
       };
 
-      savedTask = window.StorageService.tasks.create(recordToSave);
-      showToast('Task scheduled successfully.');
+      if (!Array.isArray(window.calTasksCache)) window.calTasksCache = [];
+      window.calTasksCache.unshift(newCalTask);
+
+      if (window.StorageService) {
+        window.StorageService.tasks.create(newCalTask);
+      }
+      showToast('Task scheduled & synced.');
     }
   } catch (err) {
     console.error('[Calendar] Error in handleCalTaskFormSubmit:', err);
     showToast('Failed to save task — please try again.');
   } finally {
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Task'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save / Reschedule Task'; }
   }
 
   closeCalTaskModal();
@@ -17244,18 +17336,26 @@ async function handleCalTaskFormSubmit(e) {
 window.handleCalTaskFormSubmit = handleCalTaskFormSubmit;
 
 async function handleCalDeleteTask() {
-  if (!calState.editingTaskId || !window.StorageService) return;
+  if (!calState.editingTaskId) return;
   const idToDelete = calState.editingTaskId;
-  window.StorageService.tasks.delete(idToDelete, true);
+
+  if (Array.isArray(window.calTasksCache)) {
+    window.calTasksCache = window.calTasksCache.filter(t => String(t.id) !== String(idToDelete));
+  }
+
+  if (window.StorageService) {
+    window.StorageService.tasks.delete(idToDelete, true);
+  }
   closeCalTaskModal();
   renderCalendar();
   showToast('Task removed from schedule.');
 
-  if (authToken) {
+  const token = getAuthToken();
+  if (token) {
     try {
       await fetch(`/api/tasks/${idToDelete}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${authToken}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
     } catch (_) {}
   }
@@ -17267,15 +17367,15 @@ async function handleCalDeleteTask() {
 }
 window.handleCalDeleteTask = handleCalDeleteTask;
 
-function toggleCalTaskComplete(taskId) {
+async function toggleCalTaskComplete(taskId) {
   if (!taskId) return;
 
-  // Handle Dental Cases and Dental Step tasks
+  // Virtual dental clinical case or procedure step
   if (String(taskId).startsWith('dental_')) {
     if (String(taskId).startsWith('dental_step_')) {
       const parts = String(taskId).split('_');
       const caseId = parts[2];
-      const stepKey = parts.slice(3).join('_');
+      const stepIdxOrId = parts.slice(3).join('_');
       const c = (loadedDentalCases || []).find(item => String(item.id) === String(caseId));
       if (c && Array.isArray(c.steps)) {
         const step = c.steps.find((s, i) => String(s.id || s.stepNum || i) === String(stepKey)) || c.steps[parseInt(stepKey, 10)];
@@ -17312,17 +17412,31 @@ function toggleCalTaskComplete(taskId) {
     }
   }
 
-  if (!window.StorageService) return;
-  const updated = window.StorageService.tasks.toggleComplete(taskId);
-  if (!updated) return;
+  let updated = null;
+  if (window.StorageService) {
+    updated = window.StorageService.tasks.toggleComplete(taskId);
+  }
+
+  if (Array.isArray(window.calTasksCache)) {
+    const item = window.calTasksCache.find(t => String(t.id) === String(taskId));
+    if (item) {
+      item.completed = !item.completed;
+      if (item.completed) item.completed_at = new Date().toISOString();
+      else item.completed_at = null;
+      if (!updated) updated = item;
+    }
+  }
 
   renderCalendar();
-  showToast(updated.completed ? '🎉 Task marked complete!' : 'Task reopened.');
+  if (updated) {
+    showToast(updated.completed ? '🎉 Task marked complete!' : 'Task reopened.');
+  }
 
-  if (authToken) {
+  const token = getAuthToken();
+  if (token && updated) {
     fetch(`/api/tasks/${taskId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ completed: updated.completed }),
     }).catch(() => {});
   }

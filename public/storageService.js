@@ -73,15 +73,17 @@
   // ── Cloud-Ready Schema Normalizer ──
   function normalizeRecord(item, defaultValues = {}) {
     const now = new Date().toISOString();
-    return {
-      id: item.id || generateUUID(),
-      created_at: item.created_at || item.createdAt || now,
-      updated_at: item.updated_at || item.updatedAt || now,
-      deleted_at: item.deleted_at !== undefined ? item.deleted_at : null,
-      sync_status: item.sync_status || 'pending_sync',
+    const merged = {
+      id: generateUUID(),
+      sync_status: 'pending_sync',
       ...defaultValues,
       ...item,
     };
+    merged.id = String(merged.id || generateUUID());
+    merged.created_at = merged.created_at || merged.createdAt || now;
+    merged.updated_at = merged.updated_at || merged.updatedAt || now;
+    merged.deleted_at = (merged.deleted_at && typeof merged.deleted_at === 'string') ? merged.deleted_at : null;
+    return merged;
   }
 
   // ── Tasks Starter Seed ──
@@ -165,10 +167,8 @@
   const TasksRepository = {
     getAll(includeDeleted = false) {
       const raw = readRaw(STORAGE_KEYS.TASKS, null);
-      if (!raw || !Array.isArray(raw) || raw.length === 0) {
-        const seeded = getStarterTasks();
-        writeRaw(STORAGE_KEYS.TASKS, seeded);
-        return seeded;
+      if (!raw || !Array.isArray(raw)) {
+        return [];
       }
       // Normalize schema in case older records exist
       const normalized = raw.map(t => normalizeRecord(t, {
@@ -185,7 +185,7 @@
       }));
 
       if (includeDeleted) return normalized;
-      return normalized.filter(t => t.deleted_at === null);
+      return normalized.filter(t => !t.deleted_at);
     },
 
     getById(id) {
@@ -210,6 +210,7 @@
     create(taskData) {
       const now = new Date().toISOString();
       const newTask = normalizeRecord({
+        ...taskData,
         id: taskData.id ? String(taskData.id) : generateUUID(),
         title: (taskData.title || taskData.task || '').trim() || 'Untitled Task',
         description: taskData.description || '',
@@ -227,14 +228,15 @@
               completed: Boolean(st.completed),
             }))
           : [],
-        created_at: now,
-        updated_at: now,
+        created_at: taskData.created_at || now,
+        updated_at: taskData.updated_at || now,
         deleted_at: null,
         sync_status: taskData.sync_status || 'pending_sync',
       });
 
       const current = readRaw(STORAGE_KEYS.TASKS, []);
-      const updated = [newTask, ...current];
+      const filtered = current.filter(t => String(t.id) !== String(newTask.id));
+      const updated = [newTask, ...filtered];
       writeRaw(STORAGE_KEYS.TASKS, updated);
 
       notifyChange('tasks', 'create', newTask);
@@ -250,47 +252,32 @@
       tasksList.forEach(incoming => {
         const id = String(incoming.id || generateUUID());
         const existing = map.get(id);
-        if (!existing) {
-          const newTask = normalizeRecord({
-            id,
-            title: (incoming.title || incoming.task || '').trim() || 'Untitled Task',
-            description: incoming.description !== undefined ? incoming.description : (incoming.segment ? `Segment: ${incoming.segment}` : ''),
-            date: incoming.date || incoming.dueDate || now.split('T')[0],
-            time: incoming.time || incoming.timeBlock || '10:00',
-            category: incoming.category || 'Work',
-            priority: (incoming.priority || 'medium').toLowerCase(),
-            completed: Boolean(incoming.completed),
-            completed_at: incoming.completed ? (incoming.completed_at || now) : null,
-            recurrence: incoming.recurrence || 'none',
-            subtasks: Array.isArray(incoming.subtasks) ? incoming.subtasks : [],
-            created_at: incoming.created_at || incoming.createdAt || now,
-            updated_at: incoming.updated_at || incoming.updatedAt || now,
-            deleted_at: incoming.deleted_at !== undefined ? incoming.deleted_at : null,
-            sync_status: incoming.sync_status || 'synced',
-          });
-          map.set(id, newTask);
-        } else if (existing.sync_status !== 'pending_sync') {
-          const updated = normalizeRecord({
-            ...existing,
-            title: incoming.title || incoming.task || existing.title,
-            description: incoming.description !== undefined ? incoming.description : (incoming.segment ? `Segment: ${incoming.segment}` : existing.description),
-            date: incoming.date || incoming.dueDate || existing.date,
-            time: incoming.time || incoming.timeBlock || existing.time,
-            category: incoming.category || existing.category,
-            priority: (incoming.priority || existing.priority || 'medium').toLowerCase(),
-            completed: Boolean(incoming.completed),
-            completed_at: incoming.completed ? (existing.completed_at || now) : null,
-            updated_at: incoming.updated_at || now,
-            sync_status: incoming.sync_status || 'synced',
-          });
-          map.set(id, updated);
-        }
+        const merged = normalizeRecord({
+          ...(existing || {}),
+          ...incoming,
+          id,
+          title: (incoming.title || incoming.task || (existing && existing.title) || '').trim() || 'Untitled Task',
+          description: incoming.description !== undefined ? incoming.description : (incoming.segment ? `Segment: ${incoming.segment}` : ((existing && existing.description) || '')),
+          date: incoming.date || incoming.dueDate || (existing && existing.date) || now.split('T')[0],
+          time: incoming.time || incoming.timeBlock || (existing && existing.time) || '10:00',
+          category: incoming.category || (existing && existing.category) || 'Work',
+          priority: (incoming.priority || (existing && existing.priority) || 'medium').toLowerCase(),
+          completed: Boolean(incoming.completed),
+          completed_at: incoming.completed ? (incoming.completed_at || (existing && existing.completed_at) || now) : null,
+          recurrence: incoming.recurrence || (existing && existing.recurrence) || 'none',
+          subtasks: Array.isArray(incoming.subtasks) ? incoming.subtasks : (existing && Array.isArray(existing.subtasks) ? existing.subtasks : []),
+          created_at: incoming.created_at || (existing && existing.created_at) || now,
+          updated_at: incoming.updated_at || now,
+          deleted_at: null,
+          sync_status: 'synced',
+        });
+        map.set(id, merged);
       });
 
-      const merged = Array.from(map.values());
-      writeRaw(STORAGE_KEYS.TASKS, merged);
-      notifyChange('tasks', 'bulk', merged);
-      return merged;
+      const mergedList = Array.from(map.values());
+      writeRaw(STORAGE_KEYS.TASKS, mergedList);
+      notifyChange('tasks', 'bulk', mergedList);
+      return mergedList;
     },
 
     update(id, partialUpdates) {
