@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=32.9" />
+<link rel="stylesheet" href="style.css?v=33.0" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -591,13 +591,18 @@
               <h2>Weekly Planner</h2>
               <p class="subtitle">Saturday &rarr; Friday &middot; same Main Database, one task list</p>
             </div>
-            <div class="mini-glass-progress weekly-progress" id="weeklyGlassProgress">
-              <div class="mini-progress-info">
-                <span class="mini-progress-label">Weekly Completion</span>
-                <span class="mini-progress-val" id="weeklyProgressVal">0% (0/0 done)</span>
-              </div>
-              <div class="mini-progress-track">
-                <div class="mini-progress-fill" id="weeklyProgressFill" style="width: 0%;"></div>
+            <div class="weekly-header-controls" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <button type="button" class="weekly-collapse-all-btn" id="btnToggleAllCategories" onclick="toggleAllWeeklyCategories()" style="display: none;" title="Collapse or expand all categories">
+                <span>⇲</span> Collapse All
+              </button>
+              <div class="mini-glass-progress weekly-progress" id="weeklyGlassProgress">
+                <div class="mini-progress-info">
+                  <span class="mini-progress-label">Weekly Completion</span>
+                  <span class="mini-progress-val" id="weeklyProgressVal">0% (0/0 done)</span>
+                </div>
+                <div class="mini-progress-track">
+                  <div class="mini-progress-fill" id="weeklyProgressFill" style="width: 0%;"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -4835,6 +4840,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=32.9"></script>
+  <script src="app.js?v=33.0"></script>
 </body>
 </html>

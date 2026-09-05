@@ -678,8 +678,99 @@ async function loadWeeklyProgress() {
 }
 
 // =============================================================================
-// SHARED BOARD RENDERER
+// SHARED BOARD RENDERER & COLLAPSIBLE CATEGORIES
 // =============================================================================
+
+const WEEKLY_COLLAPSED_STORAGE_KEY = 'antigravity_weekly_collapsed_cats';
+
+function getCollapsedWeeklyCategories() {
+  try {
+    return JSON.parse(localStorage.getItem(WEEKLY_COLLAPSED_STORAGE_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function isCategoryCollapsed(cat) {
+  const list = getCollapsedWeeklyCategories();
+  return list.includes(cat);
+}
+
+function toggleCategoryCollapse(cat) {
+  try {
+    let list = getCollapsedWeeklyCategories();
+    const isNowCollapsed = !list.includes(cat);
+    if (isNowCollapsed) {
+      list.push(cat);
+    } else {
+      list = list.filter(c => c !== cat);
+    }
+    localStorage.setItem(WEEKLY_COLLAPSED_STORAGE_KEY, JSON.stringify(list));
+    updateToggleAllCategoriesButton();
+    return isNowCollapsed;
+  } catch {
+    return false;
+  }
+}
+
+window.toggleAllWeeklyCategories = function() {
+  const sections = document.querySelectorAll('#weeklyBoard .category-section');
+  if (!sections.length) return;
+
+  const anyExpanded = Array.from(sections).some(sec => !sec.classList.contains('is-collapsed'));
+  const allCats = Array.from(sections).map(sec => sec.dataset.category).filter(Boolean);
+
+  try {
+    if (anyExpanded) {
+      // Collapse all
+      localStorage.setItem(WEEKLY_COLLAPSED_STORAGE_KEY, JSON.stringify(allCats));
+      sections.forEach(sec => {
+        sec.classList.add('is-collapsed');
+        const card = sec.querySelector('.card');
+        if (card) card.style.display = 'none';
+        const pill = sec.querySelector('.category-collapse-pill');
+        if (pill) pill.textContent = 'Show';
+        const hdr = sec.querySelector('.category-header');
+        if (hdr) {
+          hdr.setAttribute('aria-expanded', 'false');
+          hdr.title = `Expand ${sec.dataset.category || 'category'}`;
+        }
+      });
+    } else {
+      // Expand all
+      localStorage.setItem(WEEKLY_COLLAPSED_STORAGE_KEY, JSON.stringify([]));
+      sections.forEach(sec => {
+        sec.classList.remove('is-collapsed');
+        const card = sec.querySelector('.card');
+        if (card) card.style.display = '';
+        const pill = sec.querySelector('.category-collapse-pill');
+        if (pill) pill.textContent = 'Hide';
+        const hdr = sec.querySelector('.category-header');
+        if (hdr) {
+          hdr.setAttribute('aria-expanded', 'true');
+          hdr.title = `Collapse ${sec.dataset.category || 'category'}`;
+        }
+      });
+    }
+    updateToggleAllCategoriesButton();
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+function updateToggleAllCategoriesButton() {
+  const btn = document.getElementById('btnToggleAllCategories');
+  if (!btn) return;
+  const sections = document.querySelectorAll('#weeklyBoard .category-section');
+  if (!sections.length) {
+    btn.style.display = 'none';
+    return;
+  }
+  btn.style.display = 'inline-flex';
+  const anyExpanded = Array.from(sections).some(sec => !sec.classList.contains('is-collapsed'));
+  btn.innerHTML = anyExpanded ? '<span>⇲</span> Collapse All' : '<span>⇱</span> Expand All';
+  btn.title = anyExpanded ? 'Collapse all category sections' : 'Expand all category sections';
+}
 
 function renderBoard(containerEl, tasks, opts) {
   containerEl.innerHTML = '';
@@ -691,6 +782,7 @@ function renderBoard(containerEl, tasks, opts) {
         <h2>${opts.emptyTitle}</h2>
         <p>${opts.emptyText}</p>
       </div>`;
+    updateToggleAllCategoriesButton();
     return;
   }
 
@@ -698,24 +790,70 @@ function renderBoard(containerEl, tasks, opts) {
   for (const category of Object.keys(byCategory)) {
     containerEl.appendChild(renderCategorySection(category, byCategory[category], opts));
   }
+  updateToggleAllCategoriesButton();
 }
 
 function renderCategorySection(category, tasks, opts) {
   const section = document.createElement('section');
   section.className = 'category-section';
+  section.dataset.category = category;
+
+  const isCollapsed = isCategoryCollapsed(category);
+  if (isCollapsed) {
+    section.classList.add('is-collapsed');
+  }
 
   const header = document.createElement('div');
-  header.className = 'category-header';
+  header.className = 'category-header category-header-collapsible';
+  header.role = 'button';
+  header.tabIndex = 0;
+  header.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+  header.title = `${isCollapsed ? 'Expand' : 'Collapse'} ${category} (${tasks.length} task${tasks.length === 1 ? '' : 's'})`;
+
   header.innerHTML = `
-    <span class="category-icon">${CATEGORY_ICON[category] || '•'}</span>
-    <span class="category-title">${category}</span>
-    <span class="category-count">${tasks.length} task${tasks.length === 1 ? '' : 's'}</span>
+    <div class="category-header-main">
+      <span class="category-collapse-chevron" aria-hidden="true">▼</span>
+      <span class="category-icon">${CATEGORY_ICON[category] || '•'}</span>
+      <span class="category-title">${category}</span>
+      <span class="category-count">${tasks.length} task${tasks.length === 1 ? '' : 's'}</span>
+    </div>
+    <div class="category-header-actions">
+      <span class="category-collapse-pill">${isCollapsed ? 'Show' : 'Hide'}</span>
+    </div>
   `;
-  section.appendChild(header);
 
   const card = document.createElement('div');
-  card.className = 'card';
+  card.className = 'card category-card-body';
+  if (isCollapsed) {
+    card.style.display = 'none';
+  }
   tasks.forEach(task => card.appendChild(renderTaskRow(task, opts)));
+
+  const toggleCollapse = () => {
+    const nowCollapsed = toggleCategoryCollapse(category);
+    section.classList.toggle('is-collapsed', nowCollapsed);
+    header.setAttribute('aria-expanded', nowCollapsed ? 'false' : 'true');
+    header.title = `${nowCollapsed ? 'Expand' : 'Collapse'} ${category} (${tasks.length} task${tasks.length === 1 ? '' : 's'})`;
+
+    const pill = header.querySelector('.category-collapse-pill');
+    if (pill) pill.textContent = nowCollapsed ? 'Show' : 'Hide';
+
+    if (nowCollapsed) {
+      card.style.display = 'none';
+    } else {
+      card.style.display = '';
+    }
+  };
+
+  header.addEventListener('click', toggleCollapse);
+  header.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleCollapse();
+    }
+  });
+
+  section.appendChild(header);
   section.appendChild(card);
 
   return section;
