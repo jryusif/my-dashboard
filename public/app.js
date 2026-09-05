@@ -10002,6 +10002,104 @@ const roadmapStatusSelect      = document.getElementById('roadmapStatusSelect');
 const roadmapStrategyInput     = document.getElementById('roadmapStrategyInput');
 const roadmapKeyResultsInput   = document.getElementById('roadmapKeyResultsInput');
 
+// =============================================================================
+// 🎯 INTERACTIVE ROADMAP KEY RESULTS BUILDER CONTROLLER
+// =============================================================================
+let roadmapEditingKeyResults = [];
+
+function renderRoadmapModalKeyResults() {
+  const container = document.getElementById('roadmapKrList');
+  const countBadge = document.getElementById('roadmapKrCountBadge');
+  const hiddenInput = document.getElementById('roadmapKeyResultsInput');
+  if (!container) return;
+
+  const total = roadmapEditingKeyResults.length;
+  if (countBadge) {
+    countBadge.textContent = `${total} Target${total === 1 ? '' : 's'}`;
+  }
+
+  if (hiddenInput) {
+    hiddenInput.value = roadmapEditingKeyResults.map(kr => kr.title).join('\n');
+  }
+
+  if (total === 0) {
+    container.innerHTML = `
+      <div class="kr-empty-hint">
+        🎯 No key results added yet. Enter a target below to track progress.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = roadmapEditingKeyResults.map((kr, idx) => `
+    <div class="kr-item-row" data-index="${idx}">
+      <span class="kr-num-badge">${String(idx + 1).padStart(2, '0')}</span>
+      <button type="button" class="kr-item-toggle-done ${kr.done ? 'is-completed' : ''}" 
+              onclick="toggleEditingKrDone(${idx})" 
+              title="${kr.done ? 'Target achieved (click to mark pending)' : 'Mark target as achieved'}">
+        ${kr.done ? '✓' : ''}
+      </button>
+      <input type="text" class="kr-item-input ${kr.done ? 'is-completed' : ''}" 
+             value="${escapeHtml(kr.title)}" 
+             placeholder="Key result description..." 
+             oninput="updateEditingKrTitle(${idx}, this.value)" />
+      <button type="button" class="kr-item-delete-btn" 
+              onclick="deleteEditingKr(${idx})" 
+              title="Remove target">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
+    </div>
+  `).join('');
+}
+
+window.toggleEditingKrDone = function(index) {
+  if (roadmapEditingKeyResults[index]) {
+    roadmapEditingKeyResults[index].done = !roadmapEditingKeyResults[index].done;
+    renderRoadmapModalKeyResults();
+  }
+};
+
+window.updateEditingKrTitle = function(index, newTitle) {
+  if (roadmapEditingKeyResults[index]) {
+    roadmapEditingKeyResults[index].title = newTitle;
+    const hiddenInput = document.getElementById('roadmapKeyResultsInput');
+    if (hiddenInput) {
+      hiddenInput.value = roadmapEditingKeyResults.map(kr => kr.title).join('\n');
+    }
+  }
+};
+
+window.deleteEditingKr = function(index) {
+  if (index >= 0 && index < roadmapEditingKeyResults.length) {
+    roadmapEditingKeyResults.splice(index, 1);
+    renderRoadmapModalKeyResults();
+  }
+};
+
+window.addRoadmapEditingKr = function(title = '') {
+  const input = document.getElementById('roadmapNewKrInput');
+  const textToAdd = (typeof title === 'string' && title.trim()) ? title.trim() : (input ? input.value.trim() : '');
+  if (!textToAdd) return;
+
+  roadmapEditingKeyResults.push({
+    id: `kr_${Date.now()}_${roadmapEditingKeyResults.length}`,
+    title: textToAdd,
+    done: false
+  });
+
+  if (input) input.value = '';
+  renderRoadmapModalKeyResults();
+
+  const container = document.getElementById('roadmapKrList');
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+  if (input) input.focus();
+};
+
 function initRoadmapEvents() {
   if (backToDashboardFromRoadmap) {
     backToDashboardFromRoadmap.addEventListener('click', showDashboard);
@@ -10028,6 +10126,23 @@ function initRoadmapEvents() {
 
   if (roadmapMilestoneForm) {
     roadmapMilestoneForm.addEventListener('submit', handleSaveRoadmapMilestone);
+  }
+
+  const addKrBtn = document.getElementById('btnAddRoadmapKr');
+  const newKrInput = document.getElementById('roadmapNewKrInput');
+  if (addKrBtn) {
+    addKrBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      addRoadmapEditingKr();
+    });
+  }
+  if (newKrInput) {
+    newKrInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addRoadmapEditingKr();
+      }
+    });
   }
 }
 
@@ -10637,10 +10752,14 @@ function openRoadmapModal(defaultPillar = null, editMilestoneId = null, defaultP
     if (roadmapHorizonInput) roadmapHorizonInput.value = m.targetHorizon || '';
     if (roadmapStatusSelect) roadmapStatusSelect.value = m.status || 'in_progress';
     if (roadmapStrategyInput) roadmapStrategyInput.value = m.actionStrategy || '';
-    if (roadmapKeyResultsInput) {
-      const lines = Array.isArray(m.keyResults) ? m.keyResults.map(k => k.title).join('\n') : '';
-      roadmapKeyResultsInput.value = lines;
-    }
+    roadmapEditingKeyResults = Array.isArray(m.keyResults)
+      ? m.keyResults.map((k, i) => ({
+          id: k.id || `kr_${Date.now()}_${i}`,
+          title: k.title || '',
+          done: Boolean(k.done)
+        }))
+      : [];
+    renderRoadmapModalKeyResults();
   } else {
     if (roadmapModalTitle) roadmapModalTitle.textContent = 'Add Life Milestone';
     if (roadmapMilestoneId) roadmapMilestoneId.value = '';
@@ -10650,8 +10769,12 @@ function openRoadmapModal(defaultPillar = null, editMilestoneId = null, defaultP
     if (roadmapHorizonInput) roadmapHorizonInput.value = 'Q4 2026';
     if (roadmapStatusSelect) roadmapStatusSelect.value = 'in_progress';
     if (roadmapStrategyInput) roadmapStrategyInput.value = '';
-    if (roadmapKeyResultsInput) roadmapKeyResultsInput.value = '';
+    roadmapEditingKeyResults = [];
+    renderRoadmapModalKeyResults();
   }
+
+  const newKrInput = document.getElementById('roadmapNewKrInput');
+  if (newKrInput) newKrInput.value = '';
 
   if (roadmapModalBackdrop) roadmapModalBackdrop.hidden = false;
 }
@@ -10666,27 +10789,15 @@ window.closeRoadmapModal = closeRoadmapModal;
 async function handleSaveRoadmapMilestone(e) {
   e.preventDefault();
   const id = roadmapMilestoneId.value;
-  const rawKeyResults = roadmapKeyResultsInput.value.split('\n').map(l => l.trim()).filter(Boolean);
-  
-  let keyResults = [];
-  if (id) {
-    const existing = roadmapMilestones.find(m => m.id === id);
-    const existingKrs = existing?.keyResults || [];
-    keyResults = rawKeyResults.map((title, i) => {
-      const matched = existingKrs.find(k => k.title === title) || existingKrs[i];
-      return {
-        id: matched?.id || `kr_${Date.now()}_${i}`,
-        title,
-        done: matched ? matched.done : false
-      };
-    });
-  } else {
-    keyResults = rawKeyResults.map((title, i) => ({
-      id: `kr_${Date.now()}_${i}`,
-      title,
-      done: false
+
+  // Filter out any blank entries
+  const keyResults = roadmapEditingKeyResults
+    .filter(kr => kr.title && kr.title.trim().length > 0)
+    .map((kr, i) => ({
+      id: kr.id || `kr_${Date.now()}_${i}`,
+      title: kr.title.trim(),
+      done: Boolean(kr.done)
     }));
-  }
 
   const payload = {
     pillar: roadmapPillarSelect.value,

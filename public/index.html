@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=32.7" />
+<link rel="stylesheet" href="style.css?v=32.8" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -2913,8 +2913,33 @@
       <label for="roadmapStrategyInput">Action Strategy &amp; Blueprint</label>
       <textarea id="roadmapStrategyInput" name="actionStrategy" rows="2" placeholder="Key execution rules, schedule blocks, risk management..."></textarea>
 
-      <label for="roadmapKeyResultsInput">Key Results (One per line)</label>
-      <textarea id="roadmapKeyResultsInput" name="keyResultsRaw" rows="3" placeholder="Complete 50 clinical cases&#10;Pass Phase 1 evaluation challenge&#10;Maintain >90% mock exam score"></textarea>
+      <!-- Redesigned Separate Key Results & Targets Component -->
+      <div class="kr-editor-section">
+        <div class="kr-editor-header">
+          <div class="kr-editor-label">
+            <span class="kr-editor-title">🎯 Key Results &amp; Measurable Targets</span>
+            <span class="kr-editor-badge" id="roadmapKrCountBadge">0 Targets</span>
+          </div>
+          <span class="kr-editor-sub">Break down this milestone into individual, actionable target metrics.</span>
+        </div>
+
+        <div class="kr-items-container" id="roadmapKrList">
+          <!-- Dynamic separate key result rows rendered here -->
+        </div>
+
+        <div class="kr-add-row">
+          <input type="text" class="kr-add-input" id="roadmapNewKrInput" placeholder="Add a key result (e.g. Complete 50 clinical cases)..." />
+          <button type="button" class="btn-add-kr" id="btnAddRoadmapKr" title="Add Key Result">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Add Target</span>
+          </button>
+        </div>
+
+        <input type="hidden" id="roadmapKeyResultsInput" name="keyResultsRaw" value="" />
+      </div>
 
       <div class="modal-actions">
         <button type="button" class="btn-secondary" id="btnCancelRoadmapModal">Cancel</button>
@@ -4810,6 +4835,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=32.7"></script>
+  <script src="app.js?v=32.8"></script>
 </body>
 </html>
