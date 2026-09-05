@@ -492,6 +492,8 @@ function hideAllTopLevelSections() {
   if (analyticsSec) analyticsSec.hidden = true;
   const roadmapSec = document.getElementById('roadmapSection');
   if (roadmapSec) roadmapSec.hidden = true;
+  const tradeSec = document.getElementById('tradingSection');
+  if (tradeSec) tradeSec.hidden = true;
   const profileSec = document.getElementById('userProfileSection');
   if (profileSec) profileSec.hidden = true;
   const adminSec = document.getElementById('adminSection');
@@ -1574,6 +1576,8 @@ function openPage(category) {
       showToast('🔒 US Stocks Trading workspace is locked. Administrator approval required.');
       return;
     }
+    openTradingPage();
+    return;
   }
 
   if (category === 'Analytics & Progress') { openAnalyticsPage(); return; }
@@ -1594,9 +1598,13 @@ async function openCategoryPage(category) {
     showDashboard();
     return;
   }
-  if ((category === 'Us stocks trading' || category === 'US Stocks Trading' || category === 'Trading') && !userCanAccessTrading()) {
-    showToast('🔒 US Stocks Trading workspace is locked. Administrator approval required.');
-    showDashboard();
+  if ((category === 'Us stocks trading' || category === 'US Stocks Trading' || category === 'Trading')) {
+    if (!userCanAccessTrading()) {
+      showToast('🔒 US Stocks Trading workspace is locked. Administrator approval required.');
+      showDashboard();
+      return;
+    }
+    openTradingPage();
     return;
   }
 
@@ -4602,6 +4610,1214 @@ async function handleVerifyVaultPass(e) {
   }
 }
 window.handleVerifyVaultPass = handleVerifyVaultPass;
+
+// =============================================================================
+// 📈 INSTITUTIONAL TRADING JOURNAL & RISK MANAGEMENT ENGINE
+// =============================================================================
+
+const TRADING_STORAGE_KEYS = {
+  CAPITAL: 'antigravity_trading_capital_v1',
+  TRADES: 'antigravity_trading_trades_v1',
+  RISK: 'antigravity_trading_risk_v1',
+  REVIEWS: 'antigravity_trading_weekly_reviews_v1',
+  LESSONS: 'antigravity_trading_lessons_v1'
+};
+
+let activeTradingView = 'journal';
+let activeTradeOutcomeFilter = 'all';
+let tradeSearchFilterQuery = '';
+let activeLessonTagFilter = 'all';
+let currentTradeSideSelection = 'Long';
+let currentTradeOutcomeSelection = 'Win';
+let tradingRiskAlertDismissed = false;
+
+// ── Storage Accessors ──
+function getTradingCapital() {
+  try {
+    const raw = localStorage.getItem(TRADING_STORAGE_KEYS.CAPITAL);
+    if (!raw) return { initialCapital: 180, deposits: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      initialCapital: typeof parsed.initialCapital === 'number' ? parsed.initialCapital : 180,
+      deposits: Array.isArray(parsed.deposits) ? parsed.deposits : []
+    };
+  } catch {
+    return { initialCapital: 180, deposits: [] };
+  }
+}
+
+function saveTradingCapital(data) {
+  try {
+    localStorage.setItem(TRADING_STORAGE_KEYS.CAPITAL, JSON.stringify(data));
+  } catch (err) {
+    console.error('Failed to save trading capital:', err);
+  }
+}
+
+function getTradingTrades() {
+  try {
+    const raw = localStorage.getItem(TRADING_STORAGE_KEYS.TRADES);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveTradingTrades(trades) {
+  try {
+    localStorage.setItem(TRADING_STORAGE_KEYS.TRADES, JSON.stringify(trades));
+  } catch (err) {
+    console.error('Failed to save trades:', err);
+  }
+}
+
+function getTradingRiskSettings() {
+  try {
+    const raw = localStorage.getItem(TRADING_STORAGE_KEYS.RISK);
+    if (!raw) return { maxPositionSizePct: 20, dailyLossLimitPct: 3 };
+    const parsed = JSON.parse(raw);
+    return {
+      maxPositionSizePct: parseFloat(parsed.maxPositionSizePct) || 20,
+      dailyLossLimitPct: parseFloat(parsed.dailyLossLimitPct) || 3
+    };
+  } catch {
+    return { maxPositionSizePct: 20, dailyLossLimitPct: 3 };
+  }
+}
+
+function saveTradingRiskSettings(risk) {
+  try {
+    localStorage.setItem(TRADING_STORAGE_KEYS.RISK, JSON.stringify(risk));
+  } catch (err) {
+    console.error('Failed to save risk settings:', err);
+  }
+}
+
+function getTradingWeeklyReviews() {
+  try {
+    const raw = localStorage.getItem(TRADING_STORAGE_KEYS.REVIEWS);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveTradingWeeklyReviews(reviews) {
+  try {
+    localStorage.setItem(TRADING_STORAGE_KEYS.REVIEWS, JSON.stringify(reviews));
+  } catch (err) {
+    console.error('Failed to save weekly reviews:', err);
+  }
+}
+
+function getTradingLessons() {
+  try {
+    const raw = localStorage.getItem(TRADING_STORAGE_KEYS.LESSONS);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+
+  // Seed default high-conviction institutional trading rules if none exist
+  const defaultRules = [
+    {
+      id: 'rule_1',
+      date: '2026-09-01',
+      title: 'Do not chase breakout spikes at market open',
+      category: 'Execution',
+      severity: 'High',
+      ruleToFollow: 'Wait for the 15-minute candle to confirm support before entering.',
+      description: 'Opening 15m has erratic liquidity and spread spikes. Chasing causes instant drawdown.'
+    },
+    {
+      id: 'rule_2',
+      date: '2026-09-02',
+      title: 'Respect the 20% position size rule unconditionally',
+      category: 'Risk Management',
+      severity: 'High',
+      ruleToFollow: 'Never commit more than the maximum calculated USD size to a single trade.',
+      description: 'Oversizing leads to psychological panic, micro-managing, and emotional exits.'
+    },
+    {
+      id: 'rule_3',
+      date: '2026-09-03',
+      title: 'Hard daily loss circuit breaker',
+      category: 'Psychology',
+      severity: 'High',
+      ruleToFollow: 'Close all charts when daily loss hits 3%. Protect account survival first.',
+      description: 'Revenge trading after a loss sequence destroys accounts faster than bad setups.'
+    }
+  ];
+  saveTradingLessons(defaultRules);
+  return defaultRules;
+}
+
+function saveTradingLessons(lessons) {
+  try {
+    localStorage.setItem(TRADING_STORAGE_KEYS.LESSONS, JSON.stringify(lessons));
+  } catch (err) {
+    console.error('Failed to save lessons:', err);
+  }
+}
+
+// ── Metrics Calculation Engine ──
+function getTradingMetrics() {
+  const cap = getTradingCapital();
+  const trades = getTradingTrades();
+  const risk = getTradingRiskSettings();
+
+  const startingCapital = parseFloat(cap.initialCapital) || 180;
+  const totalDeposits = (cap.deposits || []).reduce((s, d) => s + (parseFloat(d.amount) || 0), 0);
+  const totalRealizedPnL = trades.reduce((s, t) => s + (parseFloat(t.pnlAmount) || 0), 0);
+  const currentBalance = Math.max(0, startingCapital + totalDeposits + totalRealizedPnL);
+
+  // Today's metrics (local date string YYYY-MM-DD)
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const todayTrades = trades.filter(t => t.date && t.date.startsWith(todayStr));
+  const todayPnL = todayTrades.reduce((s, t) => s + (parseFloat(t.pnlAmount) || 0), 0);
+  const todayLosses = todayTrades
+    .filter(t => (parseFloat(t.pnlAmount) || 0) < 0)
+    .reduce((s, t) => s + Math.abs(parseFloat(t.pnlAmount) || 0), 0);
+
+  const todayWins = todayTrades.filter(t => t.outcome === 'Win').length;
+  const todayLossCount = todayTrades.filter(t => t.outcome === 'Loss').length;
+
+  // Win Rate
+  const winTrades = trades.filter(t => t.outcome === 'Win');
+  const lossTrades = trades.filter(t => t.outcome === 'Loss');
+  const beTrades = trades.filter(t => t.outcome === 'Break-even');
+  const winRate = trades.length > 0 ? Math.round((winTrades.length / trades.length) * 100) : 0;
+
+  // Profit Factor (Gross Profit / Gross Loss)
+  const grossProfit = winTrades.reduce((s, t) => s + Math.max(0, parseFloat(t.pnlAmount) || 0), 0);
+  const grossLoss = lossTrades.reduce((s, t) => s + Math.abs(Math.min(0, parseFloat(t.pnlAmount) || 0)), 0);
+  const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss).toFixed(2) : (grossProfit > 0 ? '∞' : '0.00');
+
+  // Risk Calculations
+  const maxPositionSizePct = risk.maxPositionSizePct || 20;
+  const dailyLossLimitPct = risk.dailyLossLimitPct || 3;
+  const maxPositionUsd = currentBalance * (maxPositionSizePct / 100);
+  const dailyLossCapUsd = currentBalance * (dailyLossLimitPct / 100);
+  const dailyLossBreached = dailyLossCapUsd > 0 && todayLosses >= dailyLossCapUsd;
+
+  return {
+    startingCapital,
+    totalDeposits,
+    totalRealizedPnL,
+    currentBalance,
+    todayStr,
+    todayTrades,
+    todayPnL,
+    todayLosses,
+    todayWins,
+    todayLossCount,
+    winTrades: winTrades.length,
+    lossTrades: lossTrades.length,
+    beTrades: beTrades.length,
+    totalTrades: trades.length,
+    winRate,
+    grossProfit,
+    grossLoss,
+    profitFactor,
+    maxPositionSizePct,
+    dailyLossLimitPct,
+    maxPositionUsd,
+    dailyLossCapUsd,
+    dailyLossBreached
+  };
+}
+
+// ── Open & Navigate Trading Suite ──
+async function openTradingPage(view = 'journal') {
+  hideAllTopLevelSections();
+  const tradeSec = document.getElementById('tradingSection');
+  if (tradeSec) tradeSec.hidden = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  switchTradingView(view);
+  renderTradingSuite();
+}
+window.openTradingPage = openTradingPage;
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('backToDashboardFromTrading')?.addEventListener('click', showDashboard);
+});
+
+function switchTradingView(viewName) {
+  activeTradingView = viewName;
+
+  // Update tabs
+  const tabs = document.querySelectorAll('#tradingViewTabs .cat-view-tab');
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.view === viewName));
+
+  // Toggle panes
+  const panes = {
+    journal: document.getElementById('tradeJournalViewWrap'),
+    risk: document.getElementById('tradeRiskViewWrap'),
+    weekly: document.getElementById('tradeWeeklyViewWrap'),
+    lessons: document.getElementById('tradeLessonsViewWrap'),
+    watchlist: document.getElementById('tradeWatchlistViewWrap')
+  };
+
+  Object.entries(panes).forEach(([k, el]) => {
+    if (el) el.hidden = (k !== viewName);
+  });
+
+  if (viewName === 'journal') renderTradeHistoryTable();
+  if (viewName === 'risk') renderRiskGuardrails();
+  if (viewName === 'weekly') renderWeeklyReview();
+  if (viewName === 'lessons') renderLessonsKnowledgeBase();
+  if (viewName === 'watchlist') renderTradingWatchlist();
+}
+window.switchTradingView = switchTradingView;
+
+// ── Render Suite Master ──
+function renderTradingSuite() {
+  renderTradingKpis();
+  checkTradingRiskAlertBanner();
+
+  if (activeTradingView === 'journal') renderTradeHistoryTable();
+  else if (activeTradingView === 'risk') renderRiskGuardrails();
+  else if (activeTradingView === 'weekly') renderWeeklyReview();
+  else if (activeTradingView === 'lessons') renderLessonsKnowledgeBase();
+  else if (activeTradingView === 'watchlist') renderTradingWatchlist();
+}
+
+function checkTradingRiskAlertBanner() {
+  const banner = document.getElementById('tradingRiskAlertBanner');
+  if (!banner) return;
+  const m = getTradingMetrics();
+
+  if (m.dailyLossBreached && !tradingRiskAlertDismissed) {
+    banner.style.display = 'flex';
+    const title = document.getElementById('tradingRiskAlertTitle');
+    const msg = document.getElementById('tradingRiskAlertMsg');
+    if (title) title.textContent = `🛑 Daily Loss Limit Breached: -$${m.todayLosses.toFixed(2)} (Cap: -$${m.dailyLossCapUsd.toFixed(2)})`;
+    if (msg) msg.textContent = `Your accumulated losses today exceed your strict ${m.dailyLossLimitPct}% daily risk limit. Protect your remaining capital: cease all active trading for the rest of today!`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function dismissTradingRiskAlert() {
+  tradingRiskAlertDismissed = true;
+  const banner = document.getElementById('tradingRiskAlertBanner');
+  if (banner) banner.style.display = 'none';
+}
+window.dismissTradingRiskAlert = dismissTradingRiskAlert;
+
+// ── Render Top KPI Cards ──
+function renderTradingKpis() {
+  const grid = document.getElementById('tradingKpiGrid');
+  if (!grid) return;
+  const m = getTradingMetrics();
+
+  const dayPnLClass = m.todayPnL > 0 ? 'is-positive' : (m.todayPnL < 0 ? 'is-negative' : '');
+  const dayPnLSign = m.todayPnL > 0 ? '+' : (m.todayPnL < 0 ? '-' : '');
+  const dayPnLReturnPct = m.startingCapital > 0 ? ((m.todayPnL / m.currentBalance) * 100).toFixed(1) : '0.0';
+
+  let riskStatusBadge = '<span class="trading-kpi-badge is-safe">🟢 Optimal / Safe</span>';
+  if (m.dailyLossBreached) {
+    riskStatusBadge = '<span class="trading-kpi-badge is-danger">🛑 Limit Breached</span>';
+  } else if (m.todayLosses > 0 && m.todayLosses >= m.dailyLossCapUsd * 0.7) {
+    riskStatusBadge = '<span class="trading-kpi-badge is-warning">⚠️ High Risk Warning</span>';
+  }
+
+  grid.innerHTML = `
+    <!-- Card 1: Current Portfolio Balance -->
+    <div class="trading-kpi-card">
+      <div class="trading-kpi-header">
+        <span class="trading-kpi-title">Current Portfolio</span>
+        <span class="trading-kpi-icon">💼</span>
+      </div>
+      <div class="trading-kpi-main">
+        <span class="trading-kpi-value">$${m.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      </div>
+      <div class="trading-kpi-sub">
+        <span class="trading-kpi-badge">Base: $${m.startingCapital.toFixed(2)}</span>
+        <span class="trading-kpi-badge">+Dep: $${m.totalDeposits.toFixed(2)}</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Day PnL -->
+    <div class="trading-kpi-card ${m.todayPnL < 0 ? 'is-loss-card' : ''}">
+      <div class="trading-kpi-header">
+        <span class="trading-kpi-title">Day Realized PnL</span>
+        <span class="trading-kpi-icon">${m.todayPnL >= 0 ? '📈' : '📉'}</span>
+      </div>
+      <div class="trading-kpi-main">
+        <span class="trading-kpi-value ${dayPnLClass}">
+          ${dayPnLSign}$${Math.abs(m.todayPnL).toFixed(2)}
+        </span>
+      </div>
+      <div class="trading-kpi-sub">
+        <span>Today: ${m.todayWins}W / ${m.todayLossCount}L</span>
+        <span class="trading-kpi-badge ${dayPnLClass}">${m.todayPnL >= 0 ? '+' : ''}${dayPnLReturnPct}%</span>
+      </div>
+    </div>
+
+    <!-- Card 3: Win Rate & Profit Factor -->
+    <div class="trading-kpi-card">
+      <div class="trading-kpi-header">
+        <span class="trading-kpi-title">Win Rate &amp; Efficiency</span>
+        <span class="trading-kpi-icon">🎯</span>
+      </div>
+      <div class="trading-kpi-main">
+        <span class="trading-kpi-value ${m.winRate >= 50 ? 'is-positive' : ''}">${m.winRate}%</span>
+      </div>
+      <div class="trading-kpi-sub">
+        <span>${m.winTrades}W · ${m.lossTrades}L (${m.totalTrades} total)</span>
+        <span class="trading-kpi-badge" title="Profit Factor">PF: ${m.profitFactor}</span>
+      </div>
+    </div>
+
+    <!-- Card 4: Risk Guardrail Status -->
+    <div class="trading-kpi-card ${m.dailyLossBreached ? 'is-loss-card' : ''}">
+      <div class="trading-kpi-header">
+        <span class="trading-kpi-title">Risk Guardrails</span>
+        <span class="trading-kpi-icon">🛡️</span>
+      </div>
+      <div class="trading-kpi-main">
+        ${riskStatusBadge}
+      </div>
+      <div class="trading-kpi-sub">
+        <span>Max Position: <strong>$${m.maxPositionUsd.toFixed(2)}</strong> (${m.maxPositionSizePct}%)</span>
+      </div>
+    </div>
+  `;
+}
+
+// ── Render Trade History Table ──
+function renderTradeHistoryTable() {
+  const tbody = document.getElementById('tradingTableBody');
+  if (!tbody) return;
+  const trades = getTradingTrades();
+
+  let filtered = trades;
+  if (activeTradeOutcomeFilter !== 'all') {
+    const outcomeMap = { win: 'Win', loss: 'Loss', breakeven: 'Break-even' };
+    filtered = filtered.filter(t => t.outcome === outcomeMap[activeTradeOutcomeFilter]);
+  }
+
+  if (tradeSearchFilterQuery.trim()) {
+    const q = tradeSearchFilterQuery.toLowerCase().trim();
+    filtered = filtered.filter(t =>
+      (t.ticker && t.ticker.toLowerCase().includes(q)) ||
+      (t.setupTag && t.setupTag.toLowerCase().includes(q)) ||
+      (t.notes && t.notes.toLowerCase().includes(q)) ||
+      (t.mindset && t.mindset.toLowerCase().includes(q))
+    );
+  }
+
+  // Sort descending by date
+  filtered.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="10" style="text-align:center; padding:36px 16px; color:var(--ink-soft);">
+          <div style="font-size:28px; margin-bottom:8px;">📊</div>
+          <strong>No trade executions found</strong>
+          <p style="font-size:12px; margin:4px 0 0 0; opacity:0.7;">Click "+ Log Trade" above to record your first execution.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(t => {
+    const pnlVal = parseFloat(t.pnlAmount) || 0;
+    const pnlPct = parseFloat(t.pnlPct) || 0;
+    const isWin = t.outcome === 'Win' || pnlVal > 0;
+    const isLoss = t.outcome === 'Loss' || pnlVal < 0;
+    const pnlClass = isWin ? 'is-win' : (isLoss ? 'is-loss' : 'is-be');
+    const pnlSign = pnlVal > 0 ? '+' : (pnlVal < 0 ? '-' : '');
+    const pctSign = pnlPct > 0 ? '+' : (pnlPct < 0 ? '-' : '');
+
+    const sideBadge = (t.direction || 'Long') === 'Long'
+      ? '<span class="trade-side-badge is-long">BUY / LONG</span>'
+      : '<span class="trade-side-badge is-short">SELL / SHORT</span>';
+
+    const outcomeBadge = isWin
+      ? '<span class="trade-outcome-badge is-win">✓ Win</span>'
+      : (isLoss ? '<span class="trade-outcome-badge is-loss">✕ Loss</span>' : '<span class="trade-outcome-badge is-be">― B/E</span>');
+
+    const formattedDate = t.date ? new Date(t.date).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    }) : '―';
+
+    return `
+      <tr>
+        <td style="font-weight:600; font-size:12px; opacity:0.9;">${formattedDate}</td>
+        <td><strong style="color:#fff; font-size:14px; letter-spacing:0.04em;">${escapeHtml(t.ticker || 'STOCK')}</strong></td>
+        <td>${sideBadge}</td>
+        <td style="font-feature-settings:'tnum' 1; font-weight:700;">$${parseFloat(t.entryAmount || 0).toFixed(2)}</td>
+        <td style="font-feature-settings:'tnum' 1; opacity:0.85;">$${parseFloat(t.exitAmount || 0).toFixed(2)}</td>
+        <td class="trade-pnl-cell ${pnlClass}">
+          ${pnlSign}$${Math.abs(pnlVal).toFixed(2)}
+        </td>
+        <td class="trade-pnl-cell ${pnlClass}">
+          ${pctSign}${Math.abs(pnlPct).toFixed(1)}%
+        </td>
+        <td><span class="trade-tag-pill">${escapeHtml(t.setupTag || 'General')}</span></td>
+        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(t.notes || '')}">
+          <span style="font-size:12px; opacity:0.85;">${escapeHtml(t.notes || t.mindset || '―')}</span>
+        </td>
+        <td style="text-align:right;">
+          <button type="button" class="task-action-btn" onclick="openNewTradeModal('${t.id}')" title="Edit trade" style="margin-right:4px;">Edit</button>
+          <button type="button" class="task-action-btn danger" onclick="deleteTrade('${t.id}')" title="Delete trade">✕</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function setTradeOutcomeFilter(outcome) {
+  activeTradeOutcomeFilter = outcome;
+  const pills = document.querySelectorAll('#tradeOutcomeFilterPills .trade-filter-pill');
+  pills.forEach(p => p.classList.toggle('active', p.dataset.outcome === outcome));
+  renderTradeHistoryTable();
+}
+window.setTradeOutcomeFilter = setTradeOutcomeFilter;
+
+function handleTradeSearchFilter() {
+  const input = document.getElementById('tradeSearchInput');
+  tradeSearchFilterQuery = input ? input.value : '';
+  renderTradeHistoryTable();
+}
+window.handleTradeSearchFilter = handleTradeSearchFilter;
+
+// ── Render Risk Guardrails ──
+function renderRiskGuardrails() {
+  const m = getTradingMetrics();
+
+  const posPctEl = document.getElementById('riskRulePositionPctDisplay');
+  const posUsdEl = document.getElementById('riskMaxAllowedPositionUsd');
+  const lossPctEl = document.getElementById('riskRuleDailyLossPctDisplay');
+  const lossCapUsdEl = document.getElementById('riskDailyLossCapUsd');
+  const lossIncurredEl = document.getElementById('riskDailyLossIncurredDisplay');
+  const lossFillEl = document.getElementById('riskDailyLossFill');
+
+  if (posPctEl) posPctEl.textContent = `${m.maxPositionSizePct}%`;
+  if (posUsdEl) posUsdEl.textContent = `$${m.maxPositionUsd.toFixed(2)}`;
+  if (lossPctEl) lossPctEl.textContent = `${m.dailyLossLimitPct}%`;
+  if (lossCapUsdEl) lossCapUsdEl.textContent = `-$${m.dailyLossCapUsd.toFixed(2)}`;
+
+  const lossPctUsed = m.dailyLossCapUsd > 0 ? Math.min(100, Math.round((m.todayLosses / m.dailyLossCapUsd) * 100)) : 0;
+  if (lossIncurredEl) lossIncurredEl.textContent = `-$${m.todayLosses.toFixed(2)} (${lossPctUsed}%)`;
+  if (lossFillEl) lossFillEl.style.width = `${lossPctUsed}%`;
+
+  handleTestPositionSizeInput();
+}
+
+function handleTestPositionSizeInput() {
+  const input = document.getElementById('riskTestEntryInput');
+  const result = document.getElementById('riskSandboxResult');
+  if (!input || !result) return;
+  const val = parseFloat(input.value);
+  const m = getTradingMetrics();
+
+  if (isNaN(val) || val <= 0) {
+    result.className = 'risk-sandbox-result';
+    result.textContent = `Enter an amount to verify compliance against your ${m.maxPositionSizePct}% ($${m.maxPositionUsd.toFixed(2)}) limit.`;
+    return;
+  }
+
+  const actualPct = m.currentBalance > 0 ? ((val / m.currentBalance) * 100).toFixed(1) : '100.0';
+
+  if (val > m.maxPositionUsd) {
+    result.className = 'risk-sandbox-result is-warn';
+    result.innerHTML = `⚠️ <strong>Violation:</strong> $${val.toFixed(2)} is <strong>${actualPct}%</strong> of portfolio. Exceeds your ${m.maxPositionSizePct}% limit by <strong>+$${(val - m.maxPositionUsd).toFixed(2)}</strong>! Excessive risk exposure.`;
+  } else {
+    result.className = 'risk-sandbox-result is-ok';
+    result.innerHTML = `✅ <strong>Approved Size:</strong> $${val.toFixed(2)} represents <strong>${actualPct}%</strong> of current portfolio. Within safe ${m.maxPositionSizePct}% risk parameters.`;
+  }
+}
+window.handleTestPositionSizeInput = handleTestPositionSizeInput;
+
+// ── Render Weekly Review ──
+function renderWeeklyReview() {
+  const statsRow = document.getElementById('weeklyReviewStatsRow');
+  const feed = document.getElementById('weeklyReviewsFeed');
+  if (!statsRow || !feed) return;
+
+  const trades = getTradingTrades();
+  const reviews = getTradingWeeklyReviews();
+
+  // Current Week (last 7 days)
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const weekTrades = trades.filter(t => new Date(t.date || 0) >= oneWeekAgo);
+
+  const weekWins = weekTrades.filter(t => t.outcome === 'Win').length;
+  const weekLosses = weekTrades.filter(t => t.outcome === 'Loss').length;
+  const weekWinRate = weekTrades.length > 0 ? Math.round((weekWins / weekTrades.length) * 100) : 0;
+  const weekNetPnL = weekTrades.reduce((s, t) => s + (parseFloat(t.pnlAmount) || 0), 0);
+  const weekPnLClass = weekNetPnL > 0 ? 'is-positive' : (weekNetPnL < 0 ? 'is-negative' : '');
+  const weekPnLSign = weekNetPnL > 0 ? '+' : (weekNetPnL < 0 ? '-' : '');
+
+  statsRow.innerHTML = `
+    <div class="weekly-stat-box">
+      <div class="stat-val">${weekTrades.length}</div>
+      <div class="stat-lbl">Trades (7 Days)</div>
+    </div>
+    <div class="weekly-stat-box">
+      <div class="stat-val ${weekWinRate >= 50 ? 'is-positive' : ''}">${weekWinRate}%</div>
+      <div class="stat-lbl">Weekly Win Rate</div>
+    </div>
+    <div class="weekly-stat-box">
+      <div class="stat-val ${weekPnLClass}">${weekPnLSign}$${Math.abs(weekNetPnL).toFixed(2)}</div>
+      <div class="stat-lbl">Weekly Net PnL</div>
+    </div>
+    <div class="weekly-stat-box">
+      <div class="stat-val">${weekWins}W / ${weekLosses}L</div>
+      <div class="stat-lbl">Record Breakdown</div>
+    </div>
+  `;
+
+  if (reviews.length === 0) {
+    feed.innerHTML = `
+      <div class="weekly-review-item-card" style="text-align:center; padding:32px 20px; color:var(--ink-soft);">
+        <div style="font-size:32px; margin-bottom:8px;">🧠</div>
+        <h4 style="color:#fff; margin:0 0 6px 0;">No Weekly Self-Reflections Logged Yet</h4>
+        <p style="font-size:12.5px; margin:0;">Consistent traders review their psychological wins and rule adherence weekly. Click "Log Weekly Self-Reflection" above to record your first audit.</p>
+      </div>
+    `;
+    return;
+  }
+
+  feed.innerHTML = reviews.map(r => `
+    <div class="weekly-review-item-card">
+      <div class="review-item-header">
+        <div class="review-item-title">
+          <span>📅</span> Period: ${escapeHtml(r.weekPeriod || 'Recent Week')}
+        </div>
+        <button type="button" class="deposit-delete-btn" onclick="deleteWeeklyReview('${r.id}')" title="Delete review">✕</button>
+      </div>
+      <div class="review-sections-grid">
+        <div class="review-box is-pros">
+          <h5>🟢 Pros &amp; Good Habits Followed</h5>
+          <p>${escapeHtml(r.pros || 'Disciplines respected.')}</p>
+        </div>
+        <div class="review-box is-cons">
+          <h5>🔴 Cons &amp; Impulses Violated</h5>
+          <p>${escapeHtml(r.cons || 'None recorded.')}</p>
+        </div>
+      </div>
+      <div class="review-advice-callout">
+        <h5>🚀 Actionable Focus for Next Week</h5>
+        <p>${escapeHtml(r.advice || 'Maintain strict position sizing and patience.')}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openWeeklyReviewModal() {
+  const backdrop = document.getElementById('weeklyReviewModalBackdrop');
+  const weekSelect = document.getElementById('reviewWeekSelect');
+  if (weekSelect) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 6);
+    weekSelect.value = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  }
+  if (backdrop) backdrop.hidden = false;
+}
+window.openWeeklyReviewModal = openWeeklyReviewModal;
+
+function closeWeeklyReviewModal() {
+  const backdrop = document.getElementById('weeklyReviewModalBackdrop');
+  if (backdrop) backdrop.hidden = true;
+}
+window.closeWeeklyReviewModal = closeWeeklyReviewModal;
+
+function handleSaveWeeklyReviewSubmit(e) {
+  e.preventDefault();
+  const weekPeriod = document.getElementById('reviewWeekSelect')?.value || 'Weekly Review';
+  const pros = document.getElementById('reviewProsInput')?.value?.trim();
+  const cons = document.getElementById('reviewConsInput')?.value?.trim();
+  const advice = document.getElementById('reviewAdviceInput')?.value?.trim();
+
+  if (!pros || !cons || !advice) {
+    showToast('Please fill out all self-reflection sections.');
+    return;
+  }
+
+  const reviews = getTradingWeeklyReviews();
+  reviews.unshift({
+    id: 'rev_' + Date.now(),
+    date: new Date().toISOString(),
+    weekPeriod,
+    pros,
+    cons,
+    advice
+  });
+  saveTradingWeeklyReviews(reviews);
+  showToast('Weekly review recorded successfully! 🧠');
+  closeWeeklyReviewModal();
+  renderWeeklyReview();
+}
+window.handleSaveWeeklyReviewSubmit = handleSaveWeeklyReviewSubmit;
+
+function deleteWeeklyReview(id) {
+  let reviews = getTradingWeeklyReviews();
+  reviews = reviews.filter(r => r.id !== id);
+  saveTradingWeeklyReviews(reviews);
+  renderWeeklyReview();
+}
+window.deleteWeeklyReview = deleteWeeklyReview;
+
+// ── Render Lessons Knowledge Base ──
+function renderLessonsKnowledgeBase() {
+  const grid = document.getElementById('lessonsKbGrid');
+  if (!grid) return;
+  const lessons = getTradingLessons();
+
+  let filtered = lessons;
+  if (activeLessonTagFilter !== 'all') {
+    filtered = filtered.filter(l => l.category === activeLessonTagFilter);
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align:center; padding:36px; color:var(--ink-soft); background:rgba(255,255,255,0.02); border-radius:16px;">
+        <div style="font-size:32px; margin-bottom:8px;">📖</div>
+        <h4 style="color:#fff; margin:0 0 6px 0;">No Lessons in this Category</h4>
+        <p style="font-size:12px; margin:0;">Click "+ Record Lesson / Mistake" above to add new market lessons.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(l => {
+    const sevClass = l.severity === 'High' ? 'is-high' : (l.severity === 'Medium' ? 'is-medium' : 'is-low');
+    const sevLabel = l.severity || 'Medium';
+
+    return `
+      <div class="lesson-kb-card">
+        <div class="lesson-card-top">
+          <span class="lesson-category-badge">${escapeHtml(l.category || 'General')}</span>
+          <span class="lesson-severity-badge ${sevClass}">${sevLabel} Impact</span>
+        </div>
+        <h4 class="lesson-card-title">${escapeHtml(l.title || 'Trading Lesson')}</h4>
+        <div class="lesson-card-rule-box">
+          <div class="lesson-card-rule-lbl">Golden Rule to Follow:</div>
+          <div class="lesson-card-rule-text">${escapeHtml(l.ruleToFollow || 'Execute with discipline.')}</div>
+        </div>
+        ${l.description ? `<p class="lesson-card-desc">${escapeHtml(l.description)}</p>` : ''}
+        <div class="lesson-card-footer">
+          <span>${l.date ? new Date(l.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Always'}</span>
+          <button type="button" class="deposit-delete-btn" onclick="deleteTradingLesson('${l.id}')" title="Delete lesson">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterLessonsByTag(tag) {
+  activeLessonTagFilter = tag;
+  const pills = document.querySelectorAll('#lessonsTagFilterPills .tag-pill');
+  pills.forEach(p => p.classList.toggle('active', p.dataset.tag === tag));
+  renderLessonsKnowledgeBase();
+}
+window.filterLessonsByTag = filterLessonsByTag;
+
+function openNewTradingLessonModal() {
+  const backdrop = document.getElementById('newTradingLessonModalBackdrop');
+  const form = document.getElementById('newTradingLessonForm');
+  if (form) form.reset();
+  if (backdrop) backdrop.hidden = false;
+}
+window.openNewTradingLessonModal = openNewTradingLessonModal;
+
+function closeNewTradingLessonModal() {
+  const backdrop = document.getElementById('newTradingLessonModalBackdrop');
+  if (backdrop) backdrop.hidden = true;
+}
+window.closeNewTradingLessonModal = closeNewTradingLessonModal;
+
+function handleSaveTradingLessonSubmit(e) {
+  e.preventDefault();
+  const title = document.getElementById('lessonTitleInput')?.value?.trim();
+  const category = document.getElementById('lessonCategorySelect')?.value || 'Psychology';
+  const severity = document.getElementById('lessonSeveritySelect')?.value || 'Medium';
+  const ruleToFollow = document.getElementById('lessonRuleInput')?.value?.trim();
+  const description = document.getElementById('lessonDescriptionInput')?.value?.trim();
+
+  if (!title || !ruleToFollow) {
+    showToast('Lesson title and golden rule are required.');
+    return;
+  }
+
+  const lessons = getTradingLessons();
+  lessons.unshift({
+    id: 'les_' + Date.now(),
+    date: new Date().toISOString(),
+    title,
+    category,
+    severity,
+    ruleToFollow,
+    description
+  });
+  saveTradingLessons(lessons);
+  showToast('Lesson saved to knowledge base! 📖');
+  closeNewTradingLessonModal();
+  renderLessonsKnowledgeBase();
+}
+window.handleSaveTradingLessonSubmit = handleSaveTradingLessonSubmit;
+
+function deleteTradingLesson(id) {
+  let lessons = getTradingLessons();
+  lessons = lessons.filter(l => l.id !== id);
+  saveTradingLessons(lessons);
+  renderLessonsKnowledgeBase();
+}
+window.deleteTradingLesson = deleteTradingLesson;
+
+// ── Render Watchlist Board ──
+async function renderTradingWatchlist() {
+  const board = document.getElementById('tradingWatchlistBoard');
+  if (!board) return;
+
+  try {
+    const res = await fetch(`/api/tasks?category=${encodeURIComponent('Us stocks trading')}`);
+    if (!res.ok) throw new Error('failed');
+    const { tasks } = await res.json();
+    renderBoard(board, tasks, {
+      compact: false,
+      emptyGlyph: '📈',
+      emptyTitle: 'No Trading Setups Scheduled',
+      emptyText: 'Add upcoming earnings, ticker breakouts, or research setups above.',
+      onToggled: () => renderTradingWatchlist(),
+      onEdited: () => renderTradingWatchlist(),
+      onDeleted: () => renderTradingWatchlist()
+    });
+  } catch {
+    board.innerHTML = '<div class="empty-state">Failed to load trading watchlist.</div>';
+  }
+
+  // Bind quick add form
+  const form = document.getElementById('tradingQuickTaskForm');
+  if (form && !form.dataset.bound) {
+    form.dataset.bound = 'true';
+    const dateInput = document.getElementById('tradingQuickTaskDate');
+    if (dateInput) dateInput.value = toISODate(new Date());
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById('tradingQuickTaskName');
+      const prioInput = document.getElementById('tradingQuickTaskPriority');
+      const title = nameInput ? nameInput.value.trim() : '';
+      const priority = prioInput ? prioInput.value : 'Medium';
+      const date = dateInput ? dateInput.value : toISODate(new Date());
+
+      if (!title) return;
+      try {
+        const res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task: title,
+            category: 'Us stocks trading',
+            dueDate: date,
+            priority
+          })
+        });
+        if (res.ok) {
+          nameInput.value = '';
+          showToast('Trading setup added! 📈');
+          renderTradingWatchlist();
+          loadCardBadges();
+        }
+      } catch (err) {
+        showToast('Could not add setup task.');
+      }
+    });
+  }
+}
+
+// ── Trade Entry Form Live Calculation & Submission ──
+function setTradeSide(side) {
+  currentTradeSideSelection = side;
+  const btns = document.querySelectorAll('#tradeSideToggle button');
+  btns.forEach(b => b.classList.toggle('active', b.dataset.side === side));
+}
+window.setTradeSide = setTradeSide;
+
+function setTradeOutcome(outcome) {
+  currentTradeOutcomeSelection = outcome;
+  const btns = document.querySelectorAll('#tradeOutcomeToggle button');
+  btns.forEach(b => b.classList.toggle('active', b.dataset.outcome === outcome));
+  recalcTradePnL();
+}
+window.setTradeOutcome = setTradeOutcome;
+
+function recalcTradePnL() {
+  const entryInput = document.getElementById('tradeEntryAmountInput');
+  const exitInput = document.getElementById('tradeExitAmountInput');
+  const dollarPreview = document.getElementById('tradePnlDollarPreview');
+  const pctPreview = document.getElementById('tradePnlPctPreview');
+  const badgePreview = document.getElementById('tradePnlOutcomeBadge');
+  const warningBanner = document.getElementById('tradeSizeRiskWarning');
+  const warningText = document.getElementById('tradeSizeRiskWarningText');
+
+  if (!entryInput || !exitInput) return;
+  const entry = parseFloat(entryInput.value) || 0;
+  const exitVal = parseFloat(exitInput.value) || 0;
+  const m = getTradingMetrics();
+
+  // Position Size Warning Check
+  if (entry > m.maxPositionUsd && m.maxPositionUsd > 0) {
+    if (warningBanner) warningBanner.style.display = 'flex';
+    if (warningText) {
+      warningText.textContent = `Warning: Position size $${entry.toFixed(2)} exceeds your recommended ${m.maxPositionSizePct}% limit ($${m.maxPositionUsd.toFixed(2)})!`;
+    }
+  } else {
+    if (warningBanner) warningBanner.style.display = 'none';
+  }
+
+  // PnL Auto-Calculation
+  let pnlAmount = 0;
+  let pnlPct = 0;
+
+  if (entry > 0) {
+    // If exitVal is large (likely gross exit capital)
+    if (exitVal >= entry && currentTradeOutcomeSelection === 'Win') {
+      pnlAmount = exitVal - entry;
+    } else if (exitVal < entry && exitVal > 0 && currentTradeOutcomeSelection === 'Loss') {
+      pnlAmount = exitVal - entry;
+    } else if (exitVal <= 0) {
+      // Direct negative PnL entered
+      pnlAmount = exitVal;
+    } else {
+      // Direct net PnL entered
+      pnlAmount = currentTradeOutcomeSelection === 'Loss' ? -Math.abs(exitVal) : (currentTradeOutcomeSelection === 'Win' ? Math.abs(exitVal) : 0);
+    }
+    pnlPct = (pnlAmount / entry) * 100;
+  }
+
+  const isWin = pnlAmount > 0 || currentTradeOutcomeSelection === 'Win';
+  const isLoss = pnlAmount < 0 || currentTradeOutcomeSelection === 'Loss';
+  const sign = pnlAmount > 0 ? '+' : (pnlAmount < 0 ? '-' : '');
+  const pctSign = pnlPct > 0 ? '+' : (pnlPct < 0 ? '-' : '');
+
+  if (dollarPreview) {
+    dollarPreview.textContent = `${sign}$${Math.abs(pnlAmount).toFixed(2)}`;
+    dollarPreview.style.color = isWin ? 'var(--trading-win)' : (isLoss ? 'var(--trading-loss)' : 'var(--trading-be)');
+  }
+
+  if (pctPreview) {
+    pctPreview.textContent = `(${pctSign}${Math.abs(pnlPct).toFixed(1)}%)`;
+    pctPreview.style.color = isWin ? 'var(--trading-win)' : (isLoss ? 'var(--trading-loss)' : 'var(--trading-be)');
+  }
+
+  if (badgePreview) {
+    badgePreview.textContent = currentTradeOutcomeSelection;
+    badgePreview.className = `pnl-preview-badge ${isWin ? 'is-win' : (isLoss ? 'is-loss' : 'is-be')}`;
+  }
+}
+window.recalcTradePnL = recalcTradePnL;
+
+function openNewTradeModal(editId = null) {
+  const backdrop = document.getElementById('newTradeModalBackdrop');
+  const title = document.getElementById('newTradeModalTitle');
+  const editInput = document.getElementById('tradeEditId');
+  const tickerInput = document.getElementById('tradeTickerInput');
+  const dateInput = document.getElementById('tradeDateInput');
+  const entryInput = document.getElementById('tradeEntryAmountInput');
+  const exitInput = document.getElementById('tradeExitAmountInput');
+  const setupInput = document.getElementById('tradeSetupTagInput');
+  const mindsetInput = document.getElementById('tradeMindsetInput');
+  const notesInput = document.getElementById('tradeNotesInput');
+  const maxHint = document.getElementById('tradeEntryMaxHint');
+
+  const m = getTradingMetrics();
+  if (maxHint) maxHint.textContent = `Max recommended: $${m.maxPositionUsd.toFixed(2)} (${m.maxPositionSizePct}%)`;
+
+  if (editId) {
+    const trades = getTradingTrades();
+    const trade = trades.find(t => t.id === editId);
+    if (trade) {
+      if (title) title.textContent = '✏️ Edit Trade Execution';
+      if (editInput) editInput.value = trade.id;
+      if (tickerInput) tickerInput.value = trade.ticker || '';
+      if (dateInput) dateInput.value = trade.date || '';
+      if (entryInput) entryInput.value = trade.entryAmount || '';
+      if (exitInput) exitInput.value = trade.exitAmount || trade.pnlAmount || '';
+      if (setupInput) setupInput.value = trade.setupTag || 'Breakout';
+      if (mindsetInput) mindsetInput.value = trade.mindset || 'Followed Plan';
+      if (notesInput) notesInput.value = trade.notes || '';
+      setTradeSide(trade.direction || 'Long');
+      setTradeOutcome(trade.outcome || 'Win');
+    }
+  } else {
+    if (title) title.textContent = '📈 Log New Trade Execution';
+    if (editInput) editInput.value = '';
+    if (tickerInput) tickerInput.value = '';
+    if (dateInput) {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      dateInput.value = now.toISOString().slice(0, 16);
+    }
+    if (entryInput) entryInput.value = '';
+    if (exitInput) exitInput.value = '';
+    if (notesInput) notesInput.value = '';
+    setTradeSide('Long');
+    setTradeOutcome('Win');
+  }
+
+  recalcTradePnL();
+  if (backdrop) backdrop.hidden = false;
+}
+window.openNewTradeModal = openNewTradeModal;
+
+function closeNewTradeModal() {
+  const backdrop = document.getElementById('newTradeModalBackdrop');
+  if (backdrop) backdrop.hidden = true;
+}
+window.closeNewTradeModal = closeNewTradeModal;
+
+function handleSaveTradeSubmit(e) {
+  e.preventDefault();
+  const editId = document.getElementById('tradeEditId')?.value;
+  const ticker = document.getElementById('tradeTickerInput')?.value?.trim().toUpperCase();
+  const date = document.getElementById('tradeDateInput')?.value;
+  const entryAmount = parseFloat(document.getElementById('tradeEntryAmountInput')?.value) || 0;
+  const exitRaw = parseFloat(document.getElementById('tradeExitAmountInput')?.value) || 0;
+  const setupTag = document.getElementById('tradeSetupTagInput')?.value || 'General';
+  const mindset = document.getElementById('tradeMindsetInput')?.value || 'Followed Plan';
+  const notes = document.getElementById('tradeNotesInput')?.value?.trim() || '';
+
+  if (!ticker || entryAmount <= 0) {
+    showToast('Valid ticker and position size are required.');
+    return;
+  }
+
+  // Calculate Net PnL
+  let pnlAmount = 0;
+  let exitAmount = exitRaw;
+
+  if (exitRaw >= entryAmount && currentTradeOutcomeSelection === 'Win') {
+    pnlAmount = exitRaw - entryAmount;
+  } else if (exitRaw < entryAmount && exitRaw > 0 && currentTradeOutcomeSelection === 'Loss') {
+    pnlAmount = exitRaw - entryAmount;
+  } else if (exitRaw <= 0) {
+    pnlAmount = exitRaw;
+    exitAmount = Math.max(0, entryAmount + pnlAmount);
+  } else {
+    pnlAmount = currentTradeOutcomeSelection === 'Loss' ? -Math.abs(exitRaw) : (currentTradeOutcomeSelection === 'Win' ? Math.abs(exitRaw) : 0);
+    exitAmount = Math.max(0, entryAmount + pnlAmount);
+  }
+
+  const pnlPct = entryAmount > 0 ? (pnlAmount / entryAmount) * 100 : 0;
+
+  const trades = getTradingTrades();
+
+  if (editId) {
+    const idx = trades.findIndex(t => t.id === editId);
+    if (idx !== -1) {
+      trades[idx] = {
+        ...trades[idx],
+        ticker,
+        date,
+        direction: currentTradeSideSelection,
+        outcome: currentTradeOutcomeSelection,
+        entryAmount,
+        exitAmount,
+        pnlAmount,
+        pnlPct,
+        setupTag,
+        mindset,
+        notes,
+        updatedAt: new Date().toISOString()
+      };
+      showToast(`Trade updated: ${ticker} (${pnlAmount >= 0 ? '+' : ''}$${pnlAmount.toFixed(2)})`);
+    }
+  } else {
+    trades.unshift({
+      id: 'trade_' + Date.now(),
+      ticker,
+      date,
+      direction: currentTradeSideSelection,
+      outcome: currentTradeOutcomeSelection,
+      entryAmount,
+      exitAmount,
+      pnlAmount,
+      pnlPct,
+      setupTag,
+      mindset,
+      notes,
+      createdAt: new Date().toISOString()
+    });
+    showToast(`Trade logged: ${ticker} (${pnlAmount >= 0 ? '+' : ''}$${pnlAmount.toFixed(2)})! 📈`);
+  }
+
+  saveTradingTrades(trades);
+  closeNewTradeModal();
+  renderTradingSuite();
+  loadCardBadges(); // Updates dashboard card month progress!
+}
+window.handleSaveTradeSubmit = handleSaveTradeSubmit;
+
+function deleteTrade(id) {
+  if (!confirm('Are you sure you want to delete this trade execution?')) return;
+  let trades = getTradingTrades();
+  trades = trades.filter(t => t.id !== id);
+  saveTradingTrades(trades);
+  showToast('Trade deleted.');
+  renderTradingSuite();
+  loadCardBadges();
+}
+window.deleteTrade = deleteTrade;
+
+// ── Capital & Deposit Modal ──
+function openTradeDepositModal() {
+  const backdrop = document.getElementById('tradeDepositModalBackdrop');
+  const cap = getTradingCapital();
+  const initInput = document.getElementById('tradeInitialCapitalInput');
+  const depDateInput = document.getElementById('depositDateInput');
+
+  if (initInput) initInput.value = cap.initialCapital;
+  if (depDateInput) depDateInput.value = toISODate(new Date());
+
+  renderDepositsList();
+  if (backdrop) backdrop.hidden = false;
+}
+window.openTradeDepositModal = openTradeDepositModal;
+
+function closeTradeDepositModal() {
+  const backdrop = document.getElementById('tradeDepositModalBackdrop');
+  if (backdrop) backdrop.hidden = true;
+}
+window.closeTradeDepositModal = closeTradeDepositModal;
+
+function renderDepositsList() {
+  const wrap = document.getElementById('depositsListWrap');
+  if (!wrap) return;
+  const cap = getTradingCapital();
+  const deposits = cap.deposits || [];
+
+  if (deposits.length === 0) {
+    wrap.innerHTML = '<div style="padding:14px; text-align:center; color:var(--ink-soft); font-size:12px;">No periodic deposits added yet.</div>';
+    return;
+  }
+
+  wrap.innerHTML = deposits.map(d => `
+    <div class="deposit-item-row">
+      <div>
+        <span class="deposit-amount">+$${parseFloat(d.amount).toFixed(2)}</span>
+        <span style="opacity:0.75; margin-left:8px;">${d.date || '―'}</span>
+        ${d.note ? `<span style="font-size:11px; opacity:0.6; display:block;">${escapeHtml(d.note)}</span>` : ''}
+      </div>
+      <button type="button" class="deposit-delete-btn" onclick="deleteDeposit('${d.id}')" title="Delete deposit">✕</button>
+    </div>
+  `).join('');
+}
+
+function saveInitialCapitalSetting() {
+  const input = document.getElementById('tradeInitialCapitalInput');
+  const val = parseFloat(input?.value);
+  if (isNaN(val) || val < 0) {
+    showToast('Please enter a valid starting capital amount.');
+    return;
+  }
+  const cap = getTradingCapital();
+  cap.initialCapital = val;
+  saveTradingCapital(cap);
+  showToast(`Starting capital updated to $${val.toFixed(2)}! 💼`);
+  renderTradingSuite();
+  loadCardBadges();
+}
+window.saveInitialCapitalSetting = saveInitialCapitalSetting;
+
+function handleAddDepositSubmit(e) {
+  e.preventDefault();
+  const amountInput = document.getElementById('depositAmountInput');
+  const dateInput = document.getElementById('depositDateInput');
+  const noteInput = document.getElementById('depositNoteInput');
+
+  const amount = parseFloat(amountInput?.value);
+  const date = dateInput?.value || toISODate(new Date());
+  const note = noteInput?.value?.trim() || '';
+
+  if (isNaN(amount) || amount <= 0) {
+    showToast('Please enter a valid deposit amount.');
+    return;
+  }
+
+  const cap = getTradingCapital();
+  cap.deposits = cap.deposits || [];
+  cap.deposits.unshift({
+    id: 'dep_' + Date.now(),
+    amount,
+    date,
+    note,
+    createdAt: new Date().toISOString()
+  });
+
+  saveTradingCapital(cap);
+  showToast(`Deposit of +$${amount.toFixed(2)} added! Total portfolio updated. 📥`);
+  if (amountInput) amountInput.value = '';
+  if (noteInput) noteInput.value = '';
+  renderDepositsList();
+  renderTradingSuite();
+  loadCardBadges();
+}
+window.handleAddDepositSubmit = handleAddDepositSubmit;
+
+function deleteDeposit(id) {
+  const cap = getTradingCapital();
+  cap.deposits = (cap.deposits || []).filter(d => d.id !== id);
+  saveTradingCapital(cap);
+  renderDepositsList();
+  renderTradingSuite();
+  loadCardBadges();
+}
+window.deleteDeposit = deleteDeposit;
+
+// ── Risk Settings Modal ──
+function openTradeRiskSettingsModal() {
+  const backdrop = document.getElementById('tradeRiskSettingsModalBackdrop');
+  const risk = getTradingRiskSettings();
+  const posInput = document.getElementById('riskSettingMaxPositionPct');
+  const lossInput = document.getElementById('riskSettingDailyLossPct');
+
+  if (posInput) posInput.value = risk.maxPositionSizePct;
+  if (lossInput) lossInput.value = risk.dailyLossLimitPct;
+
+  if (backdrop) backdrop.hidden = false;
+}
+window.openTradeRiskSettingsModal = openTradeRiskSettingsModal;
+
+function closeTradeRiskSettingsModal() {
+  const backdrop = document.getElementById('tradeRiskSettingsModalBackdrop');
+  if (backdrop) backdrop.hidden = true;
+}
+window.closeTradeRiskSettingsModal = closeTradeRiskSettingsModal;
+
+function handleSaveRiskSettingsSubmit(e) {
+  e.preventDefault();
+  const posInput = document.getElementById('riskSettingMaxPositionPct');
+  const lossInput = document.getElementById('riskSettingDailyLossPct');
+
+  const maxPositionSizePct = parseFloat(posInput?.value);
+  const dailyLossLimitPct = parseFloat(lossInput?.value);
+
+  if (isNaN(maxPositionSizePct) || maxPositionSizePct <= 0 || maxPositionSizePct > 100) {
+    showToast('Position size must be between 1% and 100%.');
+    return;
+  }
+  if (isNaN(dailyLossLimitPct) || dailyLossLimitPct <= 0 || dailyLossLimitPct > 100) {
+    showToast('Daily loss limit must be between 1% and 100%.');
+    return;
+  }
+
+  saveTradingRiskSettings({ maxPositionSizePct, dailyLossLimitPct });
+  showToast('Risk guardrail settings updated! 🛡️');
+  closeTradeRiskSettingsModal();
+  renderTradingSuite();
+}
+window.handleSaveRiskSettingsSubmit = handleSaveRiskSettingsSubmit;
 
 // =============================================================================
 // FINANCE PAGE

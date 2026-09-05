@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=33.1" />
+<link rel="stylesheet" href="style.css?v=33.2" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -675,6 +675,236 @@
         <!-- View 2: Weekly Schedule Repeating Template Hub -->
         <div id="catTemplateViewWrap" class="cat-template-view" hidden>
           <!-- Rendered dynamically by app.js -->
+        </div>
+      </section>
+
+      <!-- ----------------------------------------------------------------
+           Trading Page & Institutional Risk Management Suite
+           ---------------------------------------------------------------- -->
+      <section class="page-section trading-page" id="tradingSection" hidden>
+        <button type="button" class="back-link" id="backToDashboardFromTrading">&larr; Back to Dashboard</button>
+        <header class="page-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+          <div style="display:flex; align-items:center; gap:16px;">
+            <span class="page-icon" style="--card-color: #eab308">📈</span>
+            <div>
+              <p class="eyebrow">Execution &amp; Capital Command</p>
+              <h1>US Stocks &amp; Trading Journal</h1>
+            </div>
+          </div>
+          <div class="trading-header-actions" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn-primary" id="btnOpenNewTradeModal" onclick="openNewTradeModal()">
+              <span>+</span> Log Trade
+            </button>
+            <button type="button" class="btn-secondary" id="btnOpenDepositModal" onclick="openTradeDepositModal()">
+              <span>📥</span> Capital &amp; Deposits
+            </button>
+            <button type="button" class="btn-secondary" id="btnOpenRiskModal" onclick="openTradeRiskSettingsModal()">
+              <span>🛡️</span> Risk Rules
+            </button>
+          </div>
+        </header>
+
+        <!-- Critical Risk Alert Banner (Dynamic) -->
+        <div class="trading-risk-alert-banner" id="tradingRiskAlertBanner" style="display:none;">
+          <div class="alert-icon">🛑</div>
+          <div class="alert-content">
+            <h4 id="tradingRiskAlertTitle">Daily Loss Limit Breached</h4>
+            <p id="tradingRiskAlertMsg">Today's accumulated losses have exceeded your configured risk threshold. Stop trading for the remainder of the session to preserve capital.</p>
+          </div>
+          <button type="button" class="alert-dismiss-btn" onclick="dismissTradingRiskAlert()">✕</button>
+        </div>
+
+        <!-- Top Scorecard KPI Grid -->
+        <div class="trading-kpi-grid" id="tradingKpiGrid">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+
+        <!-- Trading View Switcher Tabs -->
+        <div class="category-view-tabs" id="tradingViewTabs">
+          <button type="button" class="cat-view-tab active" data-view="journal" id="tabTradeJournal" onclick="switchTradingView('journal')">
+            <span>📊</span> Trade Journal
+          </button>
+          <button type="button" class="cat-view-tab" data-view="risk" id="tabTradeRisk" onclick="switchTradingView('risk')">
+            <span>🛡️</span> Risk Guardrails
+          </button>
+          <button type="button" class="cat-view-tab" data-view="weekly" id="tabTradeWeekly" onclick="switchTradingView('weekly')">
+            <span>🧠</span> Weekly Review
+          </button>
+          <button type="button" class="cat-view-tab" data-view="lessons" id="tabTradeLessons" onclick="switchTradingView('lessons')">
+            <span>📖</span> Lessons &amp; Mistakes
+          </button>
+          <button type="button" class="cat-view-tab" data-view="watchlist" id="tabTradeWatchlist" onclick="switchTradingView('watchlist')">
+            <span>📋</span> Setups &amp; Tasks
+          </button>
+        </div>
+
+        <!-- View 1: Trade Journal & History -->
+        <div class="trading-view-pane" id="tradeJournalViewWrap">
+          <div class="trading-filter-toolbar">
+            <div class="trading-search-box">
+              <span style="opacity:0.6;">🔍</span>
+              <input type="text" id="tradeSearchInput" placeholder="Search ticker, setup, notes..." oninput="handleTradeSearchFilter()" />
+            </div>
+            <div class="trading-outcome-pills" id="tradeOutcomeFilterPills">
+              <button type="button" class="trade-filter-pill active" data-outcome="all" onclick="setTradeOutcomeFilter('all')">All Trades</button>
+              <button type="button" class="trade-filter-pill is-win" data-outcome="win" onclick="setTradeOutcomeFilter('win')">🟢 Wins Only</button>
+              <button type="button" class="trade-filter-pill is-loss" data-outcome="loss" onclick="setTradeOutcomeFilter('loss')">🔴 Losses Only</button>
+              <button type="button" class="trade-filter-pill is-be" data-outcome="breakeven" onclick="setTradeOutcomeFilter('breakeven')">⚪ Break-even</button>
+            </div>
+          </div>
+
+          <div class="trading-journal-table-wrap">
+            <table class="trading-table" id="tradingHistoryTable">
+              <thead>
+                <tr>
+                  <th>Date &amp; Time</th>
+                  <th>Asset / Pair</th>
+                  <th>Side</th>
+                  <th>Position Size</th>
+                  <th>Exit / Close</th>
+                  <th>PnL ($)</th>
+                  <th>PnL (%)</th>
+                  <th>Setup Tag</th>
+                  <th>Psychology / Notes</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tradingTableBody">
+                <!-- Injected dynamically by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- View 2: Risk Guardrails & Position Sizer -->
+        <div class="trading-view-pane" id="tradeRiskViewWrap" hidden>
+          <div class="trading-risk-dashboard-grid">
+            <!-- Risk Guardrail Card 1: Position Sizing Rule -->
+            <div class="trading-risk-card">
+              <div class="risk-card-header">
+                <span class="risk-card-icon">📐</span>
+                <div>
+                  <h3>Position Size % Rule</h3>
+                  <p class="risk-card-sub">Maximum recommended capital exposure per trade</p>
+                </div>
+              </div>
+              <div class="risk-metric-box">
+                <div class="risk-metric-val" id="riskRulePositionPctDisplay">20%</div>
+                <div class="risk-metric-label">Configured Max Limit per Trade</div>
+              </div>
+              <div class="risk-calculated-box">
+                <div class="risk-calc-label">Max Allowed Position Size Right Now:</div>
+                <div class="risk-calc-val" id="riskMaxAllowedPositionUsd">$0.00</div>
+                <p class="risk-calc-note">Calculated dynamically based on your current portfolio balance.</p>
+              </div>
+              <!-- Interactive Position Size Test Sandbox -->
+              <div class="risk-test-sandbox">
+                <label class="field-label" for="riskTestEntryInput">Test Position Size ($)</label>
+                <div class="amount-input-wrap">
+                  <span class="amount-prefix">$</span>
+                  <input type="number" id="riskTestEntryInput" placeholder="e.g. 50" min="1" step="any" oninput="handleTestPositionSizeInput()" />
+                </div>
+                <div class="risk-sandbox-result" id="riskSandboxResult">
+                  Enter an amount to verify compliance against your 20% limit.
+                </div>
+              </div>
+            </div>
+
+            <!-- Risk Guardrail Card 2: Daily Loss Limit Protection -->
+            <div class="trading-risk-card">
+              <div class="risk-card-header">
+                <span class="risk-card-icon">🛑</span>
+                <div>
+                  <h3>Daily Loss Limit Rule</h3>
+                  <p class="risk-card-sub">Session loss circuit-breaker to prevent tilt</p>
+                </div>
+              </div>
+              <div class="risk-metric-box">
+                <div class="risk-metric-val" id="riskRuleDailyLossPctDisplay">3%</div>
+                <div class="risk-metric-label">Max Allowable Loss per Trading Day</div>
+              </div>
+              <div class="risk-calculated-box">
+                <div class="risk-calc-label">Today's Max Dollar Loss Cap:</div>
+                <div class="risk-calc-val is-loss-cap" id="riskDailyLossCapUsd">-$0.00</div>
+                <div class="risk-daily-progress-wrap">
+                  <div class="risk-daily-progress-header">
+                    <span>Loss Incurred Today:</span>
+                    <span id="riskDailyLossIncurredDisplay">$0.00 (0%)</span>
+                  </div>
+                  <div class="risk-daily-progress-track">
+                    <div class="risk-daily-progress-fill" id="riskDailyLossFill" style="width:0%;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="risk-rules-guidelines">
+                <h4>🛡️ Trader Rules of Engagement:</h4>
+                <ul>
+                  <li>Never exceed your maximum position size under any circumstance.</li>
+                  <li>When daily loss threshold is hit, close the screen immediately.</li>
+                  <li>Protect starting capital at all costs — survival is prerequisite to compounding.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- View 3: Weekly Review -->
+        <div class="trading-view-pane" id="tradeWeeklyViewWrap" hidden>
+          <div class="weekly-review-header-card">
+            <div class="weekly-review-stats-row" id="weeklyReviewStatsRow">
+              <!-- Rendered dynamically -->
+            </div>
+            <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+              <button type="button" class="btn-primary" onclick="openWeeklyReviewModal()">
+                <span>✏️</span> Log Weekly Self-Reflection
+              </button>
+            </div>
+          </div>
+
+          <div class="weekly-reviews-feed" id="weeklyReviewsFeed">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- View 4: Lessons & Mistakes Knowledge Base -->
+        <div class="trading-view-pane" id="tradeLessonsViewWrap" hidden>
+          <div class="lessons-kb-toolbar">
+            <div class="lessons-tag-pills" id="lessonsTagFilterPills">
+              <button type="button" class="tag-pill active" data-tag="all" onclick="filterLessonsByTag('all')">All Lessons</button>
+              <button type="button" class="tag-pill" data-tag="Psychology" onclick="filterLessonsByTag('Psychology')">🧠 Psychology</button>
+              <button type="button" class="tag-pill" data-tag="Risk Management" onclick="filterLessonsByTag('Risk Management')">🛡️ Risk Management</button>
+              <button type="button" class="tag-pill" data-tag="Strategy" onclick="filterLessonsByTag('Strategy')">🎯 Strategy</button>
+              <button type="button" class="tag-pill" data-tag="Execution" onclick="filterLessonsByTag('Execution')">⚡ Execution</button>
+              <button type="button" class="tag-pill" data-tag="Market Condition" onclick="filterLessonsByTag('Market Condition')">🌊 Market Condition</button>
+            </div>
+            <button type="button" class="btn-primary" onclick="openNewTradingLessonModal()">
+              <span>+</span> Record Lesson / Mistake
+            </button>
+          </div>
+
+          <div class="lessons-kb-grid" id="lessonsKbGrid">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- View 5: Watchlist & Setup Tasks -->
+        <div class="trading-view-pane" id="tradeWatchlistViewWrap" hidden>
+          <div class="trading-watchlist-container">
+            <div class="category-add-area" style="--card-color: #eab308; margin-bottom: 20px;">
+              <h3>Add Market Watchlist / Research Task</h3>
+              <form class="category-quick-form" id="tradingQuickTaskForm" style="--card-color: #eab308">
+                <input type="text" id="tradingQuickTaskName" placeholder="e.g. Watch NVDA 125 support breakout, Earnings review for TSLA..." required />
+                <select id="tradingQuickTaskPriority">
+                  <option value="High">High Priority</option>
+                  <option value="Medium" selected>Medium Priority</option>
+                  <option value="Low">Low Priority</option>
+                </select>
+                <input type="date" id="tradingQuickTaskDate" required />
+                <button type="submit" class="btn-primary">Add Setup</button>
+              </form>
+            </div>
+            <div id="tradingWatchlistBoard" class="board" aria-live="polite"></div>
+          </div>
         </div>
       </section>
 
@@ -4834,12 +5064,310 @@
     </svg>
   </button>
 
+  <!-- ===================================================================
+       TRADING MODALS SUITE
+       =================================================================== -->
+
+  <!-- Modal 1: Log New Trade Entry -->
+  <div class="modal-backdrop" id="newTradeModalBackdrop" hidden>
+    <div class="modal-window trading-modal-window" role="dialog" aria-labelledby="newTradeModalTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="newTradeModalTitle">📈 Log New Trade Execution</h2>
+        <button type="button" class="modal-close-btn" onclick="closeNewTradeModal()" aria-label="Close modal">✕</button>
+      </div>
+      <form class="trading-modal-form" id="newTradeForm" onsubmit="handleSaveTradeSubmit(event)">
+        <input type="hidden" id="tradeEditId" value="" />
+        
+        <!-- Live Risk Sizing Warning Banner (Inside Form) -->
+        <div class="trade-size-risk-warning" id="tradeSizeRiskWarning" style="display:none;">
+          <span class="warning-icon">⚠️</span>
+          <span id="tradeSizeRiskWarningText">Position size exceeds your recommended limit!</span>
+        </div>
+
+        <div class="form-row-2">
+          <div class="field-group">
+            <label class="field-label" for="tradeTickerInput">Asset / Ticker Symbol *</label>
+            <input type="text" id="tradeTickerInput" placeholder="e.g. NVDA, SPY, AAPL, BTC" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="tradeDateInput">Date &amp; Time *</label>
+            <input type="datetime-local" id="tradeDateInput" required />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="field-group">
+            <label class="field-label">Trade Side / Direction</label>
+            <div class="trading-pill-toggle" id="tradeSideToggle">
+              <button type="button" class="side-pill active is-long" data-side="Long" onclick="setTradeSide('Long')">🟢 Long / Buy</button>
+              <button type="button" class="side-pill is-short" data-side="Short" onclick="setTradeSide('Short')">🔴 Short / Sell</button>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Trade Outcome</label>
+            <div class="trading-pill-toggle" id="tradeOutcomeToggle">
+              <button type="button" class="outcome-pill active is-win" data-outcome="Win" onclick="setTradeOutcome('Win')">Win</button>
+              <button type="button" class="outcome-pill is-loss" data-outcome="Loss" onclick="setTradeOutcome('Loss')">Loss</button>
+              <button type="button" class="outcome-pill is-be" data-outcome="Break-even" onclick="setTradeOutcome('Break-even')">B/E</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="field-group">
+            <label class="field-label" for="tradeEntryAmountInput">Position Size / Entry Capital ($) *</label>
+            <div class="amount-input-wrap">
+              <span class="amount-prefix">$</span>
+              <input type="number" id="tradeEntryAmountInput" step="any" min="0.01" placeholder="e.g. 50.00" required oninput="recalcTradePnL()" />
+            </div>
+            <p class="field-hint" id="tradeEntryMaxHint">Max recommended: $0.00 (20%)</p>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="tradeExitAmountInput">Exit Capital or Net PnL ($) *</label>
+            <div class="amount-input-wrap">
+              <span class="amount-prefix">$</span>
+              <input type="number" id="tradeExitAmountInput" step="any" placeholder="e.g. 70.00 (Exit) or +20.00 (Net)" required oninput="recalcTradePnL()" />
+            </div>
+            <p class="field-hint">Enter total exit amount OR net profit/loss</p>
+          </div>
+        </div>
+
+        <!-- Dynamic Live PnL Auto-Calculation Card -->
+        <div class="trade-pnl-calc-preview" id="tradePnlCalcPreview">
+          <div class="pnl-preview-header">
+            <span class="pnl-preview-label">Auto-Calculated Performance</span>
+            <span class="pnl-preview-badge" id="tradePnlOutcomeBadge">Win</span>
+          </div>
+          <div class="pnl-preview-numbers">
+            <div class="pnl-preview-dollar" id="tradePnlDollarPreview">+$0.00</div>
+            <div class="pnl-preview-pct" id="tradePnlPctPreview">(+0.0%)</div>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="field-group">
+            <label class="field-label" for="tradeSetupTagInput">Setup / Strategy Pattern</label>
+            <select id="tradeSetupTagInput">
+              <option value="Breakout">🚀 Breakout / High Momentum</option>
+              <option value="Pullback">📉 Pullback to Support / EMA</option>
+              <option value="Mean Reversion">🔄 Mean Reversion / Oversold</option>
+              <option value="Key Level">🎯 Key Supply / Demand Level</option>
+              <option value="Earnings">📊 Earnings Reaction</option>
+              <option value="Scalp">⚡ Quick Scalp</option>
+              <option value="Other">💡 Other Setup</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="tradeMindsetInput">Psychology &amp; Discipline State</label>
+            <select id="tradeMindsetInput">
+              <option value="Followed Plan">✅ 100% Followed Plan &amp; Disciplined</option>
+              <option value="Patient Entry">🧘 Patient A+ Confirmation</option>
+              <option value="Early Exit">⏳ Exited Too Early (Fear)</option>
+              <option value="Chased / FOMO">⚠️ Chased Entry (FOMO)</option>
+              <option value="Over-sized">🚨 Over-sized Position</option>
+              <option value="Revenge Trade">🛑 Revenge Trading Impulse</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="tradeNotesInput">Notes &amp; Post-Trade Reflection</label>
+          <textarea id="tradeNotesInput" rows="2" placeholder="e.g. Cut loss quickly according to plan. Great risk-reward ratio..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeNewTradeModal()">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSaveTradeSubmit">Save Trade Execution</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Capital & Deposit Manager -->
+  <div class="modal-backdrop" id="tradeDepositModalBackdrop" hidden>
+    <div class="modal-window trading-modal-window" role="dialog" aria-labelledby="tradeDepositModalTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="tradeDepositModalTitle">📥 Capital &amp; Monthly Deposit Management</h2>
+        <button type="button" class="modal-close-btn" onclick="closeTradeDepositModal()" aria-label="Close modal">✕</button>
+      </div>
+      <div class="trading-modal-content">
+        <!-- Initial Starting Capital Box -->
+        <div class="capital-config-box">
+          <div>
+            <h4>Starting Capital Balance</h4>
+            <p class="field-hint">Initial account starting base (e.g. $180)</p>
+          </div>
+          <div class="capital-config-input-row">
+            <div class="amount-input-wrap">
+              <span class="amount-prefix">$</span>
+              <input type="number" id="tradeInitialCapitalInput" min="0" step="any" placeholder="180.00" />
+            </div>
+            <button type="button" class="btn-primary" onclick="saveInitialCapitalSetting()">Update Base</button>
+          </div>
+        </div>
+
+        <!-- Add New Periodic Deposit Form -->
+        <div class="add-deposit-box">
+          <h4>+ Add Monthly / Periodic Deposit</h4>
+          <p class="field-hint">Deposits immediately increment total portfolio value and available trading capital.</p>
+          <form id="tradeAddDepositForm" onsubmit="handleAddDepositSubmit(event)" style="margin-top:12px;">
+            <div class="form-row-2">
+              <div class="field-group">
+                <label class="field-label" for="depositAmountInput">Deposit Amount ($) *</label>
+                <div class="amount-input-wrap">
+                  <span class="amount-prefix">+$</span>
+                  <input type="number" id="depositAmountInput" min="1" step="any" placeholder="100.00" required />
+                </div>
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="depositDateInput">Deposit Date *</label>
+                <input type="date" id="depositDateInput" required />
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="depositNoteInput">Deposit Description / Note</label>
+              <input type="text" id="depositNoteInput" placeholder="e.g. Monthly allocation from salary, profit transfer..." />
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%; margin-top:8px;">Add Deposit to Portfolio</button>
+          </form>
+        </div>
+
+        <!-- Deposits History Table -->
+        <div class="deposits-history-section" style="margin-top:20px;">
+          <h4>Deposit Audit History</h4>
+          <div class="deposits-list-wrap" id="depositsListWrap">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Risk Settings Modal -->
+  <div class="modal-backdrop" id="tradeRiskSettingsModalBackdrop" hidden>
+    <div class="modal-window trading-modal-window" role="dialog" aria-labelledby="tradeRiskSettingsModalTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="tradeRiskSettingsModalTitle">🛡️ Risk Rules &amp; Strict Guardrails</h2>
+        <button type="button" class="modal-close-btn" onclick="closeTradeRiskSettingsModal()" aria-label="Close modal">✕</button>
+      </div>
+      <form id="tradeRiskSettingsForm" onsubmit="handleSaveRiskSettingsSubmit(event)">
+        <div class="trading-modal-content">
+          <div class="field-group">
+            <label class="field-label" for="riskSettingMaxPositionPct">Max Position Size % per Trade</label>
+            <div class="amount-input-wrap">
+              <input type="number" id="riskSettingMaxPositionPct" min="1" max="100" step="1" placeholder="20" required />
+              <span class="amount-suffix">%</span>
+            </div>
+            <p class="field-hint">Triggers a warning banner in trade logging if position size exceeds this % of total portfolio.</p>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="riskSettingDailyLossPct">Daily Loss Limit %</label>
+            <div class="amount-input-wrap">
+              <input type="number" id="riskSettingDailyLossPct" min="1" max="100" step="0.5" placeholder="3" required />
+              <span class="amount-suffix">%</span>
+            </div>
+            <p class="field-hint">Triggers a critical visual alert ("Stop trading for today") when daily loss reaches this threshold.</p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeTradeRiskSettingsModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Guardrail Rules</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Record Lesson & Mistake -->
+  <div class="modal-backdrop" id="newTradingLessonModalBackdrop" hidden>
+    <div class="modal-window trading-modal-window" role="dialog" aria-labelledby="newTradingLessonModalTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="newTradingLessonModalTitle">📖 Record Lesson &amp; Mistake (Knowledge Base)</h2>
+        <button type="button" class="modal-close-btn" onclick="closeNewTradingLessonModal()" aria-label="Close modal">✕</button>
+      </div>
+      <form id="newTradingLessonForm" onsubmit="handleSaveTradingLessonSubmit(event)">
+        <div class="trading-modal-content">
+          <div class="field-group">
+            <label class="field-label" for="lessonTitleInput">Core Lesson or Mistake Headline *</label>
+            <input type="text" id="lessonTitleInput" placeholder="e.g. Do not chase breakouts after 3 green 5m candles" required />
+          </div>
+          <div class="form-row-2">
+            <div class="field-group">
+              <label class="field-label" for="lessonCategorySelect">Category Tag</label>
+              <select id="lessonCategorySelect">
+                <option value="Psychology">🧠 Psychology &amp; Discipline</option>
+                <option value="Risk Management">🛡️ Risk Management</option>
+                <option value="Strategy">🎯 Strategy &amp; Setup</option>
+                <option value="Execution">⚡ Execution &amp; Timing</option>
+                <option value="Market Condition">🌊 Market Environment</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="lessonSeveritySelect">Severity / Impact</label>
+              <select id="lessonSeveritySelect">
+                <option value="High">🔴 High Severity (Account Threat)</option>
+                <option value="Medium" selected>🟡 Medium (Efficiency / PnL Leak)</option>
+                <option value="Low">🟢 Low (Minor Refinement)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="lessonRuleInput">Golden Rule to Follow *</label>
+            <input type="text" id="lessonRuleInput" placeholder="e.g. Wait for consolidation retest before entering" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="lessonDescriptionInput">Context &amp; What Happened</label>
+            <textarea id="lessonDescriptionInput" rows="2" placeholder="e.g. Chased NVDA open spike, suffered immediate $15 pullback due to spread..."></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeNewTradingLessonModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save to Knowledge Base</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 5: Weekly Review Modal -->
+  <div class="modal-backdrop" id="weeklyReviewModalBackdrop" hidden>
+    <div class="modal-window trading-modal-window" role="dialog" aria-labelledby="weeklyReviewModalTitle" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="weeklyReviewModalTitle">🧠 Weekly Trading Performance Review</h2>
+        <button type="button" class="modal-close-btn" onclick="closeWeeklyReviewModal()" aria-label="Close modal">✕</button>
+      </div>
+      <form id="weeklyReviewForm" onsubmit="handleSaveWeeklyReviewSubmit(event)">
+        <div class="trading-modal-content">
+          <div class="field-group">
+            <label class="field-label" for="reviewWeekSelect">Review Period</label>
+            <input type="text" id="reviewWeekSelect" readonly style="opacity:0.85;" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="reviewProsInput">🟢 Pros (Disciplines, Habits &amp; Wins Followed)</label>
+            <textarea id="reviewProsInput" rows="3" placeholder="e.g. Kept position sizes below 20%, respected stop losses on every trade, stopped after 2 trades per day..." required></textarea>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="reviewConsInput">🔴 Cons (Errors, Impulses &amp; Rules Violated)</label>
+            <textarea id="reviewConsInput" rows="3" placeholder="e.g. Looked at PnL during open trade instead of price action, entered 1 trade out of boredom..." required></textarea>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="reviewAdviceInput">🚀 Actionable Future Advice (Focus for Next Week)</label>
+            <textarea id="reviewAdviceInput" rows="2" placeholder="e.g. Strictly wait for the 10:00 AM candle close before taking breakout trades..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeWeeklyReviewModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Weekly Review</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
 
   <!-- Chart.js Engine -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=33.1"></script>
+  <script src="app.js?v=33.2"></script>
 </body>
 </html>
