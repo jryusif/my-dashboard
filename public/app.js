@@ -1246,6 +1246,19 @@ function renderDashboard() {
         </div>
         <span class="card-badge" id="${badgeId}">—</span>
       </div>
+      <div class="card-month-progress" id="month-progress-${badgeId}" style="display: none;">
+        <div class="card-month-progress-header">
+          <span class="card-month-progress-title">This Month</span>
+          <span class="card-month-progress-pct" id="month-pct-${badgeId}">0%</span>
+        </div>
+        <div class="card-month-progress-track">
+          <div class="card-month-progress-fill" id="month-fill-${badgeId}" style="width: 0%;"></div>
+        </div>
+        <div class="card-month-progress-stats">
+          <span id="month-done-${badgeId}">0 Completed</span>
+          <span id="month-total-${badgeId}">0 Total Assigned</span>
+        </div>
+      </div>
       <div class="card-label">
         <div class="card-text-group">
           <div class="card-label-top">
@@ -1274,41 +1287,116 @@ function renderDashboard() {
     newPageBtn.addEventListener('click', () => openCustomSpaceModal());
   }
 
-  // Load task counts for each badge asynchronously
+  // Load task counts and monthly progress for each card asynchronously
   loadCardBadges();
 }
 
 async function loadCardBadges() {
-  // Load counts for task-based category cards
+  const now = new Date();
+  const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  // Helper to update monthly progress widget for a card
+  const updateCardMonthlyProgress = (bId, done, total, isDental = false) => {
+    const wrap = document.getElementById(`month-progress-${bId}`);
+    if (!wrap) return;
+    if (!total || total <= 0) {
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'flex';
+    const pct = Math.min(100, Math.max(0, Math.round((done / total) * 100)));
+    const pctEl = document.getElementById(`month-pct-${bId}`);
+    const fillEl = document.getElementById(`month-fill-${bId}`);
+    const doneEl = document.getElementById(`month-done-${bId}`);
+    const totalEl = document.getElementById(`month-total-${bId}`);
+
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (fillEl) fillEl.style.width = `${pct}%`;
+    if (doneEl) doneEl.textContent = `${done} Completed`;
+    if (totalEl) totalEl.textContent = isDental ? `${total} Total Cases` : `${total} Total Assigned`;
+  };
+
+  // 1. Fetch comprehensive analytics to get synchronized monthly numbers
+  try {
+    const compRes = await fetch('/api/analytics/comprehensive');
+    if (compRes.ok) {
+      const compData = await compRes.json();
+      if (compData?.categoryProfiles) {
+        for (const [catName, prof] of Object.entries(compData.categoryProfiles)) {
+          let badgeKey = catName;
+          if (catName === 'Dental') badgeKey = 'Dental_Cases';
+          const bId = `badge-${badgeKey.replace(/[^a-z0-9]/gi, '_')}`;
+          const m = prof.monthly || prof;
+          if (m && m.total > 0) {
+            updateCardMonthlyProgress(bId, m.done, m.total, catName === 'Dental');
+          }
+        }
+      }
+      if (compData?.dentalStats) {
+        const dTotal = compData.dentalStats.totalCases || 0;
+        const dDone = compData.dentalStats.showcaseCases || 0;
+        if (dTotal > 0) {
+          updateCardMonthlyProgress('badge-Dental_Cases', dDone, dTotal, true);
+        }
+      }
+    }
+  } catch (err) {
+    // Non-blocking fallback to individual endpoints
+  }
+
+  // 2. Load counts for task-based category cards and compute monthly progress fallback
   for (const cat of TASK_CATEGORY_PAGES) {
-    const badgeEl = document.getElementById(`badge-${cat.replace(/[^a-z]/gi,'_')}`);
-    if (!badgeEl) continue;
+    const bId = `badge-${cat.replace(/[^a-z0-9]/gi, '_')}`;
+    const badgeEl = document.getElementById(bId);
     try {
       const res = await fetch(`/api/tasks?category=${encodeURIComponent(cat)}`);
       if (!res.ok) continue;
       const { tasks } = await res.json();
       const pending = tasks.filter(t => !t.completed).length;
-      badgeEl.textContent = pending > 0 ? `${pending} pending` : 'all done';
+      if (badgeEl) {
+        badgeEl.textContent = pending > 0 ? `${pending} pending` : 'all done';
+      }
+
+      // Compute monthly progress if not yet populated from comprehensive analytics
+      const wrap = document.getElementById(`month-progress-${bId}`);
+      if (wrap && (wrap.style.display === 'none' || !wrap.style.display)) {
+        const monthTasks = tasks.filter(t => t.date && t.date.startsWith(currentMonthPrefix));
+        const targetList = monthTasks.length > 0 ? monthTasks : tasks;
+        const total = targetList.length;
+        const done = targetList.filter(t => t.completed).length;
+        updateCardMonthlyProgress(bId, done, total, false);
+      }
     } catch {
-      badgeEl.textContent = '';
+      if (badgeEl) badgeEl.textContent = '';
     }
   }
 
-  // Load Dental Cases count badge
-  const dentalBadge = document.getElementById('badge-Dental_Cases');
+  // 3. Load Dental Cases count badge and monthly progress
+  const dentalBadgeId = 'badge-Dental_Cases';
+  const dentalBadge = document.getElementById(dentalBadgeId);
   if (dentalBadge) {
     try {
       const res = await fetch('/api/dental-cases');
       if (res.ok) {
         const data = await res.json();
-        dentalBadge.textContent = `${data.count || data.cases?.length || 0} cases`;
+        const cases = data.cases || [];
+        dentalBadge.textContent = `${data.count || cases.length || 0} cases`;
+
+        const wrap = document.getElementById(`month-progress-${dentalBadgeId}`);
+        if (wrap && (wrap.style.display === 'none' || !wrap.style.display)) {
+          const monthCases = cases.filter(c => (c.date && c.date.startsWith(currentMonthPrefix)) || (c.createdAt && String(c.createdAt).startsWith(currentMonthPrefix)));
+          const targetCases = monthCases.length > 0 ? monthCases : cases;
+          const dTotal = targetCases.length;
+          const dDone = targetCases.filter(c => c.status === 'Completed' || c.showcaseForPatients).length;
+          updateCardMonthlyProgress(dentalBadgeId, dDone, dTotal, true);
+        }
       }
     } catch {
       dentalBadge.textContent = '';
     }
   }
 
-  // Load Roadmap count badge
+  // 4. Load Roadmap count badge
   const rmBadge = document.getElementById('badge-Roadmaps___Master_Plan');
   if (rmBadge) {
     try {
