@@ -17878,6 +17878,8 @@ initCalendar();
     'calExportModal'
   ];
 
+  let isCurrentlyLocked = false;
+
   function isAnyModalOpen() {
     for (let i = 0; i < MODAL_BACKDROP_IDS.length; i++) {
       const el = document.getElementById(MODAL_BACKDROP_IDS[i]);
@@ -17890,30 +17892,26 @@ initCalendar();
 
   function syncScrollLock() {
     const shouldLock = isAnyModalOpen();
-    if (shouldLock) {
-      document.body.classList.add('modal-open');
-      document.documentElement.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-      document.documentElement.classList.remove('modal-open');
+    if (shouldLock !== isCurrentlyLocked) {
+      isCurrentlyLocked = shouldLock;
+      document.body.classList.toggle('modal-open', shouldLock);
+      document.documentElement.classList.toggle('modal-open', shouldLock);
     }
   }
 
-  // Observe DOM for any modal backdrop hidden attribute or style changes
+  // Observe ONLY the specific modal backdrop elements for hidden/style changes
   const observer = new MutationObserver(() => {
     syncScrollLock();
   });
 
   function startObserver() {
-    if (document.body) {
-      observer.observe(document.body, {
-        childList: false,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['hidden', 'style', 'class']
-      });
-      syncScrollLock();
-    }
+    MODAL_BACKDROP_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        observer.observe(el, { attributes: true, attributeFilter: ['hidden', 'style'] });
+      }
+    });
+    syncScrollLock();
   }
 
   if (document.readyState === 'loading') {
@@ -17922,10 +17920,24 @@ initCalendar();
     startObserver();
   }
 
+  // Also sync on Escape key or window clicks
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      setTimeout(syncScrollLock, 50);
+    }
+  }, { passive: true });
+
+  window.addEventListener('click', () => {
+    setTimeout(syncScrollLock, 50);
+  }, { passive: true });
+
   // Global manual controls
   window.lockBodyScroll = function() {
-    document.body.classList.add('modal-open');
-    document.documentElement.classList.add('modal-open');
+    if (!isCurrentlyLocked) {
+      isCurrentlyLocked = true;
+      document.body.classList.add('modal-open');
+      document.documentElement.classList.add('modal-open');
+    }
   };
 
   window.unlockBodyScroll = function() {
