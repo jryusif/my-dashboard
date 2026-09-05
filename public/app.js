@@ -1362,6 +1362,8 @@ function renderDashboard() {
     });
   });
 
+  const activeMonthName = new Date().toLocaleString('en-US', { month: 'long' });
+
   dashboardGrid.innerHTML = visibleCards.map(c => {
     const colorVar = CATEGORY_COLOR[c.category] || 'cyan';
     const icon = CATEGORY_ICON[c.category] || '•';
@@ -1386,7 +1388,7 @@ function renderDashboard() {
       </div>
       <div class="card-month-progress" id="month-progress-${badgeId}" style="display: none;">
         <div class="card-month-progress-header">
-          <span class="card-month-progress-title">This Month</span>
+          <span class="card-month-progress-title" id="month-title-${badgeId}">${escapeHtml(activeMonthName)}</span>
           <span class="card-month-progress-pct" id="month-pct-${badgeId}">0%</span>
         </div>
         <div class="card-month-progress-track">
@@ -1432,6 +1434,7 @@ function renderDashboard() {
 async function loadCardBadges() {
   const now = new Date();
   const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthName = now.toLocaleString('en-US', { month: 'long' });
 
   // Helper to update monthly progress widget for a card
   const updateCardMonthlyProgress = (bId, done, total, isDental = false) => {
@@ -1443,11 +1446,13 @@ async function loadCardBadges() {
     }
     wrap.style.display = 'flex';
     const pct = Math.min(100, Math.max(0, Math.round((done / total) * 100)));
+    const titleEl = document.getElementById(`month-title-${bId}`);
     const pctEl = document.getElementById(`month-pct-${bId}`);
     const fillEl = document.getElementById(`month-fill-${bId}`);
     const doneEl = document.getElementById(`month-done-${bId}`);
     const totalEl = document.getElementById(`month-total-${bId}`);
 
+    if (titleEl) titleEl.textContent = currentMonthName;
     if (pctEl) pctEl.textContent = `${pct}%`;
     if (fillEl) fillEl.style.width = `${pct}%`;
     if (doneEl) doneEl.textContent = `${done} Completed`;
