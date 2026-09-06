@@ -619,7 +619,7 @@ async function loadTasks() {
     emptyTitle: 'Clear day',
     emptyText:  'No tasks scheduled for today.',
     compact:    true,
-    onToggled:  syncBoards,
+    onToggled:  null, // Handled seamlessly and instantly by toggleTask
     onEdited:   syncBoards,
     onDeleted:  syncBoards,
   });
@@ -656,20 +656,56 @@ function updateSidebarGlassProgress(todayStats) {
   sidebarProgressPct.textContent = total === 0 ? 'All clear · 0 tasks' : `${pct}% (${done}/${total})`;
 }
 
-async function loadWeeklyProgress() {
-  if (!currentUser || !authToken) return;
+function updateWeeklyProgress(customStats = null) {
   const weeklyProgressFill = document.getElementById('weeklyProgressFill');
   const weeklyProgressVal  = document.getElementById('weeklyProgressVal');
   if (!weeklyProgressFill || !weeklyProgressVal) return;
 
+  if (customStats) {
+    const { done = 0, total = 0, pct = 0 } = customStats;
+    weeklyProgressFill.style.width = `${pct}%`;
+    weeklyProgressVal.textContent = total === 0 ? '0% (0/0 done)' : `${pct}% (${done}/${total} done)`;
+    return;
+  }
+
+  if (Array.isArray(weekDates) && weekDates.length) {
+    const weekDateStrings = new Set(weekDates.map(d => toISODate(d)));
+    const allTasks = (Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0)
+      ? window.calTasksCache
+      : (window.StorageService ? window.StorageService.tasks.getAll(false) : []);
+
+    const weekTasks = allTasks.filter(t => t.date && weekDateStrings.has(t.date) && !t.deleted_at && t.category !== 'Routine');
+    const total = weekTasks.length;
+    const done = weekTasks.filter(t => Boolean(t.completed)).length;
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+    weeklyProgressFill.style.width = `${pct}%`;
+    weeklyProgressVal.textContent = total === 0 ? '0% (0/0 done)' : `${pct}% (${done}/${total} done)`;
+  }
+}
+window.updateWeeklyProgress = updateWeeklyProgress;
+
+async function loadWeeklyProgress() {
+  updateWeeklyProgress();
+  const weeklyProgressFill = document.getElementById('weeklyProgressFill');
+  const weeklyProgressVal  = document.getElementById('weeklyProgressVal');
+  if (!weeklyProgressFill || !weeklyProgressVal) return;
+
+  const token = typeof getAuthToken === 'function' ? getAuthToken() : authToken;
+  if (!token) return;
+
   try {
-    const res = await fetch('/api/tasks/analytics');
+    let url = '/api/tasks/analytics';
+    if (Array.isArray(weekDates) && weekDates.length) {
+      const start = toISODate(weekDates[0]);
+      const end = toISODate(weekDates[weekDates.length - 1]);
+      url += `?startDate=${start}&endDate=${end}`;
+    }
+    const res = await fetch(url);
     if (!res.ok) return;
     const data = await res.json();
     if (data.week) {
-      const { done = 0, total = 0, pct = 0 } = data.week;
-      weeklyProgressFill.style.width = `${pct}%`;
-      weeklyProgressVal.textContent = total === 0 ? 'No tasks this week' : `${pct}% (${done}/${total} done)`;
+      updateWeeklyProgress(data.week);
     }
     if (data.today) {
       updateSidebarGlassProgress(data.today);
@@ -922,10 +958,49 @@ function renderTaskRow(task, opts) {
 // =============================================================================
 
 async function toggleTask(id, completed, row, onToggled) {
+  // 1. Optimistic instant visual update
   row.classList.toggle('done', completed);
+
+  // Sync any other matching rows on screen (e.g. today sidebar and weekly planner)
+  document.querySelectorAll(`.task-row[data-id="${id}"]`).forEach(r => {
+    if (r !== row) {
+      r.classList.toggle('done', completed);
+      const cb = r.querySelector('.checkbox');
+      if (cb) cb.checked = completed;
+    }
+  });
+
+  // 2. Immediate in-memory cache updates
   if (window.StorageService) {
     window.StorageService.tasks.update(String(id), { completed, completed_at: completed ? new Date().toISOString() : null });
   }
+  if (Array.isArray(window.calTasksCache)) {
+    const cached = window.calTasksCache.find(t => String(t.id) === String(id));
+    if (cached) cached.completed = completed;
+  }
+  if (Array.isArray(currentTodayTasks)) {
+    const todayTask = currentTodayTasks.find(t => String(t.id) === String(id));
+    if (todayTask) todayTask.completed = completed;
+    const activeTasks = currentTodayTasks.filter(t => t.category !== 'Routine');
+    const tDone = activeTasks.filter(t => t.completed).length;
+    if (typeof updateRing === 'function') updateRing(tDone, activeTasks.length);
+    if (typeof updateSidebarGlassProgress === 'function') {
+      updateSidebarGlassProgress({
+        done: tDone,
+        total: activeTasks.length,
+        pct: activeTasks.length === 0 ? 0 : Math.round((tDone / activeTasks.length) * 100)
+      });
+    }
+    const pLabel = document.getElementById('progressLabel');
+    if (pLabel) pLabel.textContent = activeTasks.length === 0 ? 'Your day at a glance' : `${tDone} of ${activeTasks.length} done`;
+  }
+
+  // 3. Instantly update Weekly Completion progress bar & week tab badges
+  if (typeof updateWeeklyProgress === 'function') updateWeeklyProgress();
+  if (typeof updateWeekTabBadges === 'function') updateWeekTabBadges();
+  if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+
+  // 4. Background persist to database (without locking or tearing down the board DOM)
   try {
     const res = await fetch(`/api/tasks/${id}`, {
       method: 'PATCH',
@@ -933,18 +1008,50 @@ async function toggleTask(id, completed, row, onToggled) {
       body: JSON.stringify({ completed }),
     });
     if (!res.ok) throw new Error('failed');
-    if (onToggled) await onToggled();
-    if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+
+    // Only invoke onToggled if it is NOT the destructive syncBoards function
+    if (onToggled && onToggled !== syncBoards) {
+      await onToggled();
+    }
+    if (typeof loadCardBadges === 'function') loadCardBadges().catch(() => {});
     if (typeof renderCalendar === 'function') {
       const calModal = document.getElementById('calendarModal');
       if (calModal && !calModal.hidden) renderCalendar();
     }
   } catch {
+    // Revert optimistic changes on failure
     row.classList.toggle('done', !completed);
     row.querySelector('.checkbox').checked = !completed;
+    document.querySelectorAll(`.task-row[data-id="${id}"]`).forEach(r => {
+      if (r !== row) {
+        r.classList.toggle('done', !completed);
+        const cb = r.querySelector('.checkbox');
+        if (cb) cb.checked = !completed;
+      }
+    });
     if (window.StorageService) {
       window.StorageService.tasks.update(String(id), { completed: !completed });
     }
+    if (Array.isArray(window.calTasksCache)) {
+      const cached = window.calTasksCache.find(t => String(t.id) === String(id));
+      if (cached) cached.completed = !completed;
+    }
+    if (Array.isArray(currentTodayTasks)) {
+      const todayTask = currentTodayTasks.find(t => String(t.id) === String(id));
+      if (todayTask) todayTask.completed = !completed;
+      const activeTasks = currentTodayTasks.filter(t => t.category !== 'Routine');
+      const tDone = activeTasks.filter(t => t.completed).length;
+      if (typeof updateRing === 'function') updateRing(tDone, activeTasks.length);
+      if (typeof updateSidebarGlassProgress === 'function') {
+        updateSidebarGlassProgress({
+          done: tDone,
+          total: activeTasks.length,
+          pct: activeTasks.length === 0 ? 0 : Math.round((tDone / activeTasks.length) * 100)
+        });
+      }
+    }
+    if (typeof updateWeeklyProgress === 'function') updateWeeklyProgress();
+    if (typeof updateWeekTabBadges === 'function') updateWeekTabBadges();
     showToast('Could not update that task — please try again.');
   }
 }
@@ -11940,6 +12047,7 @@ function initWeekTabs(baseDate = null) {
   updateIndicator();
   selectDay(selectedDayIndex);
   updateWeekTabBadges();
+  if (typeof updateWeeklyProgress === 'function') updateWeeklyProgress();
 }
 
 function updateIndicator() {
@@ -12009,12 +12117,41 @@ async function loadWeekDay() {
     if (!res.ok) throw new Error('failed');
     const { tasks: allTasks } = await res.json();
     const tasks = allTasks.filter(t => t.category !== 'Routine');
+
+    // Populate or sync day's tasks into calTasksCache so weekly progress has accurate data immediately
+    if (Array.isArray(allTasks)) {
+      if (!Array.isArray(window.calTasksCache)) window.calTasksCache = [];
+      allTasks.forEach(apiTask => {
+        const idx = window.calTasksCache.findIndex(t => String(t.id) === String(apiTask.id));
+        const mapped = {
+          id: String(apiTask.id),
+          title: apiTask.title || apiTask.task || 'Untitled Task',
+          description: apiTask.segment ? `Segment: ${apiTask.segment}` : '',
+          date: apiTask.date || apiTask.dueDate || date,
+          time: apiTask.timeBlock || '10:00',
+          category: apiTask.category || 'Work',
+          priority: (apiTask.priority || 'medium').toLowerCase(),
+          completed: Boolean(apiTask.completed),
+          created_at: apiTask.createdAt || new Date().toISOString(),
+          updated_at: apiTask.updatedAt || new Date().toISOString(),
+          deleted_at: null,
+          sync_status: 'synced',
+        };
+        if (idx >= 0) {
+          window.calTasksCache[idx] = { ...window.calTasksCache[idx], ...mapped };
+        } else {
+          window.calTasksCache.push(mapped);
+        }
+      });
+      if (typeof updateWeeklyProgress === 'function') updateWeeklyProgress();
+    }
+
     renderBoard(weeklyBoard, tasks, {
       compact:   false,
       emptyGlyph:'🗓️',
       emptyTitle:'Nothing planned',
       emptyText: 'No tasks scheduled for this day yet.',
-      onToggled: syncBoards,
+      onToggled: null, // Handled seamlessly and instantly by toggleTask
       onEdited:  syncBoards,
       onDeleted: syncBoards,
     });
@@ -21034,6 +21171,8 @@ async function syncAllWebsiteTasksWithCalendar() {
       if (window.StorageService && Array.isArray(mappedServerTasks)) {
         window.StorageService.tasks.bulkUpsert(mappedServerTasks);
       }
+      if (typeof updateWeeklyProgress === 'function') updateWeeklyProgress();
+      if (typeof updateWeekTabBadges === 'function') updateWeekTabBadges();
     }
 
     // 2. Fetch and synchronize Dental Clinical Cases (if user has access)
