@@ -416,20 +416,43 @@
           </div>
         </div>
 
-        <!-- ZONE 3: RIGHT WING — Alerts, Admin, User Profile & Sign Out -->
+        <!-- ZONE 3: RIGHT WING — Theme Switch, Notifications & User Profile -->
         <div class="nav-right-zone">
-          <div class="nav-system-dock" id="navSystemDock">
-            <div class="dock-notification-group">
-              <button type="button" class="btn-dock-notification" id="btnHeaderNotificationBell" title="Reminders &amp; Notifications" aria-haspopup="dialog">
-                <span class="dock-bell-icon">🔔</span>
-                <span class="dock-notif-badge" id="headerNotificationBadge" style="display: none;">0</span>
+          <div class="nav-cluster-trio" id="navClusterTrio">
+            <!-- 1. Dark & Light Theme Switch Pill -->
+            <div class="nav-theme-switch-pill is-dark-active" id="navThemeSwitchPill" onclick="toggleNavTheme(event)" title="Toggle Dark / Light Theme" role="switch" aria-checked="true">
+              <div class="nav-theme-switch-knob" id="navThemeSwitchKnob"></div>
+              <button type="button" class="nav-theme-btn is-moon" id="navThemeMoonBtn" onclick="setThemeFromNav('dark', event)" title="Dark Theme" aria-label="Dark Theme">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
               </button>
-              <button type="button" class="btn-dock-settings" id="btnHeaderNotificationSettings" title="Reminder Settings">
-                <span>⚙️</span>
+              <button type="button" class="nav-theme-btn is-sun" id="navThemeSunBtn" onclick="setThemeFromNav('light', event)" title="Light Theme" aria-label="Light Theme">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="4"/>
+                  <path d="M12 2v2"/>
+                  <path d="M12 20v2"/>
+                  <path d="m4.93 4.93 1.41 1.41"/>
+                  <path d="m17.66 17.66 1.41 1.41"/>
+                  <path d="M2 12h2"/>
+                  <path d="M20 12h2"/>
+                  <path d="m6.34 17.66-1.41 1.41"/>
+                  <path d="m19.07 4.93-1.41 1.41"/>
+                </svg>
               </button>
             </div>
 
-            <div class="dock-user-capsule" id="userAuthCapsule">
+            <!-- 2. Circular Notification Bell Button -->
+            <button type="button" class="nav-circle-bell-btn" id="btnHeaderNotificationBell" title="Reminders &amp; Notifications" aria-haspopup="dialog">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span class="nav-bell-notif-dot" id="headerNotificationBadge" style="display: none;"></span>
+            </button>
+
+            <!-- 3. User Profile Pill (Name + Green-Ring Avatar) -->
+            <div class="nav-user-pill-wrap" id="userAuthCapsule">
               <!-- Admin Command Center Pill (Visible for Admins) -->
               <button type="button" class="btn-dock-admin-pill" id="btnDockAdminQuick" style="display: none;" title="Admin Command Center" onclick="openAdminSection()">
                 <span class="admin-crown-icon">👑</span>
@@ -437,10 +460,12 @@
                 <span class="dock-admin-badge" id="dockAdminPendingBadge" style="display: none;">0</span>
               </button>
 
-              <button type="button" class="btn-dock-user" id="btnAuthProfile" onclick="handleUserCapsuleClick()" title="Account &amp; Profile">
-                <span class="user-avatar-icon" id="dockUserAvatar">👤</span>
-                <span class="user-email-text" id="userEmailLabel">Sign In</span>
-                <span class="user-capsule-arrow">▾</span>
+              <button type="button" class="nav-user-profile-pill" id="btnAuthProfile" onclick="handleUserCapsuleClick()" title="Profile &amp; Account Settings">
+                <span class="nav-user-pill-name" id="navProfileName">Danyal minson</span>
+                <span class="user-email-text" id="userEmailLabel" style="display: none;">Danyal minson</span>
+                <div class="nav-avatar-green-ring" id="dockUserAvatar">
+                  <img src="/kristin_avatar.jpg" alt="Avatar" class="nav-user-pill-avatar" id="dockUserAvatarImg" />
+                </div>
               </button>
               
               <!-- Quick User Dropdown Menu -->
@@ -448,7 +473,7 @@
                 <div class="dropdown-user-header">
                   <div class="dd-avatar-wrap" id="ddAvatarWrap">👤</div>
                   <div class="dd-user-meta">
-                    <strong id="ddUserName">User</strong>
+                    <strong id="ddUserName">Danyal minson</strong>
                     <span id="ddUserEmail">user@example.com</span>
                     <span class="user-role-tag" id="ddUserRoleTag">USER</span>
                   </div>
@@ -503,8 +528,42 @@
               <span>🔍</span>
               <input type="text" id="kristinQuickSearch" placeholder="Search..." autocomplete="off" />
             </div>
-            <button type="button" class="kristin-avatar-btn" id="kristinAvatarNavBtn" onclick="openProfileSection()" title="Account &amp; Settings">
-              <span id="kristinNavAvatarContent">👤</span>
+
+            <div class="nav-theme-switch-pill is-dark-active kristin-welcome-theme-pill" id="welcomeThemeSwitchPill" onclick="toggleNavTheme(event)" title="Toggle Dark / Light Theme" role="switch" aria-checked="true">
+              <div class="nav-theme-switch-knob"></div>
+              <button type="button" class="nav-theme-btn is-moon" onclick="setThemeFromNav('dark', event)" title="Dark Theme" aria-label="Dark Theme">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              </button>
+              <button type="button" class="nav-theme-btn is-sun" onclick="setThemeFromNav('light', event)" title="Light Theme" aria-label="Light Theme">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="4"/>
+                  <path d="M12 2v2"/>
+                  <path d="M12 20v2"/>
+                  <path d="m4.93 4.93 1.41 1.41"/>
+                  <path d="m17.66 17.66 1.41 1.41"/>
+                  <path d="M2 12h2"/>
+                  <path d="M20 12h2"/>
+                  <path d="m6.34 17.66-1.41 1.41"/>
+                  <path d="m19.07 4.93-1.41 1.41"/>
+                </svg>
+              </button>
+            </div>
+
+            <button type="button" class="nav-circle-bell-btn kristin-welcome-bell-btn" onclick="openNotificationDrawer()" title="Notifications & Alerts">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+            </button>
+
+            <button type="button" class="nav-user-profile-pill kristin-welcome-profile-pill" id="kristinAvatarNavBtn" onclick="openProfileSection()" title="Account &amp; Settings">
+              <span class="nav-user-pill-name" id="kristinWelcomeProfileName">Danyal minson</span>
+              <div class="nav-avatar-green-ring" id="kristinWelcomeAvatarRing">
+                <span id="kristinNavAvatarContent" style="display:none;">👤</span>
+                <img src="/kristin_avatar.jpg" alt="Avatar" class="nav-user-pill-avatar" id="kristinNavAvatarImg" />
+              </div>
             </button>
           </div>
         </div>

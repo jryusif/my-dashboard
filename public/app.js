@@ -15600,6 +15600,11 @@ function updateUserUi() {
     if (sidebarAdminBtn) sidebarAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
     if (profileGoToAdminBtn) profileGoToAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
 
+    const navProfileName = document.getElementById('navProfileName');
+    if (navProfileName) navProfileName.textContent = displayName;
+    const welcomeNavName = document.getElementById('kristinWelcomeProfileName');
+    if (welcomeNavName) welcomeNavName.textContent = displayName;
+
     if (isAdmin) {
       fetchAdminBadgeCounts();
     }
@@ -15616,7 +15621,15 @@ function updateUserUi() {
     }
 
     if (userEmailLabel) userEmailLabel.textContent = 'Sign In';
-    if (dockUserAvatar) dockUserAvatar.innerHTML = '👤';
+    if (dockUserAvatar) {
+      const img = document.getElementById('dockUserAvatarImg');
+      if (img) img.src = '/kristin_avatar.jpg';
+    }
+    const navProfileName = document.getElementById('navProfileName');
+    if (navProfileName) navProfileName.textContent = 'Danyal minson';
+    const welcomeNavName = document.getElementById('kristinWelcomeProfileName');
+    if (welcomeNavName) welcomeNavName.textContent = 'Danyal minson';
+
     if (btnAuthLogout) btnAuthLogout.style.display = 'none';
     if (btnDockAdminQuick) btnDockAdminQuick.style.display = 'none';
     if (ddAdminItem) ddAdminItem.style.display = 'none';
@@ -17332,6 +17345,44 @@ const THEMES_LIST = [
 
 let currentActiveTheme = 'kristin-light';
 
+function isDarkTheme() {
+  const current = currentActiveTheme || localStorage.getItem('antigravity_theme') || 'obsidian-mono';
+  return current !== 'kristin-light';
+}
+window.isDarkTheme = isDarkTheme;
+
+function updateNavThemeToggleUI() {
+  const isDark = isDarkTheme();
+  const capsules = [
+    document.getElementById('navThemeSwitchPill'),
+    document.getElementById('welcomeThemeSwitchPill')
+  ];
+
+  capsules.forEach(capsule => {
+    if (capsule) {
+      capsule.classList.toggle('is-dark-active', isDark);
+      capsule.classList.toggle('is-light-active', !isDark);
+      capsule.setAttribute('aria-checked', isDark ? 'true' : 'false');
+    }
+  });
+}
+window.updateNavThemeToggleUI = updateNavThemeToggleUI;
+
+function toggleNavTheme(e) {
+  if (e) e.stopPropagation();
+  const currentlyDark = isDarkTheme();
+  const newTheme = currentlyDark ? 'kristin-light' : 'obsidian-mono';
+  setTheme(newTheme, true);
+}
+window.toggleNavTheme = toggleNavTheme;
+
+function setThemeFromNav(mode, e) {
+  if (e) e.stopPropagation();
+  const newTheme = mode === 'dark' ? 'obsidian-mono' : 'kristin-light';
+  setTheme(newTheme, true);
+}
+window.setThemeFromNav = setThemeFromNav;
+
 function initTheme() {
   let saved = localStorage.getItem('antigravity_theme');
   if (!saved || saved === 'cyber-cyan' || !localStorage.getItem('antigravity_kristin_migrated')) {
@@ -17340,6 +17391,7 @@ function initTheme() {
     localStorage.setItem('antigravity_kristin_migrated', 'true');
   }
   setTheme(saved, false);
+  updateNavThemeToggleUI();
 }
 window.initTheme = initTheme;
 
@@ -17352,9 +17404,11 @@ function setTheme(themeId, notify = true) {
 
   renderThemeGallery('themeCardsGrid');
   renderThemeGallery('profileThemeCardsGrid');
+  updateNavThemeToggleUI();
 
   if (notify) {
-    showToast(`✨ Workspace theme set to ${theme.name}!`);
+    const isDark = isDarkTheme();
+    showToast(isDark ? '🌙 Switched to Dark Theme' : '☀️ Switched to Light Theme');
   }
 }
 window.setTheme = setTheme;
@@ -23082,8 +23136,20 @@ function syncAllUserAvatars(avatar) {
   }
 
   // 4. Update Dock, Sidebar, Dropdown & Profile Section Avatars
-  const dockUserAvatar = document.getElementById('dockUserAvatar');
-  if (dockUserAvatar) dockUserAvatar.innerHTML = renderAvatarHtml(av, defaultEmoji);
+  const dockImg = document.getElementById('dockUserAvatarImg');
+  if (dockImg && isImg) {
+    dockImg.src = av;
+    dockImg.style.display = 'block';
+  } else {
+    const dockUserAvatar = document.getElementById('dockUserAvatar');
+    if (dockUserAvatar && !dockImg) dockUserAvatar.innerHTML = renderAvatarHtml(av, defaultEmoji);
+  }
+
+  const welcomeImg = document.getElementById('kristinNavAvatarImg');
+  if (welcomeImg && isImg) {
+    welcomeImg.src = av;
+    welcomeImg.style.display = 'block';
+  }
 
   const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
   if (sidebarUserAvatar) sidebarUserAvatar.innerHTML = renderAvatarHtml(av, defaultEmoji);
@@ -23898,6 +23964,12 @@ async function updateKristinExecutiveDashboard() {
   if (welcomeNameEl) welcomeNameEl.textContent = `Welcome, ${uName}`;
   if (profileNameEl) profileNameEl.textContent = (currentUser && currentUser.name) ? currentUser.name : 'Mohamed Yousef';
   if (profileRoleEl) profileRoleEl.textContent = (currentUser && currentUser.role === 'ADMIN') ? 'Executive Administrator' : (currentUser?.specialty || currentUser?.occupation || 'Design Manager');
+
+  const displayName = (currentUser && currentUser.name) ? currentUser.name : 'Danyal minson';
+  const navProfileName = document.getElementById('navProfileName');
+  if (navProfileName) navProfileName.textContent = displayName;
+  const welcomeNavName = document.getElementById('kristinWelcomeProfileName');
+  if (welcomeNavName) welcomeNavName.textContent = displayName;
 
   // Synchronize avatar across card, nav bar, and workspace
   const userAvatar = (currentUser && (currentUser.avatar || currentUser.avatarUrl)) || '/kristin_avatar.jpg';
