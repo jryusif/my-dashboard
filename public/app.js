@@ -2006,17 +2006,13 @@ async function loadCategoryPage(category) {
   const catViewTabs = document.getElementById('categoryViewTabs');
   const catGlassProgress = document.getElementById('categoryGlassProgress');
 
+  if (catHeader) catHeader.style.display = '';
+  if (categoryStats) categoryStats.style.display = '';
+  if (catGlassProgress) catGlassProgress.style.display = '';
+  if (catViewTabs) catViewTabs.style.display = category === 'Workouts' ? 'none' : '';
+
   if (category === 'Workouts') {
-    if (catHeader) catHeader.style.display = 'none';
-    if (catViewTabs) catViewTabs.style.display = 'none';
-    if (categoryStats) categoryStats.style.display = 'none';
-    if (catGlassProgress) catGlassProgress.style.display = 'none';
     return loadWorkoutsPage();
-  } else {
-    if (catHeader) catHeader.style.display = '';
-    if (catViewTabs) catViewTabs.style.display = '';
-    if (categoryStats) categoryStats.style.display = '';
-    if (catGlassProgress) catGlassProgress.style.display = '';
   }
 
   const color = CATEGORY_COLOR[category] || 'ink-soft';
@@ -2932,6 +2928,41 @@ function getDayDisplayName(d) {
   return val.charAt(0).toUpperCase() + val.slice(1);
 }
 
+
+// Active Session Stopwatch State
+let workoutStopwatchInterval = null;
+let workoutStopwatchSeconds = 0;
+let isWorkoutStopwatchRunning = false;
+let isSoundAlertsEnabled = true;
+let activeMuscleFilter = 'ALL';
+
+function playGymBeep() {
+  if (!isSoundAlertsEnabled) return;
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+  } catch (e) {}
+}
+
+function formatStopwatchTime(totalSecs) {
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = totalSecs % 60;
+  if (h > 0) {
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, todayCompleted) {
   const { days } = workoutProgramData;
   const isSelectedToday = currentDay.id === todayDayId;
@@ -2940,9 +2971,14 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
 
   // Real-time progress computation
   const storedData = getStoredCompletedSets(todayDate);
+  let completedSetsTotal = 0;
+  let targetSetsTotal = 0;
+
   const doneExercises = dayExercises.filter(ex => {
     const totalSets = parseInt(ex.sets || ex.targetSets || 4, 10) || 4;
+    targetSetsTotal += totalSets;
     const sets = Array.isArray(storedData[ex.id]) ? storedData[ex.id] : [];
+    completedSetsTotal += sets.length;
     const isDoneFromSets = totalSets > 0 && sets.length >= totalSets;
     const isDoneFromApi = todayCompleted && todayCompleted.includes(ex.id);
     return isDoneFromSets || isDoneFromApi;
@@ -2953,7 +2989,7 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
   // Active days count
   const activeDaysCount = days.filter(d => !d.isRestDay && ((d.exercises && d.exercises.length > 0) || (d.title && !d.title.toLowerCase().includes('rest')))).length;
 
-  // Approximate volume moved
+  // Approximate volume moved & peak PR
   let estVolumeKg = 0;
   let topPrWeight = 0;
   let topPrName = 'Bench Press';
@@ -2976,446 +3012,197 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
 
   const displayPrWeight = topPrWeight > 0 ? topPrWeight : 105;
   const primaryVideoEx = dayExercises.find(e => e.videoUrl) || dayExercises[0];
-  const primaryMuscles = currentDay.targetMuscles && currentDay.targetMuscles.length ? currentDay.targetMuscles.join(', ') : (currentDay.title || 'Conditioning');
+
+  // Muscle filter detection
+  const distinctMuscles = ['ALL', ...new Set(dayExercises.map(e => (e.muscleGroup || 'General').toUpperCase()).filter(Boolean))];
+  const filteredExercises = activeMuscleFilter === 'ALL' 
+    ? dayExercises 
+    : dayExercises.filter(e => (e.muscleGroup || '').toUpperCase().includes(activeMuscleFilter));
 
   container.innerHTML = `
-    <div class="neka-workout-container">
+    <div class="workout-program-container" style="display:flex;flex-direction:column;gap:20px;">
 
       <!-- =========================================================
-           TOP SECTION: NEKA MASTER BIOMETRIC COMMAND CENTER
+           1. MAIN 7-DAY NAVIGATION TABS (Restored from original)
            ========================================================= -->
-      <div class="neka-workout-hero-grid">
-
-        <!-- -------------------------------------------------------
-             LEFT STAGE: Ethereal Frosted Anatomical Command Canvas
-             ------------------------------------------------------- -->
-        <div class="neka-bio-stage">
-          
-          <!-- Stage Top Bar: Brand & Controls -->
-          <div class="neka-stage-header">
-            <div class="neka-brand-row">
-              <div class="neka-brand-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M12 2v3m0 14v3M2 12h3m14 0h3m-3.5-6.5l-2.1 2.1m-8.8 8.8l-2.1 2.1m0-13l2.1 2.1m8.8 8.8l2.1 2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <span class="neka-brand-name">Neka</span>
-            </div>
-
-            <div class="neka-stage-controls">
-              <button type="button" class="neka-stage-ctrl-btn" title="Workout Alerts" id="nekaBtnAlerts">🔔</button>
-              <button type="button" class="neka-stage-ctrl-btn" title="Profile / Athlete" id="nekaBtnAthlete">👤</button>
-              <button type="button" class="neka-stage-ctrl-btn" title="Customize Routine" id="nekaBtnSettings">⚙️</button>
-            </div>
-          </div>
-
-          <!-- Main Hero Headline -->
-          <div class="neka-stage-title-wrap">
-            <h1 class="neka-stage-title">Heart &amp;<br>Circulation</h1>
-            <div class="neka-stage-subtitle">${getDayDisplayName(currentDay)} &middot; ${escapeHtml(currentDay.title || 'Performance')}</div>
-          </div>
-
-          <!-- Left Floating Capsule Toolbar -->
-          <div class="neka-floating-toolbar">
-            <button type="button" class="neka-toolbar-btn is-active" title="Biometric Routine" id="tbBtnRoutine">⚡</button>
-            <button type="button" class="neka-toolbar-btn" title="Exercise Deck" id="tbBtnDeck">🏋️</button>
-            <button type="button" class="neka-toolbar-btn" title="Target Muscle Map" id="tbBtnMuscles">🧬</button>
-            <button type="button" class="neka-toolbar-btn" title="Rest Timer &amp; Pacing" id="tbBtnTimer">⏱</button>
-          </div>
-
-          <!-- Center Ethereal Anatomical Athlete Visual -->
-          <div class="neka-center-stage">
-            <img src="/workout_silhouette.jpg" alt="Athletic Anatomy Silhouette" class="neka-silhouette-img" />
-          </div>
-
-          <!-- Interactive Glowing Biometric Hotspots & Floating Micro-Callouts -->
-          <div class="neka-hotspots-layer">
-            
-            <!-- Callout 1: Heart & Chest Focus -->
-            <div class="neka-hotspot-item neka-callout-heart" id="hotspotHeart" title="Click to focus Chest &amp; Core exercises">
-              <div class="neka-callout-card">
-                <div class="neka-callout-val">120</div>
-                <div class="neka-callout-label">heart sound</div>
-                <span class="neka-callout-badge optimal">Optimal</span>
-              </div>
-              <div class="neka-pulse-dot" style="position:absolute;left:-28px;top:50%;transform:translateY(-50%);"></div>
-            </div>
-
-            <!-- Callout 2: Arm / Bench Pressure PR -->
-            <div class="neka-hotspot-item neka-callout-arm" id="hotspotArm" title="Click to view PR &amp; Upper Body logs">
-              <div style="display:flex;align-items:center;gap:12px;">
-                <div class="neka-callout-card">
-                  <div class="neka-callout-val">92 <span class="sub">/57</span></div>
-                  <div class="neka-callout-label">arm pressure</div>
-                  <span class="neka-callout-badge high">High</span>
-                </div>
-                <div class="neka-pulse-dot"></div>
-              </div>
-            </div>
-
-            <!-- Callout 3: Arterial Health / Muscle Target -->
-            <div class="neka-hotspot-item neka-callout-arterial" id="hotspotArterial" title="Target Muscle Groups">
-              <div style="text-align:right;">
-                <div style="font-size:18px;color:#A3E635;line-height:1;margin-bottom:4px;">❖</div>
-                <div style="font-size:12px;font-weight:800;color:#0F172A;">Arterial health</div>
-                <div style="font-size:10px;font-weight:700;color:#64748B;">Monitor</div>
-              </div>
-            </div>
-
-            <!-- Callout 4: Heart Rhythm / Recovery Normal -->
-            <div class="neka-hotspot-item neka-callout-rhythm" id="hotspotRhythm" title="Rest &amp; Conditioning Status">
-              <div style="text-align:right;">
-                <div style="font-size:12px;font-weight:800;color:#0F172A;">Heart rhythm</div>
-                <span class="neka-callout-badge normal" style="margin-top:2px;">Normal</span>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Bottom Timeline Scrubber: Today's Data -->
-          <div class="neka-stage-bottom-bar">
-            <span class="neka-timeline-title">Today's Data</span>
-
-            <div class="neka-timeline-slider-wrap">
-              ${days.map((d, i) => {
-                const isToday = d.id === todayDayId;
-                const isActive = d.id === currentDay.id;
-                const shortTimes = ['12:55', '13:00', '13:05', '13:10', '13:15', '13:20', '13:25'];
-                const timeLabel = shortTimes[i] || '13:00';
-                return `
-                  <button type="button" class="neka-time-chip ${isActive ? 'is-active' : ''}" data-day-id="${d.id}" title="${getDayDisplayName(d)}: ${escapeHtml(d.title || '')}">
-                    ${getDayDisplayName(d).slice(0,3)} &middot; ${timeLabel}
-                  </button>
-                `;
-              }).join('')}
-            </div>
-
-            <button type="button" class="neka-timeline-expand-btn" id="btnTimelineExpand" title="View Full Weekly Schedule">↗</button>
-          </div>
-
-        </div>
-
-
-        <!-- -------------------------------------------------------
-             RIGHT ZONE: 6 Ambient Glowing Mesh-Gradient Cards
-             ------------------------------------------------------- -->
-        <div class="neka-bento-grid">
-
-          <!-- Card 1 (Top Left, Aurora Green Mesh): Heart Age & Parametric Double-Torus -->
-          <div class="neka-card neka-card-green" id="cardHeartAge">
-            <div class="neka-card-head">
-              <span class="neka-card-label">Heart Age</span>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="neka-card-subpill">Dates 2026 ⌵</span>
-                <span style="font-size:11.5px;font-weight:800;color:#DCFCE7;">-6 years</span>
-              </div>
-            </div>
-
-            <div class="neka-card-body">
-              <div class="neka-hero-num">25 <span class="unit">years</span></div>
-            </div>
-
-            <div class="neka-vis-wrap" style="flex-direction:column;">
-              <svg viewBox="0 0 200 120" class="neka-wireframe-svg" style="max-height:160px;">
-                <g stroke="rgba(255,255,255,0.38)" fill="none" stroke-width="0.85">
-                  <ellipse cx="100" cy="38" rx="44" ry="24" transform="rotate(-6 100 38)"/>
-                  <ellipse cx="100" cy="38" rx="48" ry="22" transform="rotate(6 100 38)"/>
-                  <ellipse cx="100" cy="38" rx="52" ry="20" transform="rotate(-15 100 38)"/>
-                  <ellipse cx="100" cy="38" rx="52" ry="20" transform="rotate(15 100 38)"/>
-                  <ellipse cx="100" cy="38" rx="56" ry="16" />
-                  
-                  <ellipse cx="100" cy="78" rx="44" ry="24" transform="rotate(6 100 78)"/>
-                  <ellipse cx="100" cy="78" rx="48" ry="22" transform="rotate(-6 100 78)"/>
-                  <ellipse cx="100" cy="78" rx="52" ry="20" transform="rotate(15 100 78)"/>
-                  <ellipse cx="100" cy="78" rx="52" ry="20" transform="rotate(-15 100 78)"/>
-                  <ellipse cx="100" cy="78" rx="56" ry="16" />
-                </g>
-                <circle cx="100" cy="58" r="4.5" class="neka-node-dot" />
-              </svg>
-
-              <div class="neka-scale-labels">
-                <span>Younger</span>
-                <span>Older</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 2 (Top Right, Amber-Peach Sunset Mesh): Blood Oxygen & Braided Ribbon Waves -->
-          <div class="neka-card neka-card-amber" id="cardBloodOxygen">
-            <div class="neka-card-head">
-              <span class="neka-card-label">Blood Oxygen</span>
-              <span class="neka-card-arrow">↗</span>
-            </div>
-
-            <div class="neka-card-body" style="display:flex;align-items:center;">
-              <div class="neka-hero-num">99</div>
-              <span class="neka-card-status-pill">Normal</span>
-            </div>
-
-            <div class="neka-vis-wrap" style="flex-direction:column;">
-              <svg viewBox="0 0 200 70" class="neka-wireframe-svg" style="max-height:65px;">
-                <path d="M 10 35 C 45 10, 65 60, 100 35 C 135 10, 155 60, 190 35" fill="none" stroke="#FEF08A" stroke-width="2.2" opacity="0.9" />
-                <path d="M 10 35 C 45 60, 65 10, 100 35 C 135 60, 155 10, 190 35" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.8" />
-                <path d="M 10 35 C 50 20, 80 50, 120 35 C 150 20, 170 50, 190 35" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
-                <circle cx="100" cy="35" r="4" class="neka-node-dot" />
-                <circle cx="170" cy="46" r="3.2" fill="#FEF08A" />
-                <circle cx="35" cy="22" r="3" fill="rgba(255,255,255,0.8)" />
-              </svg>
-
-              <div class="neka-scale-labels" style="opacity:0.6;font-size:9.5px;">
-                <span>1</span>
-                <span>100</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 3 (Middle Right, Sunset Mauve to Slate): Inflammation (hs-CRP) & Trajectory Arcs -->
-          <div class="neka-card neka-card-sunset" id="cardInflammation">
-            <div class="neka-card-head">
-              <span class="neka-card-label">Inflammation (hs-CRP)</span>
-              <span class="neka-card-arrow">↗</span>
-            </div>
-
-            <div class="neka-card-body">
-              <div class="neka-hero-num">0.5</div>
-            </div>
-
-            <div class="neka-vis-wrap" style="flex-direction:column;">
-              <svg viewBox="0 0 200 80" class="neka-wireframe-svg" style="max-height:75px;">
-                <line x1="15" y1="65" x2="185" y2="65" stroke="rgba(255,255,255,0.3)" stroke-dasharray="2 2" stroke-width="1" />
-                <path d="M 25 65 A 70 70 0 0 1 165 65" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.3" />
-                <path d="M 45 65 A 50 50 0 0 1 145 65" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.6" />
-                <path d="M 70 65 A 25 25 0 0 1 120 65" fill="none" stroke="#A3E635" stroke-width="2" />
-                <circle cx="28" cy="65" r="3.5" class="neka-node-dot" />
-              </svg>
-
-              <div class="neka-scale-labels" style="font-size:9.5px;">
-                <span>Optimal</span>
-                <span>Mid</span>
-                <span>Moderate</span>
-                <span>High</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 4 (Bottom Left, Solar Ember Mesh): +2000 Measurements / Lotus Spirograph -->
-          <div class="neka-card neka-card-ember" id="cardMeasurements" title="Click to track PRs &amp; Workout Weight">
-            <div class="neka-card-head">
-              <span class="neka-card-label">+2000<br><span style="font-size:11px;font-weight:600;opacity:0.85;">Measurements</span></span>
-              <span class="neka-card-arrow">↗</span>
-            </div>
-
-            <div class="neka-vis-wrap" style="margin-top:auto;">
-              <svg viewBox="0 0 100 80" class="neka-wireframe-svg" style="max-height:65px;">
-                <g stroke="rgba(255,255,255,0.45)" fill="none" stroke-width="0.85">
-                  <path d="M 50 10 C 68 30, 68 50, 50 70 C 32 50, 32 30, 50 10 Z" />
-                  <path d="M 18 40 C 38 22, 62 22, 82 40 C 62 58, 38 58, 18 40 Z" />
-                  <path d="M 28 20 C 52 24, 64 44, 72 60 C 48 56, 36 36, 28 20 Z" />
-                  <path d="M 72 20 C 48 24, 36 44, 28 60 C 52 56, 64 36, 72 20 Z" />
-                </g>
-                <circle cx="50" cy="40" r="3.5" class="neka-node-dot" />
-              </svg>
-            </div>
-          </div>
-
-          <!-- Card 5 (Bottom Middle, Olive Chartreuse Mesh): 16 Bloodwork / Inverted Conical Vortex -->
-          <div class="neka-card neka-card-olive" id="cardBloodwork">
-            <div class="neka-card-head">
-              <span class="neka-card-label">16<br><span style="font-size:11px;font-weight:600;opacity:0.85;">Bloodwork</span></span>
-              <span class="neka-card-arrow">↗</span>
-            </div>
-
-            <div class="neka-vis-wrap" style="margin-top:auto;">
-              <svg viewBox="0 0 100 80" class="neka-wireframe-svg" style="max-height:65px;">
-                <g stroke="rgba(255,255,255,0.45)" fill="none" stroke-width="0.85">
-                  <ellipse cx="50" cy="18" rx="36" ry="9" />
-                  <ellipse cx="50" cy="30" rx="26" ry="6.5" />
-                  <ellipse cx="50" cy="44" rx="17" ry="4.5" />
-                  <ellipse cx="50" cy="56" rx="9" ry="2.5" />
-                  <line x1="14" y1="18" x2="50" y2="68" stroke="rgba(255,255,255,0.3)" />
-                  <line x1="86" y1="18" x2="50" y2="68" stroke="rgba(255,255,255,0.3)" />
-                </g>
-                <circle cx="50" cy="68" r="3.5" class="neka-node-dot" />
-              </svg>
-            </div>
-
-            <!-- Quick Rest Timer Integration -->
-            <div class="neka-in-card-timer">
-              <button class="neka-mini-timer-btn" id="miniTimer30">30s</button>
-              <button class="neka-mini-timer-btn" id="miniTimer60">60s</button>
-              <button class="neka-mini-timer-btn" id="miniTimer90">90s</button>
-              <span id="miniTimerDisplay" style="font-size:11px;font-weight:800;color:#A3E635;display:none;margin-left:auto;"></span>
-            </div>
-          </div>
-
-          <!-- Card 6 (Bottom Right, Cinematic Athletic Card): 5 min Video Insights -->
-          <div class="neka-card neka-card-video" id="cardVideoInsight" title="Click to watch primary exercise tutorial">
-            <div class="neka-card-head">
-              <span class="neka-video-badge">⏱ 5 min</span>
-            </div>
-
-            <div class="neka-video-footer" style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;">
-              <h3 class="neka-video-title">Heart, Body, Skin<br>Data Insights</h3>
-              <div class="neka-video-play-icon">▶</div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
+      <nav class="workout-days-nav" aria-label="Workout days">
+        ${days.map(d => {
+          const isToday = d.id === todayDayId;
+          const isActive = d.id === currentDay.id;
+          const isRest = d.isRestDay || (!d.exercises || d.exercises.length === 0 && (!d.title || d.title.toLowerCase().includes('rest')));
+          const exCount = isRest ? '🌴 Rest' : `${d.exercises ? d.exercises.length : 0} ex`;
+          return `
+            <button type="button" class="workout-day-tab ${isActive ? 'is-active' : ''} ${isToday ? 'is-today' : ''} ${isRest ? 'is-rest-tab' : ''}" data-day-id="${d.id}">
+              <span class="w-day-name">${getDayDisplayName(d)}</span>
+              <span class="w-day-badge ${isRest ? 'is-rest-badge' : ''}">${exCount}</span>
+            </button>
+          `;
+        }).join('')}
+      </nav>
 
       <!-- =========================================================
-           LOWER SECTION: FULL EXERCISE DECK & ROUTINE CONTROLS
+           2. MAIN WORKOUT DAY HEADER CARD (Restored & Enhanced)
            ========================================================= -->
-      <div class="neka-deck-header-bar">
-        <div class="neka-deck-title-group">
-          <h2 class="neka-deck-title">🏋️ ${getDayDisplayName(currentDay)} Exercise Deck</h2>
-          ${isSelectedToday ? '<span class="asset-type-badge" style="background:var(--workouts);color:#0A1A12;font-weight:800;">TODAY</span>' : ''}
-          ${currentDay.isRestDay ? '<span class="asset-type-badge" style="background:rgba(255,255,255,0.08);color:var(--ink-soft);">🌴 REST &amp; RECOVERY</span>' : '<span class="asset-type-badge" style="background:rgba(79,209,165,0.15);color:var(--workouts);">⚡ ACTIVE (${totalExCount} EXERCISES)</span>'}
+      <div class="workout-day-header-card">
+        <div>
+          <div class="w-day-title-row">
+            <h2 class="w-day-title">${getDayDisplayName(currentDay)} &middot; ${escapeHtml(currentDay.title || '')}</h2>
+            ${isSelectedToday ? '<span class="asset-type-badge" style="background:var(--workouts);color:#0A1A12;font-weight:800;">TODAY</span>' : ''}
+            ${currentDay.isRestDay ? '<span class="asset-type-badge" style="background:rgba(255,255,255,0.08);color:var(--ink-soft);">🌴 REST &amp; RECOVERY</span>' : '<span class="asset-type-badge" style="background:rgba(79,209,165,0.15);color:var(--workouts);">⚡ ACTIVE DAY (${totalExCount} EXERCISES)</span>'}
+          </div>
+          ${currentDay.targetMuscles && currentDay.targetMuscles.length ? `
+            <div class="w-day-tags">
+              ${currentDay.targetMuscles.map(m => `<span class="w-day-tag highlight">${escapeHtml(m)}</span>`).join('')}
+            </div>
+          ` : ''}
         </div>
-
-        <div class="neka-deck-actions">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button type="button" class="btn-primary" id="addExerciseBtn" style="padding:8px 18px;font-size:13px;">+ Add Exercise</button>
           <button type="button" class="asset-action-btn" id="editDaySplitBtn">Edit Day Focus</button>
+          <button type="button" class="asset-action-btn" id="btnToggleRestDay" title="Toggle between Training Day and Rest Day">
+            ${currentDay.isRestDay ? '⚡ Set as Training Day' : '🌴 Set as Rest Day'}
+          </button>
+          <button type="button" class="asset-action-btn" id="btnCopyRoutine" title="Copy routine to clipboard">📋 Share</button>
         </div>
       </div>
 
-      <!-- Rest Timer Bar -->
-      ${!currentDay.isRestDay ? `
-      <div class="darebee-timer-bar">
-        <span class="darebee-timer-bar-label">⏱ Rest Timer:</span>
-        <button class="darebee-timer-btn" id="timerBtn30">30s</button>
-        <button class="darebee-timer-btn" id="timerBtn60">60s</button>
-        <button class="darebee-timer-btn" id="timerBtn90">90s</button>
-        <button class="darebee-timer-btn" id="timerBtn120">2 min</button>
-        <span id="timerDisplay" style="margin-left:auto;font-size:13px;font-weight:700;color:var(--workouts);display:none;"></span>
+      <!-- =========================================================
+           3. ACTIVE WORKOUT SESSION & STOPWATCH COMMAND BAR (New Feature)
+           ========================================================= -->
+      <div class="workout-session-bar">
+        <div class="session-timer-group">
+          <span class="session-stopwatch-display" id="sessionStopwatchDisplay">${formatStopwatchTime(workoutStopwatchSeconds)}</span>
+          <button type="button" class="session-ctrl-btn ${isWorkoutStopwatchRunning ? 'active' : ''}" id="btnToggleStopwatch">
+            ${isWorkoutStopwatchRunning ? '⏸ Pause' : '▶ Start Workout'}
+          </button>
+          <button type="button" class="session-ctrl-btn" id="btnResetStopwatch" title="Reset Session Timer">🔄 Reset</button>
+          <button type="button" class="session-ctrl-btn" id="btnToggleSound" title="Toggle audio alert on timer complete">
+            ${isSoundAlertsEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF'}
+          </button>
+        </div>
+
+        <div class="session-quick-actions">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink-soft);letter-spacing:0.06em;">Rest:</span>
+            <button class="darebee-timer-btn" id="timerBtn30">30s</button>
+            <button class="darebee-timer-btn" id="timerBtn60">60s</button>
+            <button class="darebee-timer-btn" id="timerBtn90">90s</button>
+            <button class="darebee-timer-btn" id="timerBtn120">2m</button>
+            <span id="timerDisplay" style="font-size:13px;font-weight:800;color:var(--workouts);display:none;margin-left:4px;"></span>
+          </div>
+
+          <button type="button" class="session-ctrl-btn" id="btnMarkAllDone" style="border-color:rgba(79,209,165,0.4);color:var(--workouts);" title="Mark all sets for today complete">
+            ⚡ Mark All Done
+          </button>
+          <button type="button" class="session-ctrl-btn" id="btnViewPrStats" title="View all Personal Records">
+            🏆 PR Stats
+          </button>
+        </div>
       </div>
+
+      <!-- =========================================================
+           4. DARK BIOMETRIC PERFORMANCE & FORM HUB (Dark Aesthetic Images)
+           ========================================================= -->
+      <div class="neka-dark-bento-deck">
+        
+        <!-- Card 1: Power & Volume Deck -->
+        <div class="dark-bento-card card-power" id="cardPowerDeck">
+          <div class="bento-card-header">
+            <span class="bento-tag">⚡ Power &amp; Volume</span>
+            <span class="bento-badge-right">${activeDaysCount} Active &middot; ${7 - activeDaysCount} Rest</span>
+          </div>
+
+          <div class="bento-card-body">
+            <div class="bento-hero-metric">${estVolumeKg.toLocaleString()} <span style="font-size:16px;font-weight:600;opacity:0.8;">kg Moved</span></div>
+            <div class="bento-sub-metric">🏆 Peak Record: ${displayPrWeight} kg (${escapeHtml(topPrName)})</div>
+          </div>
+
+          <div class="bento-card-footer">
+            <svg viewBox="0 0 160 50" style="max-height:45px;width:100%;overflow:visible;">
+              <g stroke="rgba(79,209,165,0.6)" fill="none" stroke-width="1.2">
+                <ellipse cx="80" cy="20" rx="35" ry="12" transform="rotate(-6 80 20)"/>
+                <ellipse cx="80" cy="20" rx="38" ry="10" transform="rotate(6 80 20)"/>
+                <ellipse cx="80" cy="32" rx="35" ry="12" transform="rotate(6 80 32)"/>
+                <ellipse cx="80" cy="32" rx="38" ry="10" transform="rotate(-6 80 32)"/>
+              </g>
+              <circle cx="80" cy="26" r="4" fill="#4FD1A5" style="filter:drop-shadow(0 0 6px #4FD1A5);" />
+            </svg>
+            <button type="button" class="btn-secondary" id="btnPowerPrLog" style="font-size:11px;padding:5px 12px;border-radius:999px;white-space:nowrap;">
+              Log PR &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 2: Form & Studio Video Spotlight -->
+        <div class="dark-bento-card card-form" id="cardFormDeck">
+          <div class="bento-card-header">
+            <span class="bento-tag" style="background:rgba(253,224,71,0.15);color:#FDE047;border-color:rgba(253,224,71,0.3);">⏱ 5 min Video Form</span>
+            <span class="bento-badge-right">${compPct}% Completed</span>
+          </div>
+
+          <div class="bento-card-body">
+            <div class="bento-hero-metric" style="font-size:26px;">${escapeHtml(primaryVideoEx ? primaryVideoEx.name : 'Primary Lift Form')}</div>
+            <div class="bento-sub-metric">Form Execution &amp; Technique Studio</div>
+          </div>
+
+          <div class="bento-card-footer">
+            <svg viewBox="0 0 160 40" style="max-height:35px;width:100%;overflow:visible;">
+              <path d="M 5 20 C 35 5, 55 35, 80 20 C 105 5, 125 35, 155 20" fill="none" stroke="#FDE047" stroke-width="1.8" />
+              <path d="M 5 20 C 35 35, 55 5, 80 20 C 105 35, 125 5, 155 20" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.2" />
+              <circle cx="80" cy="20" r="3.5" fill="#FDE047" />
+            </svg>
+            <button type="button" class="btn-primary" id="btnLaunchFormVideo" style="font-size:11px;padding:6px 14px;border-radius:999px;white-space:nowrap;">
+              ▶ Play Form
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- =========================================================
+           5. MUSCLE FILTER CHIPS BAR (New Feature)
+           ========================================================= -->
+      ${distinctMuscles.length > 2 ? `
+        <div class="muscle-filter-bar">
+          <span style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;margin-right:4px;">Filter:</span>
+          ${distinctMuscles.map(m => `
+            <button type="button" class="muscle-filter-chip ${activeMuscleFilter === m ? 'is-active' : ''}" data-muscle="${m}">
+              ${m}
+            </button>
+          `).join('')}
+        </div>
       ` : ''}
 
-      <!-- Exercise Cards Grid -->
-      <div class="exercise-list" id="nekaExerciseGrid">
+      <!-- =========================================================
+           6. EXERCISE CARDS GRID (Restored with all controls)
+           ========================================================= -->
+      <div class="exercise-list">
         ${currentDay.isRestDay ? `
           <div class="empty-state" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:36px 20px;">
             <span class="glyph">🧘</span>
             <h2>Rest &amp; Active Recovery</h2>
             <p>Allow your muscles to repair and grow. Focus on hydration, mobility, and high protein intake.</p>
           </div>
-        ` : (dayExercises.length === 0 ? `
+        ` : (filteredExercises.length === 0 ? `
           <div class="empty-state" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px 20px;">
             <span class="glyph">🏋️</span>
-            <h2>No exercises for ${getDayDisplayName(currentDay)}</h2>
-            <p>Click <strong>+ Add Exercise</strong> above to build your workout.</p>
+            <h2>No exercises found for this filter</h2>
+            <p>Select <strong>ALL</strong> or click <strong>+ Add Exercise</strong> above.</p>
           </div>
-        ` : dayExercises.map((ex, idx) => renderExerciseCard(ex, isSelectedToday, todayCompleted, idx, dayExercises.length, currentDay.id)).join(''))}
+        ` : filteredExercises.map((ex, idx) => renderExerciseCard(ex, isSelectedToday, todayCompleted, idx, filteredExercises.length, currentDay.id)).join(''))}
       </div>
 
     </div>
   `;
 
-  // Wire Timeline Day Chips
-  container.querySelectorAll('.neka-time-chip').forEach(btn => {
+  // Wire 7-Day Navigation Tabs
+  container.querySelectorAll('.workout-day-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedWorkoutDayId = btn.dataset.dayId;
+      activeMuscleFilter = 'ALL';
       renderWorkoutsView();
     });
   });
-
-  // Timeline Expand Button
-  const expandBtn = document.getElementById('btnTimelineExpand');
-  if (expandBtn) {
-    expandBtn.addEventListener('click', () => {
-      openRoutineCustomizerModal();
-    });
-  }
-
-  // Quick Action Toolbar Buttons
-  const tbDeck = document.getElementById('tbBtnDeck');
-  if (tbDeck) {
-    tbDeck.addEventListener('click', () => {
-      const grid = document.getElementById('nekaExerciseGrid');
-      if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-
-  const tbTimer = document.getElementById('tbBtnTimer');
-  if (tbTimer) {
-    tbTimer.addEventListener('click', () => {
-      startRestTimer(60);
-    });
-  }
-
-  const tbMuscles = document.getElementById('tbBtnMuscles');
-  if (tbMuscles) {
-    tbMuscles.addEventListener('click', () => {
-      showToast(`Target Focus: ${escapeHtml(primaryMuscles)}`);
-    });
-  }
-
-  const tbRoutine = document.getElementById('tbBtnRoutine');
-  if (tbRoutine) {
-    tbRoutine.addEventListener('click', () => {
-      openRoutineCustomizerModal();
-    });
-  }
-
-  // Hotspots Interactions
-  const hsHeart = document.getElementById('hotspotHeart');
-  if (hsHeart) {
-    hsHeart.addEventListener('click', () => {
-      showToast(`⚡ Session Completion: ${compPct}% (${doneCount}/${totalExCount} exercises done)`);
-    });
-  }
-
-  const hsArm = document.getElementById('hotspotArm');
-  if (hsArm) {
-    hsArm.addEventListener('click', () => {
-      showToast(`🏆 Peak Record: ${displayPrWeight} kg (${escapeHtml(topPrName)})`);
-    });
-  }
-
-  // Right Bento Cards Interactions
-  const cardHeartAge = document.getElementById('cardHeartAge');
-  if (cardHeartAge) {
-    cardHeartAge.addEventListener('click', () => {
-      showToast(`Weekly Training Split: ${activeDaysCount} Active Days · ${7 - activeDaysCount} Rest Days`);
-    });
-  }
-
-  const cardBloodOxygen = document.getElementById('cardBloodOxygen');
-  if (cardBloodOxygen) {
-    cardBloodOxygen.addEventListener('click', () => {
-      showToast(`Optimal Biometric Work Capacity: ${compPct}% on track`);
-    });
-  }
-
-  const cardMeasurements = document.getElementById('cardMeasurements');
-  if (cardMeasurements) {
-    cardMeasurements.addEventListener('click', () => {
-      if (dayExercises.length > 0) {
-        openExerciseWeightModal(dayExercises[0], currentDay.id);
-      } else {
-        openRoutineCustomizerModal();
-      }
-    });
-  }
-
-  const cardVideoInsight = document.getElementById('cardVideoInsight');
-  if (cardVideoInsight) {
-    cardVideoInsight.addEventListener('click', () => {
-      if (primaryVideoEx && primaryVideoEx.videoUrl) {
-        openVideoModal(primaryVideoEx.videoUrl, primaryVideoEx.name);
-      } else {
-        showToast('Tip: Add a form video URL to any exercise to play it here!');
-      }
-    });
-  }
-
-  const nekaBtnSettings = document.getElementById('nekaBtnSettings');
-  if (nekaBtnSettings) {
-    nekaBtnSettings.addEventListener('click', () => openRoutineCustomizerModal());
-  }
 
   // Add Exercise Button
   const addBtn = document.getElementById('addExerciseBtn');
@@ -3429,10 +3216,163 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
     editDayBtn.addEventListener('click', () => openEditDayModal(currentDay));
   }
 
-  // Rest Timer Buttons (Both Main Bar and In-Card Mini Timer)
+  // Toggle Rest Day Button
+  const toggleRestBtn = document.getElementById('btnToggleRestDay');
+  if (toggleRestBtn) {
+    toggleRestBtn.addEventListener('click', async () => {
+      try {
+        const newIsRest = !currentDay.isRestDay;
+        const res = await fetch(`/api/workout-program/days/${currentDay.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isRestDay: newIsRest, title: newIsRest ? 'Rest & Recovery' : (currentDay.title || 'Training Day') })
+        });
+        if (res.ok) {
+          showToast(newIsRest ? '🌴 Marked as Rest Day' : '⚡ Marked as Training Day');
+          await loadWorkoutsPage();
+        } else {
+          showToast('Could not update day status.');
+        }
+      } catch (err) {
+        showToast('Error updating day status.');
+      }
+    });
+  }
+
+  // Copy Routine Button
+  const copyBtn = document.getElementById('btnCopyRoutine');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const title = `${getDayDisplayName(currentDay)}: ${currentDay.title || 'Workout'}`;
+      const exLines = (currentDay.exercises || []).map((e, i) => `${i + 1}. ${e.name} - ${e.sets}x${e.reps} (${e.weight || 'BW'})`).join('\n');
+      const text = `🏋️ ${title}\n${exLines || 'Rest & Recovery'}`;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('📋 Routine copied to clipboard!');
+      }).catch(() => {
+        showToast('Could not copy to clipboard.');
+      });
+    });
+  }
+
+  // Stopwatch Controls
+  const btnToggleStopwatch = document.getElementById('btnToggleStopwatch');
+  const btnResetStopwatch = document.getElementById('btnResetStopwatch');
+  const stopwatchDisplay = document.getElementById('sessionStopwatchDisplay');
+
+  if (btnToggleStopwatch) {
+    btnToggleStopwatch.addEventListener('click', () => {
+      if (isWorkoutStopwatchRunning) {
+        clearInterval(workoutStopwatchInterval);
+        workoutStopwatchInterval = null;
+        isWorkoutStopwatchRunning = false;
+        btnToggleStopwatch.textContent = '▶ Resume Workout';
+        btnToggleStopwatch.classList.remove('active');
+      } else {
+        isWorkoutStopwatchRunning = true;
+        btnToggleStopwatch.textContent = '⏸ Pause';
+        btnToggleStopwatch.classList.add('active');
+        workoutStopwatchInterval = setInterval(() => {
+          workoutStopwatchSeconds++;
+          if (stopwatchDisplay) stopwatchDisplay.textContent = formatStopwatchTime(workoutStopwatchSeconds);
+        }, 1000);
+      }
+    });
+  }
+
+  if (btnResetStopwatch) {
+    btnResetStopwatch.addEventListener('click', () => {
+      if (workoutStopwatchInterval) clearInterval(workoutStopwatchInterval);
+      workoutStopwatchInterval = null;
+      isWorkoutStopwatchRunning = false;
+      workoutStopwatchSeconds = 0;
+      if (stopwatchDisplay) stopwatchDisplay.textContent = '00:00';
+      if (btnToggleStopwatch) {
+        btnToggleStopwatch.textContent = '▶ Start Workout';
+        btnToggleStopwatch.classList.remove('active');
+      }
+    });
+  }
+
+  // Toggle Sound Alerts
+  const btnToggleSound = document.getElementById('btnToggleSound');
+  if (btnToggleSound) {
+    btnToggleSound.addEventListener('click', () => {
+      isSoundAlertsEnabled = !isSoundAlertsEnabled;
+      btnToggleSound.textContent = isSoundAlertsEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+      showToast(isSoundAlertsEnabled ? '🔊 Audio beeps enabled' : '🔇 Audio alerts muted');
+    });
+  }
+
+  // Mark All Sets Done Button
+  const btnMarkAllDone = document.getElementById('btnMarkAllDone');
+  if (btnMarkAllDone) {
+    btnMarkAllDone.addEventListener('click', async () => {
+      if (dayExercises.length === 0) return;
+      const todayDate = toISODate(new Date());
+      const storedSets = getStoredCompletedSets(todayDate);
+
+      dayExercises.forEach(ex => {
+        const totalSets = parseInt(ex.sets || ex.targetSets || 4, 10) || 4;
+        storedSets[ex.id] = Array.from({ length: totalSets }, (_, i) => i);
+        toggleExerciseCheck(ex.id, true, todayDate, storedSets[ex.id]);
+      });
+
+      saveStoredCompletedSets(todayDate, storedSets);
+      workoutProgramData.todayCompleted = dayExercises.map(e => e.id);
+
+      showToast('⚡ All sets marked complete for today! Great session 💪');
+      updateTodaySessionProgress();
+      renderWorkoutsView();
+    });
+  }
+
+  // View PR Stats Button
+  const btnViewPrStats = document.getElementById('btnViewPrStats');
+  if (btnViewPrStats) {
+    btnViewPrStats.addEventListener('click', () => {
+      if (dayExercises.length > 0) {
+        openExerciseWeightModal(dayExercises[0], currentDay.id);
+      } else {
+        showToast(`🏆 Peak PR recorded: ${displayPrWeight} kg (${topPrName})`);
+      }
+    });
+  }
+
+  // Launch Form Video Button
+  const btnLaunchFormVideo = document.getElementById('btnLaunchFormVideo');
+  if (btnLaunchFormVideo) {
+    btnLaunchFormVideo.addEventListener('click', () => {
+      if (primaryVideoEx && primaryVideoEx.videoUrl) {
+        openVideoModal(primaryVideoEx.videoUrl, primaryVideoEx.name);
+      } else {
+        showToast('Add a video link to any exercise to watch it here!');
+      }
+    });
+  }
+
+  // Power Deck Log PR Button
+  const btnPowerPrLog = document.getElementById('btnPowerPrLog');
+  if (btnPowerPrLog) {
+    btnPowerPrLog.addEventListener('click', () => {
+      if (dayExercises.length > 0) {
+        openExerciseWeightModal(dayExercises[0], currentDay.id);
+      } else {
+        openRoutineCustomizerModal();
+      }
+    });
+  }
+
+  // Muscle Filter Chips
+  container.querySelectorAll('.muscle-filter-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeMuscleFilter = btn.dataset.muscle;
+      renderWorkoutsView();
+    });
+  });
+
+  // Rest Timer Buttons
   let restTimerInterval = null;
   const timerDisplay = document.getElementById('timerDisplay');
-  const miniTimerDisplay = document.getElementById('miniTimerDisplay');
 
   function startRestTimer(seconds) {
     if (restTimerInterval) clearInterval(restTimerInterval);
@@ -3441,23 +3381,17 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
       timerDisplay.style.display = 'inline';
       timerDisplay.textContent = `${remaining}s`;
     }
-    if (miniTimerDisplay) {
-      miniTimerDisplay.style.display = 'inline';
-      miniTimerDisplay.textContent = `${remaining}s`;
-    }
     restTimerInterval = setInterval(() => {
       remaining--;
       if (timerDisplay) timerDisplay.textContent = `${remaining}s`;
-      if (miniTimerDisplay) miniTimerDisplay.textContent = `${remaining}s`;
       if (remaining <= 0) {
         clearInterval(restTimerInterval);
         restTimerInterval = null;
-        if (timerDisplay) { timerDisplay.textContent = '✅ Done!'; }
-        if (miniTimerDisplay) { miniTimerDisplay.textContent = '✅ Done!'; }
+        if (timerDisplay) { timerDisplay.textContent = '✅ Ready!'; }
+        playGymBeep();
         showToast('🔔 Rest timer complete! Ready for your next set.');
         setTimeout(() => { 
           if (timerDisplay) timerDisplay.style.display = 'none'; 
-          if (miniTimerDisplay) miniTimerDisplay.style.display = 'none'; 
         }, 2500);
       }
     }, 1000);
@@ -3466,11 +3400,6 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
   ['timerBtn30','timerBtn60','timerBtn90','timerBtn120'].forEach((id, i) => {
     const btn = document.getElementById(id);
     if (btn) btn.addEventListener('click', () => startRestTimer([30,60,90,120][i]));
-  });
-
-  ['miniTimer30','miniTimer60','miniTimer90'].forEach((id, i) => {
-    const btn = document.getElementById(id);
-    if (btn) btn.addEventListener('click', () => startRestTimer([30,60,90][i]));
   });
 
   // Set Check-off Buttons
@@ -3501,7 +3430,7 @@ function renderWorkoutProgramView(container, currentDay, todayDayId, todayDate, 
         workoutProgramData.todayCompleted = workoutProgramData.todayCompleted.filter(id => id !== exId);
       }
 
-      // Live update Today's Session stat card and Category Completion bar in real time!
+      // Live update Category completion bar and stat cards
       updateTodaySessionProgress();
 
       // Persist to database in background

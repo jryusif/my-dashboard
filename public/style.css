@@ -21697,3 +21697,212 @@ body.is-unauthenticated .btn-floating-braindump {
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.45) !important;
   font-weight: 900;
 }
+
+/* =====================================================================
+   DARK BIOMETRIC COMMAND DECK & ENHANCED WORKOUT TOOLBAR
+   ===================================================================== */
+
+.workout-session-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: linear-gradient(135deg, #16203A 0%, #1A2234 50%, #111827 100%);
+  border: 1px solid rgba(79, 209, 165, 0.25);
+  border-radius: var(--radius-xl);
+  padding: 14px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.session-timer-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.session-stopwatch-display {
+  font-family: 'Courier New', monospace, var(--font-body);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--workouts);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(79, 209, 165, 0.3);
+  letter-spacing: 0.06em;
+  min-width: 105px;
+  text-align: center;
+}
+
+.session-ctrl-btn {
+  background: var(--surface-quiet);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.session-ctrl-btn:hover {
+  background: var(--workouts);
+  color: #0A1A12;
+  border-color: var(--workouts);
+  box-shadow: 0 0 14px rgba(79, 209, 165, 0.35);
+}
+
+.session-ctrl-btn.active {
+  background: rgba(79, 209, 165, 0.2);
+  border-color: var(--workouts);
+  color: var(--workouts);
+}
+
+.session-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Dark Bento Performance Hub */
+.neka-dark-bento-deck {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 960px) {
+  .neka-dark-bento-deck {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dark-bento-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(79, 209, 165, 0.2);
+  position: relative;
+  overflow: hidden;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 26px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+}
+
+.dark-bento-card.card-power {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(15, 23, 42, 0.7) 60%, rgba(15, 23, 42, 0.85) 100%),
+              url('/workout_hero_dark.jpg') center/cover no-repeat;
+}
+
+.dark-bento-card.card-form {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(15, 23, 42, 0.65) 60%, rgba(15, 23, 42, 0.9) 100%),
+              url('/workout_chalk_dark.jpg') center/cover no-repeat;
+}
+
+.bento-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 2;
+}
+
+.bento-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--workouts);
+  background: rgba(79, 209, 165, 0.12);
+  border: 1px solid rgba(79, 209, 165, 0.3);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.bento-badge-right {
+  font-size: 11px;
+  font-weight: 700;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+}
+
+.bento-card-body {
+  position: relative;
+  z-index: 2;
+  margin: 12px 0 8px;
+}
+
+.bento-hero-metric {
+  font-family: var(--font-display, var(--font-body));
+  font-size: 32px;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.bento-sub-metric {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.bento-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  position: relative;
+  z-index: 2;
+  gap: 12px;
+}
+
+/* Muscle Filter Bar */
+.muscle-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: none;
+}
+.muscle-filter-bar::-webkit-scrollbar { display: none; }
+
+.muscle-filter-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.muscle-filter-chip:hover {
+  border-color: var(--workouts);
+  color: var(--ink);
+}
+
+.muscle-filter-chip.is-active {
+  background: var(--workouts);
+  border-color: var(--workouts);
+  color: #0A1A12;
+  font-weight: 800;
+  box-shadow: 0 2px 10px rgba(79, 209, 165, 0.35);
+}
