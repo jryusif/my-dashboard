@@ -15562,6 +15562,9 @@ function updateUserUi() {
     if (dockUserAvatar) {
       dockUserAvatar.innerHTML = renderAvatarHtml(currentUser.avatar, defaultAvatar);
     }
+    if (typeof syncAllUserAvatars === 'function') {
+      syncAllUserAvatars(currentUser.avatar);
+    }
     if (btnAuthLogout) btnAuthLogout.style.display = 'flex';
     if (authCalloutBanner) authCalloutBanner.style.display = 'none';
 
@@ -16958,6 +16961,9 @@ async function loadProfileData() {
 
     currentUser = { ...currentUser, ...user };
     localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+    if (typeof syncAllUserAvatars === 'function') {
+      syncAllUserAvatars(user.avatar);
+    }
 
     // Populate Hero banner
     const profileAvatarDisplay = document.getElementById('profileAvatarDisplay');
@@ -23037,33 +23043,562 @@ initCalendar();
 })();
 
 // =============================================================================
-// 🌟 KRISTIN NORDIC EXECUTIVE DASHBOARD CONTROLLER
+// 🌟 KRISTIN NORDIC EXECUTIVE DASHBOARD CONTROLLER & AVATAR ENGINE
 // =============================================================================
+
+function syncAllUserAvatars(avatar) {
+  const av = avatar || (currentUser && (currentUser.avatar || currentUser.avatarUrl)) || '/kristin_avatar.jpg';
+  const defaultEmoji = (currentUser && currentUser.role === 'ADMIN') ? '👑' : '👤';
+  const isImg = av && (av.startsWith('http://') || av.startsWith('https://') || av.startsWith('data:image/') || av.startsWith('/'));
+
+  // 1. Update Card Avatar (#kristinAvatarImgWrap)
+  const wrap = document.getElementById('kristinAvatarImgWrap');
+  if (wrap) {
+    if (isImg) {
+      wrap.innerHTML = `<img src="${escapeHtml(av)}" alt="Profile Avatar" class="kristin-avatar-img" id="kristinAvatarImg" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'kristin-avatar-emoji-main\\'>${defaultEmoji}</span>'" />`;
+    } else {
+      wrap.innerHTML = `<span class="kristin-avatar-emoji-main">${escapeHtml(av || defaultEmoji)}</span>`;
+    }
+  }
+
+  // 2. Update Top Navbar Avatar (#kristinAvatarNavBtn / #kristinNavAvatarContent)
+  const navContent = document.getElementById('kristinNavAvatarContent');
+  if (navContent) {
+    if (isImg) {
+      navContent.innerHTML = `<img src="${escapeHtml(av)}" alt="Avatar" class="avatar-img-circle" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'avatar-emoji\\'>${defaultEmoji}</span>'" />`;
+    } else {
+      navContent.innerHTML = `<span class="avatar-emoji">${escapeHtml(av || defaultEmoji)}</span>`;
+    }
+  }
+
+  // 3. Update Modal Avatar Preview (#kristinModalAvatarDisplay)
+  const modalDisplay = document.getElementById('kristinModalAvatarDisplay');
+  if (modalDisplay) {
+    if (isImg) {
+      modalDisplay.innerHTML = `<img src="${escapeHtml(av)}" alt="Avatar Preview" id="kristinModalAvatarImg" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'avatar-emoji\\'>${defaultEmoji}</span>'" />`;
+    } else {
+      modalDisplay.innerHTML = `<span class="avatar-emoji">${escapeHtml(av || defaultEmoji)}</span>`;
+    }
+  }
+
+  // 4. Update Dock, Sidebar, Dropdown & Profile Section Avatars
+  const dockUserAvatar = document.getElementById('dockUserAvatar');
+  if (dockUserAvatar) dockUserAvatar.innerHTML = renderAvatarHtml(av, defaultEmoji);
+
+  const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
+  if (sidebarUserAvatar) sidebarUserAvatar.innerHTML = renderAvatarHtml(av, defaultEmoji);
+
+  const ddAvatarWrap = document.getElementById('ddAvatarWrap');
+  if (ddAvatarWrap) ddAvatarWrap.innerHTML = renderAvatarHtml(av, defaultEmoji);
+
+  const profileAvatarDisplay = document.getElementById('profileAvatarDisplay');
+  if (profileAvatarDisplay) profileAvatarDisplay.innerHTML = renderAvatarHtml(av, defaultEmoji);
+
+  // Sync into currentUser and localStorage
+  if (currentUser) {
+    currentUser.avatar = av;
+    currentUser.avatarUrl = av;
+    try {
+      localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+    } catch {}
+  }
+}
+window.syncAllUserAvatars = syncAllUserAvatars;
+
+async function updateKristinProgressCircle(forcedTasks = null) {
+  const ringEl = document.getElementById('kristinAvatarProgressRing');
+  const badgeEl = document.getElementById('kristinAvatarBadge');
+  const containerEl = document.getElementById('kristinAvatarContainer');
+  const modalRingEl = document.getElementById('kristinModalRing');
+
+  // Flyout elements
+  const flyoutPctEl = document.getElementById('kristinFlyoutPct');
+  const flyoutCircleEl = document.getElementById('kristinFlyoutScoreCircle');
+  const flyoutSummaryEl = document.getElementById('kristinFlyoutSummary');
+  const flyoutHighPrioEl = document.getElementById('kristinFlyoutHighPrio');
+  const flyoutSpacesEl = document.getElementById('kristinFlyoutActiveSpaces');
+  const flyoutStreakEl = document.getElementById('kristinFlyoutStreak');
+
+  let tasks = forcedTasks;
+  if (!tasks && Array.isArray(currentTodayTasks) && currentTodayTasks.length > 0) {
+    tasks = currentTodayTasks;
+  } else if (!tasks && Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0) {
+    tasks = window.calTasksCache;
+  } else if (!tasks && window.StorageService && typeof window.StorageService.tasks?.getAll === 'function') {
+    tasks = window.StorageService.tasks.getAll(false);
+  }
+
+  if (!tasks) {
+    try {
+      const res = await fetch('/api/tasks');
+      if (res.ok) {
+        const data = await res.json();
+        tasks = data.tasks || [];
+      }
+    } catch (e) {
+      tasks = [];
+    }
+  }
+
+  tasks = (tasks || []).filter(t => !t.deleted_at && t.category !== 'Routine');
+
+  const todayStr = toISODate(new Date());
+  // Filter for today or overdue or all active
+  let targetTasks = tasks.filter(t => {
+    const d = t.date || t.dueDate;
+    return !d || d <= todayStr;
+  });
+
+  if (targetTasks.length === 0) {
+    targetTasks = tasks;
+  }
+
+  const total = targetTasks.length;
+  const done = targetTasks.filter(t => Boolean(t.completed)).length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : (tasks.length > 0 ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0);
+
+  // Circumference = 2 * PI * 44 ~= 276.46
+  const circumference = 276.46;
+  const offset = Math.max(0, Math.min(circumference, circumference - (circumference * pct) / 100));
+
+  // Determine dynamic ring color
+  let ringColor = '#F87171'; // Soft Coral
+  if (pct >= 85) {
+    ringColor = '#10B981'; // Emerald
+  } else if (pct >= 45) {
+    ringColor = '#F59E0B'; // Amber
+  }
+
+  if (ringEl) {
+    ringEl.style.strokeDashoffset = String(offset);
+    ringEl.style.stroke = ringColor;
+    if (pct === 100) {
+      ringEl.classList.add('ring-completed');
+    } else {
+      ringEl.classList.remove('ring-completed');
+    }
+  }
+
+  if (modalRingEl) {
+    modalRingEl.style.strokeDashoffset = String(offset);
+    modalRingEl.style.stroke = ringColor;
+  }
+
+  if (badgeEl) {
+    if (pct === 100) {
+      badgeEl.textContent = '👑';
+      badgeEl.title = '100% Day Completed! Magnificent!';
+    } else if (pct >= 70) {
+      badgeEl.textContent = '★';
+      badgeEl.title = `${pct}% Day Completed • Click for breakdown`;
+    } else {
+      badgeEl.textContent = '★';
+      badgeEl.title = `${pct}% Day Completed • Click for breakdown`;
+    }
+  }
+
+  if (containerEl) {
+    containerEl.title = `Productivity: ${pct}% (${done}/${total} tasks completed) • Click to customize photo & profile`;
+  }
+
+  // Priority velocity
+  const highPrioTasks = targetTasks.filter(t => {
+    const p = (t.priority || '').toLowerCase();
+    return p === 'high' || p === 'urgent';
+  });
+  const highDone = highPrioTasks.filter(t => t.completed).length;
+  const highPct = highPrioTasks.length > 0 ? Math.round((highDone / highPrioTasks.length) * 100) : pct;
+
+  // Connected spaces
+  const customSpaces = typeof getUserCustomSpaces === 'function' ? getUserCustomSpaces() : [];
+
+  // Update Flyout elements
+  if (flyoutPctEl) flyoutPctEl.textContent = `${pct}%`;
+  if (flyoutCircleEl) flyoutCircleEl.style.background = ringColor;
+  if (flyoutSummaryEl) flyoutSummaryEl.textContent = total > 0 ? `${done} of ${total} Completed` : `${done} Completed`;
+  if (flyoutHighPrioEl) flyoutHighPrioEl.textContent = `${highPct}%`;
+  if (flyoutSpacesEl) flyoutSpacesEl.textContent = String(customSpaces.length + 6);
+  if (flyoutStreakEl) flyoutStreakEl.textContent = done >= 5 ? '🔥 High' : '⚡ Good';
+}
+window.updateKristinProgressCircle = updateKristinProgressCircle;
+
+// Modal controllers
+let kristinPendingAvatar = null;
+
+function openKristinProfileModal(focusTarget = 'avatar') {
+  const backdrop = document.getElementById('kristinAvatarModalBackdrop');
+  if (!backdrop) return;
+
+  const currentAvatar = (currentUser && (currentUser.avatar || currentUser.avatarUrl)) || '/kristin_avatar.jpg';
+  kristinPendingAvatar = currentAvatar;
+  const currentName = currentUser?.name || 'Mohamed Yousef';
+  const currentRole = (currentUser?.role === 'ADMIN') ? 'Executive Administrator' : (currentUser?.specialty || currentUser?.occupation || 'Design Manager');
+  const currentStatus = localStorage.getItem('antigravity_kristin_status') || '🟢 Active';
+
+  const nameInput = document.getElementById('kristinInputName');
+  const roleInput = document.getElementById('kristinInputRole');
+  const urlInput = document.getElementById('kristinInputAvatarUrl');
+
+  if (nameInput) nameInput.value = currentName;
+  if (roleInput) roleInput.value = currentRole;
+  if (urlInput) urlInput.value = (currentAvatar && (currentAvatar.startsWith('http') || currentAvatar.startsWith('/'))) ? currentAvatar : '';
+
+  setKristinFocusStatus(currentStatus, false);
+  updateKristinModalPreview();
+
+  backdrop.hidden = false;
+  backdrop.removeAttribute('hidden');
+  if (window.lockBodyScroll) window.lockBodyScroll();
+
+  if (focusTarget === 'name' && nameInput) setTimeout(() => nameInput.focus(), 50);
+  else if (focusTarget === 'status') {
+    const opt = document.getElementById('kristinStatusOptions');
+    if (opt) opt.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+window.openKristinProfileModal = openKristinProfileModal;
+
+function closeKristinProfileModal() {
+  const backdrop = document.getElementById('kristinAvatarModalBackdrop');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+  }
+  if (window.unlockBodyScroll) window.unlockBodyScroll();
+}
+window.closeKristinProfileModal = closeKristinProfileModal;
+
+function updateKristinModalPreview() {
+  const nameInput = document.getElementById('kristinInputName');
+  const roleInput = document.getElementById('kristinInputRole');
+  const previewName = document.getElementById('kristinModalPreviewName');
+  const previewRole = document.getElementById('kristinModalPreviewRole');
+  const previewStatus = document.getElementById('kristinModalPreviewStatus');
+
+  if (previewName && nameInput) previewName.textContent = nameInput.value.trim() || 'Mohamed Yousef';
+  if (previewRole && roleInput) previewRole.textContent = roleInput.value.trim() || 'Executive Administrator';
+
+  const currentStatus = localStorage.getItem('antigravity_kristin_status') || '🟢 Active';
+  if (previewStatus) previewStatus.textContent = currentStatus;
+
+  const avatar = kristinPendingAvatar || (currentUser && (currentUser.avatar || currentUser.avatarUrl)) || '/kristin_avatar.jpg';
+  const display = document.getElementById('kristinModalAvatarDisplay');
+  if (display) {
+    const isImg = avatar && (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('data:image/') || avatar.startsWith('/'));
+    if (isImg) {
+      display.innerHTML = `<img src="${escapeHtml(avatar)}" alt="Avatar Preview" id="kristinModalAvatarImg" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'avatar-emoji\\'>👤</span>'" />`;
+    } else {
+      display.innerHTML = `<span class="avatar-emoji">${escapeHtml(avatar)}</span>`;
+    }
+  }
+}
+window.updateKristinModalPreview = updateKristinModalPreview;
+
+function handleKristinAvatarUrlInput(url) {
+  const clean = (url || '').trim();
+  if (clean) {
+    kristinPendingAvatar = clean;
+    updateKristinModalPreview();
+  }
+}
+window.handleKristinAvatarUrlInput = handleKristinAvatarUrlInput;
+
+function selectKristinPresetAvatar(preset) {
+  kristinPendingAvatar = preset;
+  const urlInput = document.getElementById('kristinInputAvatarUrl');
+  if (urlInput) urlInput.value = '';
+  updateKristinModalPreview();
+  showToast(`Avatar preset ${preset} selected!`);
+}
+window.selectKristinPresetAvatar = selectKristinPresetAvatar;
+
+function generateDicebearAvatar() {
+  const styles = ['personas', 'bottts', 'adventurer', 'fun-emoji', 'micah'];
+  const style = styles[Math.floor(Math.random() * styles.length)];
+  const seed = Math.random().toString(36).substring(2, 9);
+  const diceUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+  kristinPendingAvatar = diceUrl;
+  const urlInput = document.getElementById('kristinInputAvatarUrl');
+  if (urlInput) urlInput.value = diceUrl;
+  updateKristinModalPreview();
+  showToast('🎲 New avatar generated!');
+}
+window.generateDicebearAvatar = generateDicebearAvatar;
+
+function resetKristinAvatarToDefault() {
+  kristinPendingAvatar = '/kristin_avatar.jpg';
+  const urlInput = document.getElementById('kristinInputAvatarUrl');
+  if (urlInput) urlInput.value = '';
+  updateKristinModalPreview();
+  showToast('Reset avatar to default photo.');
+}
+window.resetKristinAvatarToDefault = resetKristinAvatarToDefault;
+
+async function handleKristinAvatarFileUpload(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const dataUrl = reader.result;
+      kristinPendingAvatar = dataUrl;
+      updateKristinModalPreview();
+      syncAllUserAvatars(dataUrl);
+
+      // Try uploading to backend
+      let uploadedUrl = dataUrl;
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64: dataUrl, filename: file.name, type: 'avatar' })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) uploadedUrl = data.url;
+        }
+      } catch (e) {
+        console.debug('Direct upload fallback to base64');
+      }
+
+      kristinPendingAvatar = uploadedUrl;
+      syncAllUserAvatars(uploadedUrl);
+
+      // Persist directly to user profile
+      try {
+        await fetch('/api/user/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatar: uploadedUrl })
+        });
+      } catch (e) {
+        console.debug('Profile patch error:', e);
+      }
+
+      showToast('📸 New profile photo uploaded successfully!');
+    } catch (err) {
+      console.error('File read error:', err);
+      showToast('Failed to process uploaded photo.');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+window.handleKristinAvatarFileUpload = handleKristinAvatarFileUpload;
+
+function setKristinFocusStatus(statusText, save = true) {
+  if (save) {
+    localStorage.setItem('antigravity_kristin_status', statusText);
+    showToast(`Focus status updated to: ${statusText}`);
+  }
+  const pillText = document.getElementById('kristinStatusText');
+  if (pillText) pillText.textContent = statusText.replace(/^[^\w\s]+\s*/, '');
+
+  const miniDot = document.getElementById('kristinStatusDotMini');
+  if (miniDot) {
+    if (statusText.includes('Away')) {
+      miniDot.style.background = '#F59E0B';
+    } else if (statusText.includes('Meeting')) {
+      miniDot.style.background = '#EF4444';
+    } else {
+      miniDot.style.background = '#10B981';
+    }
+  }
+
+  // Highlight active chip in modal
+  const chips = document.querySelectorAll('#kristinStatusOptions .kristin-status-chip');
+  chips.forEach(chip => {
+    if (chip.textContent.trim() === statusText.trim()) {
+      chip.classList.add('active');
+    } else {
+      chip.classList.remove('active');
+    }
+  });
+
+  const previewStatus = document.getElementById('kristinModalPreviewStatus');
+  if (previewStatus) previewStatus.textContent = statusText;
+}
+window.setKristinFocusStatus = setKristinFocusStatus;
+
+async function saveKristinProfileModal() {
+  const saveBtn = document.getElementById('kristinSaveProfileBtn');
+  const name = document.getElementById('kristinInputName')?.value.trim() || 'Mohamed Yousef';
+  const role = document.getElementById('kristinInputRole')?.value.trim() || 'Executive Administrator';
+  const avatar = kristinPendingAvatar || (currentUser && (currentUser.avatar || currentUser.avatarUrl)) || '/kristin_avatar.jpg';
+
+  try {
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span>⏳</span> Saving...';
+    }
+
+    // Save to user profile API
+    const res = await fetch('/api/user/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, specialty: role, avatar })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.user) {
+        currentUser = { ...currentUser, ...data.user };
+      }
+    } else {
+      // Fallback in memory
+      currentUser = { ...currentUser, name, specialty: role, avatar };
+    }
+
+    localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+
+    // Update UI Elements
+    syncAllUserAvatars(avatar);
+
+    const profileNameEl = document.getElementById('kristinProfileName');
+    const profileRoleEl = document.getElementById('kristinProfileRole');
+    const welcomeNameEl = document.getElementById('kristinWelcomeName');
+
+    if (profileNameEl) profileNameEl.textContent = name;
+    if (profileRoleEl) profileRoleEl.textContent = role;
+    if (welcomeNameEl) welcomeNameEl.textContent = `Welcome, ${name.split(' ')[0]}`;
+
+    // Also update profile section if open
+    const profileNameDisplay = document.getElementById('profileNameDisplay');
+    const profileSpecialtyDisplay = document.getElementById('profileSpecialtyDisplay');
+    if (profileNameDisplay) profileNameDisplay.textContent = name;
+    if (profileSpecialtyDisplay) profileSpecialtyDisplay.textContent = role;
+
+    closeKristinProfileModal();
+    kristinPendingAvatar = null;
+    showToast('✨ Profile & photo saved successfully!');
+  } catch (err) {
+    console.error('Save Kristin Profile Error:', err);
+    showToast('Saved profile settings locally.');
+    closeKristinProfileModal();
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<span>✨</span> Save Changes';
+    }
+  }
+}
+window.saveKristinProfileModal = saveKristinProfileModal;
+
+// Toggling flyout
+function toggleKristinProductivityFlyout(force = null) {
+  const flyout = document.getElementById('kristinProductivityFlyout');
+  if (!flyout) return;
+  const isHidden = flyout.hasAttribute('hidden') || flyout.style.display === 'none';
+  const shouldShow = force !== null ? force : isHidden;
+  if (shouldShow) {
+    flyout.hidden = false;
+    flyout.removeAttribute('hidden');
+    flyout.style.display = 'flex';
+  } else {
+    flyout.hidden = true;
+    flyout.setAttribute('hidden', '');
+    flyout.style.display = 'none';
+  }
+}
+window.toggleKristinProductivityFlyout = toggleKristinProductivityFlyout;
+
+// Micro-pills click handlers
+function handleKristinSpacesPillClick() {
+  if (typeof openCustomSpaceModal === 'function') {
+    openCustomSpaceModal();
+    showToast('🪐 Manage your workspaces & spaces');
+  } else {
+    const grid = document.getElementById('dashboardGrid');
+    if (grid) grid.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+window.handleKristinSpacesPillClick = handleKristinSpacesPillClick;
+
+function handleKristinDonePillClick() {
+  if (typeof focusKristinPriorityTasks === 'function') {
+    focusKristinPriorityTasks();
+    showToast('✓ Viewing prioritized & completed tasks');
+  } else {
+    const el = document.getElementById('kristinPriorityCard');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+window.handleKristinDonePillClick = handleKristinDonePillClick;
+
+function handleKristinGoalsPillClick() {
+  if (typeof openRoadmapPage === 'function') {
+    openRoadmapPage();
+    showToast('🏆 Opening Master Roadmap & Goals');
+  } else {
+    showToast('🏆 Active Goals & Roadmap Milestones');
+  }
+}
+window.handleKristinGoalsPillClick = handleKristinGoalsPillClick;
+
+// Profile card refresh
+async function handleKristinProfileRefresh() {
+  const btn = document.getElementById('kristinRefreshBtn');
+  if (btn) btn.classList.add('spinning');
+
+  try {
+    if (typeof updateKristinExecutiveDashboard === 'function') {
+      await updateKristinExecutiveDashboard();
+    }
+    if (typeof renderDashboard === 'function') {
+      renderDashboard();
+    }
+    showToast('↻ Profile & productivity metrics synchronized');
+  } catch (e) {
+    console.debug('Refresh error:', e);
+  } finally {
+    setTimeout(() => {
+      if (btn) btn.classList.remove('spinning');
+    }, 700);
+  }
+}
+window.handleKristinProfileRefresh = handleKristinProfileRefresh;
 
 async function updateKristinExecutiveDashboard() {
   const welcomeNameEl = document.getElementById('kristinWelcomeName');
   const profileNameEl = document.getElementById('kristinProfileName');
   const profileRoleEl = document.getElementById('kristinProfileRole');
-  const avatarImgEl = document.getElementById('kristinAvatarImg');
   const statSpacesEl = document.getElementById('kristinStatSpaces');
   const statDoneEl = document.getElementById('kristinStatDone');
   const statGoalsEl = document.getElementById('kristinStatGoals');
-  const prioPctEl = document.getElementById('kristinPrioritizedPct');
-  const addPctEl = document.getElementById('kristinAdditionalPct');
   const trackersCountEl = document.getElementById('kristinTrackersCount');
 
   const uName = (currentUser && currentUser.name) ? currentUser.name.split(' ')[0] : 'Kristin';
   if (welcomeNameEl) welcomeNameEl.textContent = `Welcome, ${uName}`;
-  if (profileNameEl) profileNameEl.textContent = (currentUser && currentUser.name) ? currentUser.name : 'Kristin Watson';
-  if (profileRoleEl) profileRoleEl.textContent = (currentUser && currentUser.role === 'ADMIN') ? 'Executive Administrator' : (currentUser?.occupation || 'Design Manager');
+  if (profileNameEl) profileNameEl.textContent = (currentUser && currentUser.name) ? currentUser.name : 'Mohamed Yousef';
+  if (profileRoleEl) profileRoleEl.textContent = (currentUser && currentUser.role === 'ADMIN') ? 'Executive Administrator' : (currentUser?.specialty || currentUser?.occupation || 'Design Manager');
 
-  if (avatarImgEl && currentUser && currentUser.avatarUrl) {
-    avatarImgEl.src = currentUser.avatarUrl;
-  }
+  // Synchronize avatar across card, nav bar, and workspace
+  const userAvatar = (currentUser && (currentUser.avatar || currentUser.avatarUrl)) || '/kristin_avatar.jpg';
+  syncAllUserAvatars(userAvatar);
+
+  // Status indicator
+  const currentStatus = localStorage.getItem('antigravity_kristin_status') || '🟢 Active';
+  setKristinFocusStatus(currentStatus, false);
 
   const customSpaces = typeof getUserCustomSpaces === 'function' ? getUserCustomSpaces() : [];
   if (statSpacesEl) statSpacesEl.textContent = String(customSpaces.length + 6);
   if (trackersCountEl) trackersCountEl.textContent = `${customSpaces.length + 3} active connections`;
+
+  // Calculate real active roadmap goals count for statGoalsEl
+  try {
+    let goalsCount = 12;
+    if (Array.isArray(window.roadmapMilestonesCache) && window.roadmapMilestonesCache.length > 0) {
+      goalsCount = window.roadmapMilestonesCache.filter(m => !m.completed).length || 12;
+    }
+    if (statGoalsEl) statGoalsEl.textContent = String(goalsCount);
+  } catch (e) {}
+
+  // Calculate and update real-time progress circle ring
+  try {
+    await updateKristinProgressCircle();
+  } catch (err) {
+    console.debug('Kristin progress circle error:', err);
+  }
 
   // Calculate and update real-time Prioritized vs Additional task velocity
   try {
@@ -23420,6 +23955,11 @@ async function updateKristinTaskVelocityCards(providedTasks = null) {
   // 3. Update profile header done counter with real tasks completed
   if (statDoneEl) {
     statDoneEl.textContent = String(totalDone);
+  }
+
+  // 4. Update circular progress ring around avatar
+  if (typeof updateKristinProgressCircle === 'function') {
+    updateKristinProgressCircle(tasks);
   }
 }
 window.updateKristinTaskVelocityCards = updateKristinTaskVelocityCards;

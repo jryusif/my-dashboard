@@ -504,7 +504,7 @@
               <input type="text" id="kristinQuickSearch" placeholder="Search..." autocomplete="off" />
             </div>
             <button type="button" class="kristin-avatar-btn" id="kristinAvatarNavBtn" onclick="openProfileSection()" title="Account &amp; Settings">
-              👤
+              <span id="kristinNavAvatarContent">👤</span>
             </button>
           </div>
         </div>
@@ -517,35 +517,86 @@
                ----------------------------------------------------- -->
           <div class="kristin-top-row">
 
-            <!-- Card 1: Profile Card -->
-            <div class="kristin-profile-card">
+            <!-- Card 1: Profile Card (Fully Interactive & Functional) -->
+            <div class="kristin-profile-card" id="kristinProfileCard">
               <div class="kristin-profile-header">
-                <span>Profile</span>
-                <button type="button" class="kristin-refresh-btn" onclick="renderDashboard()" title="Refresh Overview">↻</button>
+                <div class="kristin-profile-header-left">
+                  <span>Profile</span>
+                  <span class="kristin-status-dot-mini online" id="kristinStatusDotMini" title="Status: Active"></span>
+                </div>
+                <div class="kristin-profile-header-actions">
+                  <button type="button" class="kristin-card-act-btn" onclick="openKristinProfileModal()" title="Edit Profile & Photo">⚙️</button>
+                  <button type="button" class="kristin-refresh-btn" id="kristinRefreshBtn" onclick="handleKristinProfileRefresh()" title="Refresh & Sync Profile">↻</button>
+                </div>
               </div>
 
-              <div class="kristin-avatar-container">
-                <svg class="kristin-avatar-ring-svg" viewBox="0 0 100 100">
+              <div class="kristin-avatar-container" id="kristinAvatarContainer" onclick="openKristinProfileModal()" title="Click to change profile picture or edit profile">
+                <svg class="kristin-avatar-ring-svg" viewBox="0 0 100 100" id="kristinAvatarRingSvg">
                   <circle cx="50" cy="50" r="44" fill="none" stroke="#FEE2E2" stroke-width="4.5" />
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="#F87171" stroke-width="4.5" stroke-dasharray="276" stroke-dashoffset="65" stroke-linecap="round" />
+                  <circle id="kristinAvatarProgressRing" cx="50" cy="50" r="44" fill="none" stroke="#F87171" stroke-width="4.5" stroke-dasharray="276.46" stroke-dashoffset="65" stroke-linecap="round" />
                 </svg>
-                <img src="/kristin_avatar.jpg" alt="Profile Avatar" class="kristin-avatar-img" id="kristinAvatarImg" />
-                <span class="kristin-avatar-badge">★</span>
+                <div class="kristin-avatar-img-wrap" id="kristinAvatarImgWrap">
+                  <img src="/kristin_avatar.jpg" alt="Profile Avatar" class="kristin-avatar-img" id="kristinAvatarImg" />
+                </div>
+                <span class="kristin-avatar-edit-overlay" title="Change Photo">📷</span>
+                <span class="kristin-avatar-badge" id="kristinAvatarBadge" onclick="event.stopPropagation(); toggleKristinProductivityFlyout();" title="Productivity Velocity (Click for details)">★</span>
               </div>
 
-              <h3 class="kristin-profile-name" id="kristinProfileName">Kristin Watson</h3>
-              <p class="kristin-profile-role" id="kristinProfileRole">Design Manager</p>
+              <h3 class="kristin-profile-name" id="kristinProfileName" onclick="openKristinProfileModal()" title="Click to edit profile">Kristin Watson</h3>
+              <p class="kristin-profile-role" id="kristinProfileRole" onclick="openKristinProfileModal()" title="Click to edit role">Design Manager</p>
 
+              <!-- Status / Presence Pill -->
+              <div class="kristin-status-pill-wrap">
+                <button type="button" class="kristin-status-pill" id="kristinStatusPill" onclick="openKristinProfileModal('status')" title="Click to change focus status">
+                  <span class="status-dot"></span> <span id="kristinStatusText">In Flow</span>
+                </button>
+              </div>
+
+              <!-- Interactive Functional Micro-Pills -->
               <div class="kristin-micro-pills">
-                <div class="kristin-micro-pill" title="Connected Spaces &amp; Categories">
+                <button type="button" class="kristin-micro-pill" id="kristinPillSpaces" onclick="handleKristinSpacesPillClick()" title="Connected Spaces (Click to manage)">
                   <span>👥</span> <span id="kristinStatSpaces">11</span>
-                </div>
-                <div class="kristin-micro-pill coral" title="Completed Tasks">
+                </button>
+                <button type="button" class="kristin-micro-pill coral" id="kristinPillDone" onclick="handleKristinDonePillClick()" title="Completed Tasks (Click to view today's tasks)">
                   <span>✓</span> <span id="kristinStatDone">56</span>
-                </div>
-                <div class="kristin-micro-pill amber" title="Active Goals &amp; Streaks">
+                </button>
+                <button type="button" class="kristin-micro-pill amber" id="kristinPillGoals" onclick="handleKristinGoalsPillClick()" title="Active Goals & Milestones (Click to view roadmap)">
                   <span>🏆</span> <span id="kristinStatGoals">12</span>
+                </button>
+              </div>
+
+              <!-- Productivity Velocity Popover / Flyout -->
+              <div class="kristin-productivity-flyout" id="kristinProductivityFlyout" hidden>
+                <div class="kristin-flyout-header">
+                  <span>⚡ Productivity Velocity</span>
+                  <button type="button" class="kristin-flyout-close" onclick="toggleKristinProductivityFlyout(false)">✕</button>
                 </div>
+                <div class="kristin-flyout-score-row">
+                  <div class="kristin-flyout-score-circle" id="kristinFlyoutScoreCircle">
+                    <span id="kristinFlyoutPct">0%</span>
+                  </div>
+                  <div class="kristin-flyout-score-text">
+                    <strong id="kristinFlyoutSummary">0 of 0 Completed</strong>
+                    <span id="kristinFlyoutSub">Today's completion rate</span>
+                  </div>
+                </div>
+                <div class="kristin-flyout-stats">
+                  <div class="kristin-flyout-stat">
+                    <span class="num" id="kristinFlyoutHighPrio">0%</span>
+                    <span class="lbl">Priority</span>
+                  </div>
+                  <div class="kristin-flyout-stat">
+                    <span class="num" id="kristinFlyoutActiveSpaces">0</span>
+                    <span class="lbl">Spaces</span>
+                  </div>
+                  <div class="kristin-flyout-stat">
+                    <span class="num" id="kristinFlyoutStreak">Active</span>
+                    <span class="lbl">Momentum</span>
+                  </div>
+                </div>
+                <button type="button" class="kristin-flyout-action-btn" onclick="toggleKristinProductivityFlyout(false); focusKristinPriorityTasks();">
+                  Focus Priority Tasks &rarr;
+                </button>
               </div>
             </div>
 
@@ -4283,6 +4334,131 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       👑 KRISTIN EXECUTIVE PROFILE & AVATAR MANAGER MODAL
+       =================================================================== -->
+  <div class="modal-backdrop" id="kristinAvatarModalBackdrop" hidden>
+    <div class="modal kristin-avatar-modal" role="dialog" aria-modal="true" aria-labelledby="kristinAvatarModalTitle">
+      <button type="button" class="modal-close-btn" onclick="closeKristinProfileModal()" title="Close modal">✕</button>
+      
+      <div class="modal-header">
+        <div class="space-modal-badge" style="background: rgba(248,113,113,0.12); color:#e11d48; border-color:rgba(248,113,113,0.25);">
+          👤 EXECUTIVE PROFILE &amp; PHOTO
+        </div>
+        <h2 id="kristinAvatarModalTitle">Customize Profile &amp; Picture</h2>
+        <p class="subtitle">Change your photo, update your executive title, and manage your focus status.</p>
+      </div>
+
+      <!-- Live Interactive Avatar Preview -->
+      <div class="kristin-modal-preview-zone">
+        <div class="kristin-modal-preview-avatar">
+          <svg class="kristin-avatar-ring-svg modal-ring" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="44" fill="none" stroke="#FEE2E2" stroke-width="4" />
+            <circle id="kristinModalRing" cx="50" cy="50" r="44" fill="none" stroke="#F87171" stroke-width="4" stroke-dasharray="276.46" stroke-dashoffset="65" stroke-linecap="round" />
+          </svg>
+          <div class="kristin-modal-avatar-display" id="kristinModalAvatarDisplay">
+            <img src="/kristin_avatar.jpg" alt="Avatar Preview" id="kristinModalAvatarImg" />
+          </div>
+        </div>
+        <div class="kristin-modal-preview-info">
+          <h4 id="kristinModalPreviewName">Kristin Watson</h4>
+          <p id="kristinModalPreviewRole">Design Manager</p>
+          <span class="kristin-modal-preview-status" id="kristinModalPreviewStatus">🟢 Active</span>
+        </div>
+      </div>
+
+      <!-- Form Body -->
+      <div class="kristin-modal-body">
+        <!-- Photo Upload & Source Section -->
+        <div class="kristin-field-group">
+          <label class="kristin-field-label">Profile Picture Source</label>
+          <div class="kristin-photo-actions-row">
+            <!-- Hidden native file input -->
+            <input type="file" id="kristinDirectFileInput" accept="image/*" style="display: none;" onchange="handleKristinAvatarFileUpload(this)" />
+            <button type="button" class="kristin-btn-action primary" onclick="document.getElementById('kristinDirectFileInput').click()">
+              <span>📸</span> Upload Photo
+            </button>
+            <button type="button" class="kristin-btn-action" onclick="generateDicebearAvatar()">
+              <span>🎲</span> Random Avatar
+            </button>
+            <button type="button" class="kristin-btn-action text-danger" onclick="resetKristinAvatarToDefault()">
+              <span>↺</span> Reset Default
+            </button>
+          </div>
+
+          <!-- URL Input -->
+          <div class="kristin-input-with-icon" style="margin-top: 10px;">
+            <span class="input-icon">🔗</span>
+            <input type="text" id="kristinInputAvatarUrl" placeholder="Or paste any image URL (https://...)" oninput="handleKristinAvatarUrlInput(this.value)" />
+          </div>
+
+          <!-- Quick Executive Presets -->
+          <div class="kristin-presets-wrap" style="margin-top: 12px;">
+            <span class="presets-label">Executive &amp; Creative Presets</span>
+            <div class="kristin-presets-list" id="kristinPresetPills">
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('👩‍💼')">👩‍💼</button>
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('👨‍💼')">👨‍💼</button>
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('👑')">👑</button>
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('⚡')">⚡</button>
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('🎯')">🎯</button>
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('🚀')">🚀</button>
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('💼')">💼</button>
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('💎')">💎</button>
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('💻')">💻</button>
+              <button type="button" class="kristin-preset-btn" onclick="selectKristinPresetAvatar('🏆')">🏆</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Name & Role Fields -->
+        <div class="kristin-form-row">
+          <div class="kristin-field-col">
+            <label class="kristin-field-label" for="kristinInputName">Full Name</label>
+            <input type="text" id="kristinInputName" class="kristin-text-input" placeholder="e.g. Mohamed Yousef" oninput="updateKristinModalPreview()" />
+          </div>
+          <div class="kristin-field-col">
+            <label class="kristin-field-label" for="kristinInputRole">Title / Role</label>
+            <input type="text" id="kristinInputRole" class="kristin-text-input" placeholder="e.g. Executive Administrator" oninput="updateKristinModalPreview()" />
+          </div>
+        </div>
+
+        <!-- Status / Presence Options -->
+        <div class="kristin-field-group">
+          <label class="kristin-field-label">Active Presence &amp; Status</label>
+          <div class="kristin-status-options" id="kristinStatusOptions">
+            <label class="kristin-status-chip active" onclick="setKristinFocusStatus('🟢 Active')">
+              <input type="radio" name="kristinStatusRadio" value="🟢 Active" checked style="display:none" />
+              <span>🟢 Active</span>
+            </label>
+            <label class="kristin-status-chip" onclick="setKristinFocusStatus('🎯 Deep Focus')">
+              <input type="radio" name="kristinStatusRadio" value="🎯 Deep Focus" style="display:none" />
+              <span>🎯 Deep Focus</span>
+            </label>
+            <label class="kristin-status-chip" onclick="setKristinFocusStatus('⚡ In Flow')">
+              <input type="radio" name="kristinStatusRadio" value="⚡ In Flow" style="display:none" />
+              <span>⚡ In Flow</span>
+            </label>
+            <label class="kristin-status-chip" onclick="setKristinFocusStatus('☕ Away')">
+              <input type="radio" name="kristinStatusRadio" value="☕ Away" style="display:none" />
+              <span>☕ Away</span>
+            </label>
+            <label class="kristin-status-chip" onclick="setKristinFocusStatus('📅 In Meeting')">
+              <input type="radio" name="kristinStatusRadio" value="📅 In Meeting" style="display:none" />
+              <span>📅 In Meeting</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-secondary" onclick="closeKristinProfileModal()">Cancel</button>
+        <button type="button" class="btn-primary" id="kristinSaveProfileBtn" onclick="saveKristinProfileModal()">
+          <span>✨</span> Save Changes
+        </button>
+      </div>
     </div>
   </div>
 
