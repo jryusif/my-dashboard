@@ -5316,26 +5316,78 @@
           </div>
         </div>
 
+        <!-- Entry Position Section (Share-based Calculation) -->
         <div class="form-row-2">
           <div class="field-group">
-            <label class="field-label" for="tradeEntryAmountInput">Position Size / Entry Capital ($) *</label>
-            <div class="amount-input-wrap">
-              <span class="amount-prefix">$</span>
-              <input type="number" id="tradeEntryAmountInput" step="any" min="0.01" placeholder="e.g. 50.00" required oninput="recalcTradePnL()" />
-            </div>
-            <p class="field-hint" id="tradeEntryMaxHint">Max recommended: $0.00 (20%)</p>
+            <label class="field-label" for="tradeSharesInput">Shares / Quantity *</label>
+            <input type="number" id="tradeSharesInput" step="any" min="0.0001" placeholder="e.g. 100" required oninput="handleTradeEntryChange()" />
           </div>
           <div class="field-group">
-            <label class="field-label" for="tradeExitAmountInput">Exit Capital or Net PnL ($) *</label>
+            <label class="field-label" for="tradeEntryPriceInput">Entry Price per Share ($) *</label>
             <div class="amount-input-wrap">
               <span class="amount-prefix">$</span>
-              <input type="number" id="tradeExitAmountInput" step="any" placeholder="e.g. 70.00 (Exit) or +20.00 (Net)" required oninput="recalcTradePnL()" />
+              <input type="number" id="tradeEntryPriceInput" step="0.0001" min="0.0001" placeholder="e.g. 1.0100" required oninput="handleTradeEntryChange()" />
             </div>
-            <p class="field-hint">Enter total exit amount OR net profit/loss</p>
           </div>
         </div>
 
-        <!-- Dynamic Live PnL Auto-Calculation Card -->
+        <!-- Auto-calculated Total Entry Capital & Risk Hint -->
+        <div class="trade-entry-calc-bar">
+          <div class="trade-entry-calc-left">
+            <span class="trade-entry-calc-label">Total Entry Capital:</span>
+            <span class="trade-entry-calc-value" id="tradeTotalEntryCapitalDisplay">$0.00</span>
+            <input type="hidden" id="tradeEntryAmountInput" value="0" />
+          </div>
+          <p class="field-hint" id="tradeEntryMaxHint" style="margin:0;">Max recommended: $0.00 (20%)</p>
+        </div>
+
+        <!-- Scaling Out / Multi-Tranche Partial Exits (تخفيف الكميات) -->
+        <div class="trade-partial-exits-section">
+          <div class="trade-partial-exits-header">
+            <div class="trade-partial-exits-title-group">
+              <h3><span>⚡</span> Partial Exits / Scaling Out (تخفيف الكميات)</h3>
+              <p class="trade-partial-exits-subtitle">Log multiple sell tranches as you de-risk and take profits.</p>
+            </div>
+            <div class="position-status-badge is-open" id="tradePositionStatusBadge">
+              <span class="status-dot">●</span>
+              <span id="tradePositionStatusText">OPEN / Partially Filled</span>
+            </div>
+          </div>
+
+          <!-- Position Tracker Bar -->
+          <div class="position-tracker-bar">
+            <div class="position-tracker-stat">
+              <span>Remaining Shares:</span>
+              <strong><span id="tradeRemainingSharesDisplay">0</span> / <span id="tradeInitialSharesDisplay">0</span></strong>
+            </div>
+            <div class="position-tracker-stat">
+              <span>Remaining Capital:</span>
+              <strong><span id="tradeRemainingCapitalDisplay">$0.00</span></strong>
+            </div>
+            <div class="position-tracker-stat">
+              <span>Shares Sold:</span>
+              <strong><span id="tradeSoldSharesDisplay">0</span> (<span id="tradeSoldPctDisplay">0%</span>)</strong>
+            </div>
+          </div>
+
+          <!-- Dynamic Tranches Container -->
+          <div id="tradePartialExitsContainer" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Rendered dynamically by renderPartialExits() in app.js -->
+          </div>
+
+          <!-- Tranche Actions Bar -->
+          <div class="trade-tranche-actions-bar">
+            <button type="button" class="btn-add-tranche" id="btnAddPartialExitBtn" onclick="addPartialExitTranche()">
+              <span>+</span> Add Partial Exit / Scale Out
+            </button>
+            <div class="trade-allocation-warning" id="tradeAllocationWarning" style="display:none;">
+              <span>⚠️</span>
+              <span id="tradeAllocationWarningText">Shares sold cannot exceed initial position balance!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Live Aggregate PnL Auto-Calculation Card -->
         <div class="trade-pnl-calc-preview" id="tradePnlCalcPreview">
           <div class="pnl-preview-header">
             <span class="pnl-preview-label">Auto-Calculated Performance</span>
@@ -5344,6 +5396,24 @@
           <div class="pnl-preview-numbers">
             <div class="pnl-preview-dollar" id="tradePnlDollarPreview">+$0.00</div>
             <div class="pnl-preview-pct" id="tradePnlPctPreview">(+0.0%)</div>
+          </div>
+          <div class="pnl-preview-metrics-grid">
+            <div class="pnl-metric-box">
+              <span class="metric-lbl">Total Cash Out</span>
+              <span class="metric-val" id="tradeTotalCashOutPreview">$0.00</span>
+            </div>
+            <div class="pnl-metric-box">
+              <span class="metric-lbl">Avg Exit Price</span>
+              <span class="metric-val" id="tradeAvgExitPricePreview">$0.0000</span>
+            </div>
+            <div class="pnl-metric-box">
+              <span class="metric-lbl">Total Sold</span>
+              <span class="metric-val" id="tradeSummarySoldPreview">0 shares</span>
+            </div>
+            <div class="pnl-metric-box">
+              <span class="metric-lbl">Position State</span>
+              <span class="metric-val" id="tradeSummaryStatusPreview" style="color:var(--sky, #38bdf8);">OPEN</span>
+            </div>
           </div>
         </div>
 

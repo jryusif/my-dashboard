@@ -5051,8 +5051,15 @@ function renderTradeHistoryTable() {
         <td style="font-weight:600; font-size:12px; opacity:0.9;">${formattedDate}</td>
         <td><strong style="color:#fff; font-size:14px; letter-spacing:0.04em;">${escapeHtml(t.ticker || 'STOCK')}</strong></td>
         <td>${sideBadge}</td>
-        <td style="font-feature-settings:'tnum' 1; font-weight:700;">$${parseFloat(t.entryAmount || 0).toFixed(2)}</td>
-        <td style="font-feature-settings:'tnum' 1; opacity:0.85;">$${parseFloat(t.exitAmount || 0).toFixed(2)}</td>
+        <td style="font-feature-settings:'tnum' 1; font-weight:700;">
+          $${parseFloat(t.entryAmount || 0).toFixed(2)}
+          ${t.shares && t.entryPrice ? `<span style="display:block; font-size:10.5px; opacity:0.65; font-weight:500; letter-spacing:0.02em;">${t.shares} sh @ $${parseFloat(t.entryPrice).toFixed(4)}</span>` : ''}
+        </td>
+        <td style="font-feature-settings:'tnum' 1; opacity:0.9;">
+          $${parseFloat(t.exitAmount || 0).toFixed(2)}
+          ${t.avgExitPrice ? `<span style="display:block; font-size:10.5px; opacity:0.65; letter-spacing:0.02em;">avg $${parseFloat(t.avgExitPrice).toFixed(4)}</span>` : ''}
+          ${t.status === 'OPEN' ? `<span style="display:inline-block; font-size:9.5px; padding:1px 5px; border-radius:4px; background:rgba(56,189,248,0.18); color:#38bdf8; font-weight:700; margin-top:2px;">OPEN (${t.remainingShares || 0} sh left)</span>` : (Array.isArray(t.partialExits) && t.partialExits.length > 1 ? `<span style="display:inline-block; font-size:9.5px; padding:1px 5px; border-radius:4px; background:rgba(255,255,255,0.06); color:#cbd5e1; font-weight:600; margin-top:2px;">${t.partialExits.length} tranches</span>` : '')}
+        </td>
         <td class="trade-pnl-cell ${pnlClass}">
           ${pnlSign}$${Math.abs(pnlVal).toFixed(2)}
         </td>
@@ -5436,11 +5443,14 @@ async function renderTradingWatchlist() {
   }
 }
 
-// ── Trade Entry Form Live Calculation & Submission ──
+// ── Trade Entry Form Live Calculation & Scaling Out (تخفيف الكميات) ──
+let currentTradeTranches = [];
+
 function setTradeSide(side) {
   currentTradeSideSelection = side;
   const btns = document.querySelectorAll('#tradeSideToggle button');
   btns.forEach(b => b.classList.toggle('active', b.dataset.side === side));
+  recalcTradePnL();
 }
 window.setTradeSide = setTradeSide;
 
@@ -5448,73 +5458,381 @@ function setTradeOutcome(outcome) {
   currentTradeOutcomeSelection = outcome;
   const btns = document.querySelectorAll('#tradeOutcomeToggle button');
   btns.forEach(b => b.classList.toggle('active', b.dataset.outcome === outcome));
-  recalcTradePnL();
+  
+  const badgePreview = document.getElementById('tradePnlOutcomeBadge');
+  if (badgePreview) {
+    badgePreview.textContent = outcome;
+    badgePreview.className = `pnl-preview-badge ${outcome === 'Win' ? 'is-win' : (outcome === 'Loss' ? 'is-loss' : 'is-be')}`;
+  }
 }
 window.setTradeOutcome = setTradeOutcome;
 
+function handleTradeEntryChange() {
+  const sharesInput = document.getElementById('tradeSharesInput');
+  const priceInput = document.getElementById('tradeEntryPriceInput');
+  const totalCapDisplay = document.getElementById('tradeTotalEntryCapitalDisplay');
+  const legacyEntryInput = document.getElementById('tradeEntryAmountInput');
+
+  const shares = parseFloat(sharesInput?.value) || 0;
+  const price = parseFloat(priceInput?.value) || 0;
+  const totalCap = shares * price;
+
+  if (totalCapDisplay) {
+    totalCapDisplay.textContent = `$${totalCap.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+  }
+  if (legacyEntryInput) {
+    legacyEntryInput.value = totalCap > 0 ? totalCap.toFixed(4) : '';
+  }
+
+  recalcTradePnL();
+}
+window.handleTradeEntryChange = handleTradeEntryChange;
+
+function renderPartialExits() {
+  const container = document.getElementById('tradePartialExitsContainer');
+  if (!container) return;
+
+  if (!currentTradeTranches || currentTradeTranches.length === 0) {
+    currentTradeTranches = [{ id: 'tr_' + Date.now(), shares: '', exitPrice: '' }];
+  }
+
+  const initialShares = parseFloat(document.getElementById('tradeSharesInput')?.value) || 0;
+  const entryPrice = parseFloat(document.getElementById('tradeEntryPriceInput')?.value) || 0;
+  const direction = currentTradeSideSelection || 'Long';
+
+  container.innerHTML = currentTradeTranches.map((t, idx) => {
+    const sharesVal = parseFloat(t.shares) || 0;
+    const exitPriceVal = parseFloat(t.exitPrice) || 0;
+
+    // Real-time tranche PnL calculation
+    let tranchePnL = 0;
+    let tranchePct = 0;
+    const trancheRevenue = sharesVal * exitPriceVal;
+
+    if (sharesVal > 0 && entryPrice > 0 && exitPriceVal > 0) {
+      if (direction === 'Long') {
+        tranchePnL = (exitPriceVal - entryPrice) * sharesVal;
+        tranchePct = ((exitPriceVal - entryPrice) / entryPrice) * 100;
+      } else {
+        tranchePnL = (entryPrice - exitPriceVal) * sharesVal;
+        tranchePct = ((entryPrice - exitPriceVal) / entryPrice) * 100;
+      }
+    }
+
+    const isWin = tranchePnL > 0.005;
+    const isLoss = tranchePnL < -0.005;
+    const pnlColorClass = isWin ? 'is-win' : (isLoss ? 'is-loss' : 'is-neutral');
+    const pnlSign = tranchePnL > 0 ? '+' : (tranchePnL < 0 ? '-' : '');
+    const pctSign = tranchePct > 0 ? '+' : (tranchePct < 0 ? '-' : '');
+
+    return `
+      <div class="trade-tranche-card" id="trancheCard_${idx}">
+        <div class="trade-tranche-top">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="trade-tranche-index-tag">Tranche #${idx + 1}</span>
+            <div class="trade-quick-chips-group">
+              <button type="button" class="tranche-pct-chip" onclick="applyTrancheChip(${idx}, 10)" title="Set 10% of position">10%</button>
+              <button type="button" class="tranche-pct-chip" onclick="applyTrancheChip(${idx}, 20)" title="Set 20% of position">20%</button>
+              <button type="button" class="tranche-pct-chip" onclick="applyTrancheChip(${idx}, 25)" title="Set 25% (1/4) of position">25% (¼)</button>
+              <button type="button" class="tranche-pct-chip" onclick="applyTrancheChip(${idx}, 50)" title="Set 50% (1/2) of position">50% (½)</button>
+              <button type="button" class="tranche-pct-chip is-all" onclick="applyTrancheChip(${idx}, 100)" title="Sell 100% of remaining position">100% (All Remaining)</button>
+            </div>
+          </div>
+          ${currentTradeTranches.length > 1 ? `
+            <button type="button" class="tranche-delete-btn" onclick="removePartialExitTranche(${idx})" title="Delete Tranche">✕</button>
+          ` : ''}
+        </div>
+
+        <div class="trade-tranche-inputs-grid">
+          <div>
+            <label class="field-label">Shares Sold *</label>
+            <input type="number" step="any" min="0.0001" id="trancheShares_${idx}" value="${t.shares !== '' && t.shares !== undefined ? t.shares : ''}" placeholder="e.g. 25" required oninput="handleTrancheFieldChange(${idx}, 'shares', this.value)" />
+          </div>
+          <div>
+            <label class="field-label">Exit Price per Share ($) *</label>
+            <div class="amount-input-wrap">
+              <span class="amount-prefix">$</span>
+              <input type="number" step="0.0001" min="0.0001" id="tranchePrice_${idx}" value="${t.exitPrice !== '' && t.exitPrice !== undefined ? t.exitPrice : ''}" placeholder="e.g. 1.2000" required oninput="handleTrancheFieldChange(${idx}, 'exitPrice', this.value)" />
+            </div>
+          </div>
+        </div>
+
+        <div class="trade-tranche-footer-stats">
+          <div class="tranche-metric-pill">
+            <span class="lbl">Tranche PnL:</span>
+            <span class="val ${pnlColorClass}" id="tranchePnlDisplay_${idx}">
+              ${sharesVal > 0 && exitPriceVal > 0 ? `${pnlSign}$${Math.abs(tranchePnL).toFixed(2)} (${pctSign}${Math.abs(tranchePct).toFixed(1)}%)` : '$0.00 (0.0%)'}
+            </span>
+          </div>
+          <div class="tranche-metric-pill">
+            <span class="lbl">Cash Out:</span>
+            <span class="val" id="trancheRevenueDisplay_${idx}" style="color:#fff;">$${trancheRevenue.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+window.renderPartialExits = renderPartialExits;
+
+function addPartialExitTranche(defaultShares = 0, defaultPrice = 0) {
+  const initialShares = parseFloat(document.getElementById('tradeSharesInput')?.value) || 0;
+  const totalSold = currentTradeTranches.reduce((sum, t) => sum + (parseFloat(t.shares) || 0), 0);
+  const remaining = Math.max(0, initialShares - totalSold);
+
+  // If there's an unallocated balance, pre-fill with remaining
+  const suggestedShares = defaultShares > 0 ? defaultShares : (remaining > 0 ? remaining : '');
+  
+  // Suggest last exit price if available
+  const lastExitPrice = currentTradeTranches.length > 0 ? currentTradeTranches[currentTradeTranches.length - 1].exitPrice : '';
+  const suggestedPrice = defaultPrice > 0 ? defaultPrice : lastExitPrice;
+
+  currentTradeTranches.push({
+    id: 'tr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    shares: suggestedShares,
+    exitPrice: suggestedPrice
+  });
+
+  renderPartialExits();
+  recalcTradePnL();
+}
+window.addPartialExitTranche = addPartialExitTranche;
+
+function removePartialExitTranche(index) {
+  if (currentTradeTranches.length > 1) {
+    currentTradeTranches.splice(index, 1);
+  } else {
+    currentTradeTranches = [{ id: 'tr_' + Date.now(), shares: '', exitPrice: '' }];
+  }
+  renderPartialExits();
+  recalcTradePnL();
+}
+window.removePartialExitTranche = removePartialExitTranche;
+
+function applyTrancheChip(index, pct) {
+  const initialShares = parseFloat(document.getElementById('tradeSharesInput')?.value) || 0;
+  if (initialShares <= 0) {
+    showToast('Please enter initial shares / quantity first.');
+    document.getElementById('tradeSharesInput')?.focus();
+    return;
+  }
+
+  // Calculate shares sold in all other tranches
+  const otherSold = currentTradeTranches.reduce((sum, t, i) => i === index ? sum : sum + (parseFloat(t.shares) || 0), 0);
+  const remaining = Math.max(0, initialShares - otherSold);
+
+  let calculatedShares = 0;
+  if (pct >= 100) {
+    calculatedShares = remaining;
+  } else {
+    const isInteger = Number.isInteger(initialShares);
+    const target = initialShares * (pct / 100);
+    calculatedShares = isInteger ? Math.round(target) : Number(target.toFixed(4));
+    if (calculatedShares <= 0 && target > 0) calculatedShares = isInteger ? 1 : Number(target.toFixed(4));
+    calculatedShares = Math.min(remaining, calculatedShares);
+  }
+
+  if (!currentTradeTranches[index]) {
+    currentTradeTranches[index] = { id: 'tr_' + Date.now(), shares: '', exitPrice: '' };
+  }
+  currentTradeTranches[index].shares = calculatedShares > 0 ? calculatedShares : (remaining > 0 ? remaining : 0);
+
+  const sharesInput = document.getElementById(`trancheShares_${index}`);
+  if (sharesInput) sharesInput.value = currentTradeTranches[index].shares;
+
+  recalcTradePnL();
+}
+window.applyTrancheChip = applyTrancheChip;
+
+function handleTrancheFieldChange(index, field, value) {
+  if (!currentTradeTranches[index]) return;
+  currentTradeTranches[index][field] = value !== '' ? (parseFloat(value) || 0) : '';
+  recalcTradePnL();
+}
+window.handleTrancheFieldChange = handleTrancheFieldChange;
+
 function recalcTradePnL() {
-  const entryInput = document.getElementById('tradeEntryAmountInput');
-  const exitInput = document.getElementById('tradeExitAmountInput');
+  const sharesInput = document.getElementById('tradeSharesInput');
+  const priceInput = document.getElementById('tradeEntryPriceInput');
   const dollarPreview = document.getElementById('tradePnlDollarPreview');
   const pctPreview = document.getElementById('tradePnlPctPreview');
   const badgePreview = document.getElementById('tradePnlOutcomeBadge');
   const warningBanner = document.getElementById('tradeSizeRiskWarning');
   const warningText = document.getElementById('tradeSizeRiskWarningText');
 
-  if (!entryInput || !exitInput) return;
-  const entry = parseFloat(entryInput.value) || 0;
-  const exitVal = parseFloat(exitInput.value) || 0;
-  const m = getTradingMetrics();
+  const cashOutPreview = document.getElementById('tradeTotalCashOutPreview');
+  const avgExitPricePreview = document.getElementById('tradeAvgExitPricePreview');
+  const summarySoldPreview = document.getElementById('tradeSummarySoldPreview');
+  const summaryStatusPreview = document.getElementById('tradeSummaryStatusPreview');
 
-  // Position Size Warning Check
-  if (entry > m.maxPositionUsd && m.maxPositionUsd > 0) {
+  const statusBadge = document.getElementById('tradePositionStatusBadge');
+  const statusBadgeText = document.getElementById('tradePositionStatusText');
+  const remainingSharesDisplay = document.getElementById('tradeRemainingSharesDisplay');
+  const initialSharesDisplay = document.getElementById('tradeInitialSharesDisplay');
+  const remainingCapitalDisplay = document.getElementById('tradeRemainingCapitalDisplay');
+  const soldSharesDisplay = document.getElementById('tradeSoldSharesDisplay');
+  const soldPctDisplay = document.getElementById('tradeSoldPctDisplay');
+  const addTrancheBtn = document.getElementById('btnAddPartialExitBtn');
+  const allocationWarning = document.getElementById('tradeAllocationWarning');
+  const allocationWarningText = document.getElementById('tradeAllocationWarningText');
+  const saveBtn = document.getElementById('btnSaveTradeSubmit');
+
+  const initialShares = Math.max(0, parseFloat(sharesInput?.value) || 0);
+  const entryPrice = Math.max(0, parseFloat(priceInput?.value) || 0);
+  const totalEntryCapital = initialShares * entryPrice;
+  const direction = currentTradeSideSelection || 'Long';
+
+  // 1. Position Size Risk Check
+  const m = getTradingMetrics();
+  if (totalEntryCapital > m.maxPositionUsd && m.maxPositionUsd > 0) {
     if (warningBanner) warningBanner.style.display = 'flex';
     if (warningText) {
-      warningText.textContent = `Warning: Position size $${entry.toFixed(2)} exceeds your recommended ${m.maxPositionSizePct}% limit ($${m.maxPositionUsd.toFixed(2)})!`;
+      warningText.textContent = `Warning: Entry capital $${totalEntryCapital.toFixed(2)} exceeds your recommended ${m.maxPositionSizePct}% limit ($${m.maxPositionUsd.toFixed(2)})!`;
     }
   } else {
     if (warningBanner) warningBanner.style.display = 'none';
   }
 
-  // PnL Auto-Calculation
-  let pnlAmount = 0;
-  let pnlPct = 0;
+  // 2. Iterate through tranches and calculate individual & aggregate stats
+  let totalSharesSold = 0;
+  let totalExitRevenue = 0;
+  let totalRealizedPnL = 0;
 
-  if (entry > 0) {
-    // If exitVal is large (likely gross exit capital)
-    if (exitVal >= entry && currentTradeOutcomeSelection === 'Win') {
-      pnlAmount = exitVal - entry;
-    } else if (exitVal < entry && exitVal > 0 && currentTradeOutcomeSelection === 'Loss') {
-      pnlAmount = exitVal - entry;
-    } else if (exitVal <= 0) {
-      // Direct negative PnL entered
-      pnlAmount = exitVal;
-    } else {
-      // Direct net PnL entered
-      pnlAmount = currentTradeOutcomeSelection === 'Loss' ? -Math.abs(exitVal) : (currentTradeOutcomeSelection === 'Win' ? Math.abs(exitVal) : 0);
+  currentTradeTranches.forEach((t, idx) => {
+    const tShares = Math.max(0, parseFloat(t.shares) || 0);
+    const tPrice = Math.max(0, parseFloat(t.exitPrice) || 0);
+
+    totalSharesSold += tShares;
+    const tRev = tShares * tPrice;
+    totalExitRevenue += tRev;
+
+    let tPnL = 0;
+    let tPct = 0;
+    if (tShares > 0 && entryPrice > 0 && tPrice > 0) {
+      if (direction === 'Long') {
+        tPnL = (tPrice - entryPrice) * tShares;
+        tPct = ((tPrice - entryPrice) / entryPrice) * 100;
+      } else {
+        tPnL = (entryPrice - tPrice) * tShares;
+        tPct = ((entryPrice - tPrice) / entryPrice) * 100;
+      }
     }
-    pnlPct = (pnlAmount / entry) * 100;
+    totalRealizedPnL += tPnL;
+
+    // Update individual card labels in real time
+    const pnlEl = document.getElementById(`tranchePnlDisplay_${idx}`);
+    const revEl = document.getElementById(`trancheRevenueDisplay_${idx}`);
+    const cardEl = document.getElementById(`trancheCard_${idx}`);
+
+    if (pnlEl) {
+      const isWin = tPnL > 0.005;
+      const isLoss = tPnL < -0.005;
+      const pnlSign = tPnL > 0 ? '+' : (tPnL < 0 ? '-' : '');
+      const pctSign = tPct > 0 ? '+' : (tPct < 0 ? '-' : '');
+      pnlEl.className = `val ${isWin ? 'is-win' : (isLoss ? 'is-loss' : 'is-neutral')}`;
+      pnlEl.textContent = (tShares > 0 && tPrice > 0) ? `${pnlSign}$${Math.abs(tPnL).toFixed(2)} (${pctSign}${Math.abs(tPct).toFixed(1)}%)` : '$0.00 (0.0%)';
+    }
+    if (revEl) {
+      revEl.textContent = `$${tRev.toFixed(2)}`;
+    }
+    if (cardEl) {
+      cardEl.classList.remove('is-error');
+    }
+  });
+
+  // 3. Position Status & Safeguards
+  const remainingShares = Math.max(0, initialShares - totalSharesSold);
+  const remainingCapital = remainingShares * entryPrice;
+  const soldPct = initialShares > 0 ? Math.min(100, (totalSharesSold / initialShares) * 100) : 0;
+  const isOverAllocated = totalSharesSold > initialShares && initialShares > 0;
+
+  if (initialSharesDisplay) initialSharesDisplay.textContent = initialShares.toLocaleString('en-US');
+  if (remainingSharesDisplay) remainingSharesDisplay.textContent = Number(remainingShares.toFixed(4)).toLocaleString('en-US');
+  if (remainingCapitalDisplay) remainingCapitalDisplay.textContent = `$${remainingCapital.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (soldSharesDisplay) soldSharesDisplay.textContent = Number(totalSharesSold.toFixed(4)).toLocaleString('en-US');
+  if (soldPctDisplay) soldPctDisplay.textContent = `${soldPct.toFixed(0)}%`;
+
+  // Status Badge
+  if (statusBadge && statusBadgeText) {
+    if (initialShares > 0 && remainingShares <= 0.0001) {
+      statusBadge.className = 'position-status-badge is-closed';
+      statusBadgeText.textContent = 'CLOSED / Completed';
+      if (summaryStatusPreview) {
+        summaryStatusPreview.textContent = 'CLOSED';
+        summaryStatusPreview.style.color = 'var(--trading-win)';
+      }
+    } else if (initialShares > 0 && totalSharesSold > 0) {
+      statusBadge.className = 'position-status-badge is-open';
+      statusBadgeText.textContent = 'OPEN / Partially Filled';
+      if (summaryStatusPreview) {
+        summaryStatusPreview.textContent = 'PARTIAL';
+        summaryStatusPreview.style.color = 'var(--sky, #38bdf8)';
+      }
+    } else {
+      statusBadge.className = 'position-status-badge is-unfilled';
+      statusBadgeText.textContent = 'OPEN / Unfilled';
+      if (summaryStatusPreview) {
+        summaryStatusPreview.textContent = 'OPEN';
+        summaryStatusPreview.style.color = '#94a3b8';
+      }
+    }
   }
 
-  const isWin = pnlAmount > 0 || currentTradeOutcomeSelection === 'Win';
-  const isLoss = pnlAmount < 0 || currentTradeOutcomeSelection === 'Loss';
-  const sign = pnlAmount > 0 ? '+' : (pnlAmount < 0 ? '-' : '');
-  const pctSign = pnlPct > 0 ? '+' : (pnlPct < 0 ? '-' : '');
+  // Allocation Safeguard Banner
+  if (allocationWarning && allocationWarningText) {
+    if (isOverAllocated) {
+      allocationWarning.style.display = 'flex';
+      allocationWarningText.textContent = `⚠️ Sold shares (${totalSharesSold.toFixed(2)}) exceed initial position (${initialShares.toFixed(2)}) by +${(totalSharesSold - initialShares).toFixed(2)}!`;
+      if (saveBtn) saveBtn.disabled = true;
+    } else {
+      allocationWarning.style.display = 'none';
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
+
+  // Disable "+ Add Partial Exit" when 100% of shares are sold
+  if (addTrancheBtn) {
+    const isFullyClosed = initialShares > 0 && remainingShares <= 0.0001;
+    addTrancheBtn.disabled = isFullyClosed || isOverAllocated;
+    addTrancheBtn.title = isFullyClosed ? 'All shares have been accounted for.' : 'Add another partial exit tranche';
+  }
+
+  // 4. Aggregate Performance
+  const weightedAvgExitPrice = totalSharesSold > 0 ? (totalExitRevenue / totalSharesSold) : 0;
+  const soldCostBasis = totalSharesSold * entryPrice;
+  const realizedReturnPct = soldCostBasis > 0 ? (totalRealizedPnL / soldCostBasis) * 100 : 0;
+
+  const isWin = totalRealizedPnL > 0.005;
+  const isLoss = totalRealizedPnL < -0.005;
+  const pnlSign = totalRealizedPnL > 0 ? '+' : (totalRealizedPnL < 0 ? '-' : '');
+  const pctSign = realizedReturnPct > 0 ? '+' : (realizedReturnPct < 0 ? '-' : '');
 
   if (dollarPreview) {
-    dollarPreview.textContent = `${sign}$${Math.abs(pnlAmount).toFixed(2)}`;
+    dollarPreview.textContent = `${pnlSign}$${Math.abs(totalRealizedPnL).toFixed(2)}`;
     dollarPreview.style.color = isWin ? 'var(--trading-win)' : (isLoss ? 'var(--trading-loss)' : 'var(--trading-be)');
   }
-
   if (pctPreview) {
-    pctPreview.textContent = `(${pctSign}${Math.abs(pnlPct).toFixed(1)}%)`;
+    pctPreview.textContent = `(${pctSign}${Math.abs(realizedReturnPct).toFixed(1)}%)`;
     pctPreview.style.color = isWin ? 'var(--trading-win)' : (isLoss ? 'var(--trading-loss)' : 'var(--trading-be)');
   }
 
+  // Auto-toggle outcome pills
+  let autoOutcome = 'Break-even';
+  if (isWin) autoOutcome = 'Win';
+  else if (isLoss) autoOutcome = 'Loss';
+
+  currentTradeOutcomeSelection = autoOutcome;
+  const outcomeBtns = document.querySelectorAll('#tradeOutcomeToggle button');
+  outcomeBtns.forEach(b => b.classList.toggle('active', b.dataset.outcome === autoOutcome));
+
   if (badgePreview) {
-    badgePreview.textContent = currentTradeOutcomeSelection;
+    badgePreview.textContent = autoOutcome;
     badgePreview.className = `pnl-preview-badge ${isWin ? 'is-win' : (isLoss ? 'is-loss' : 'is-be')}`;
   }
+
+  if (cashOutPreview) cashOutPreview.textContent = `$${totalExitRevenue.toFixed(2)}`;
+  if (avgExitPricePreview) avgExitPricePreview.textContent = `$${weightedAvgExitPrice.toFixed(4)}`;
+  if (summarySoldPreview) summarySoldPreview.textContent = `${totalSharesSold} / ${initialShares} sh`;
 }
 window.recalcTradePnL = recalcTradePnL;
 
@@ -5524,8 +5842,8 @@ function openNewTradeModal(editId = null) {
   const editInput = document.getElementById('tradeEditId');
   const tickerInput = document.getElementById('tradeTickerInput');
   const dateInput = document.getElementById('tradeDateInput');
-  const entryInput = document.getElementById('tradeEntryAmountInput');
-  const exitInput = document.getElementById('tradeExitAmountInput');
+  const sharesInput = document.getElementById('tradeSharesInput');
+  const priceInput = document.getElementById('tradeEntryPriceInput');
   const setupInput = document.getElementById('tradeSetupTagInput');
   const mindsetInput = document.getElementById('tradeMindsetInput');
   const notesInput = document.getElementById('tradeNotesInput');
@@ -5542,11 +5860,34 @@ function openNewTradeModal(editId = null) {
       if (editInput) editInput.value = trade.id;
       if (tickerInput) tickerInput.value = trade.ticker || '';
       if (dateInput) dateInput.value = trade.date || '';
-      if (entryInput) entryInput.value = trade.entryAmount || '';
-      if (exitInput) exitInput.value = trade.exitAmount || trade.pnlAmount || '';
       if (setupInput) setupInput.value = trade.setupTag || 'Breakout';
       if (mindsetInput) mindsetInput.value = trade.mindset || 'Followed Plan';
       if (notesInput) notesInput.value = trade.notes || '';
+
+      // Backward compatibility: support old trades with entryAmount or new shares/entryPrice
+      if (trade.shares !== undefined && trade.entryPrice !== undefined) {
+        if (sharesInput) sharesInput.value = trade.shares;
+        if (priceInput) priceInput.value = trade.entryPrice;
+      } else {
+        // Fallback for older trade format
+        const oldEntry = parseFloat(trade.entryAmount) || 0;
+        if (sharesInput) sharesInput.value = 1;
+        if (priceInput) priceInput.value = oldEntry.toFixed(2);
+      }
+
+      // Load partial exits or reconstruct 1 tranche from old exitAmount
+      if (Array.isArray(trade.partialExits) && trade.partialExits.length > 0) {
+        currentTradeTranches = JSON.parse(JSON.stringify(trade.partialExits));
+      } else {
+        const sh = parseFloat(trade.shares) || 1;
+        const oldExit = parseFloat(trade.exitAmount) || (parseFloat(trade.entryAmount || 0) + parseFloat(trade.pnlAmount || 0));
+        currentTradeTranches = [{
+          id: 'tr_legacy',
+          shares: sh,
+          exitPrice: sh > 0 ? (oldExit / sh) : oldExit
+        }];
+      }
+
       setTradeSide(trade.direction || 'Long');
       setTradeOutcome(trade.outcome || 'Win');
     }
@@ -5559,14 +5900,22 @@ function openNewTradeModal(editId = null) {
       now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
       dateInput.value = now.toISOString().slice(0, 16);
     }
-    if (entryInput) entryInput.value = '';
-    if (exitInput) exitInput.value = '';
+    if (sharesInput) sharesInput.value = '';
+    if (priceInput) priceInput.value = '';
     if (notesInput) notesInput.value = '';
+
+    currentTradeTranches = [
+      { id: 'tr_' + Date.now(), shares: '', exitPrice: '' }
+    ];
+
     setTradeSide('Long');
     setTradeOutcome('Win');
   }
 
+  handleTradeEntryChange();
+  renderPartialExits();
   recalcTradePnL();
+
   if (backdrop) backdrop.hidden = false;
 }
 window.openNewTradeModal = openNewTradeModal;
@@ -5582,80 +5931,117 @@ function handleSaveTradeSubmit(e) {
   const editId = document.getElementById('tradeEditId')?.value;
   const ticker = document.getElementById('tradeTickerInput')?.value?.trim().toUpperCase();
   const date = document.getElementById('tradeDateInput')?.value;
-  const entryAmount = parseFloat(document.getElementById('tradeEntryAmountInput')?.value) || 0;
-  const exitRaw = parseFloat(document.getElementById('tradeExitAmountInput')?.value) || 0;
+  const shares = parseFloat(document.getElementById('tradeSharesInput')?.value) || 0;
+  const entryPrice = parseFloat(document.getElementById('tradeEntryPriceInput')?.value) || 0;
   const setupTag = document.getElementById('tradeSetupTagInput')?.value || 'General';
   const mindset = document.getElementById('tradeMindsetInput')?.value || 'Followed Plan';
   const notes = document.getElementById('tradeNotesInput')?.value?.trim() || '';
 
-  if (!ticker || entryAmount <= 0) {
-    showToast('Valid ticker and position size are required.');
+  if (!ticker || shares <= 0 || entryPrice <= 0) {
+    showToast('Valid ticker, shares quantity, and entry price are required.');
     return;
   }
 
-  // Calculate Net PnL
-  let pnlAmount = 0;
-  let exitAmount = exitRaw;
-
-  if (exitRaw >= entryAmount && currentTradeOutcomeSelection === 'Win') {
-    pnlAmount = exitRaw - entryAmount;
-  } else if (exitRaw < entryAmount && exitRaw > 0 && currentTradeOutcomeSelection === 'Loss') {
-    pnlAmount = exitRaw - entryAmount;
-  } else if (exitRaw <= 0) {
-    pnlAmount = exitRaw;
-    exitAmount = Math.max(0, entryAmount + pnlAmount);
-  } else {
-    pnlAmount = currentTradeOutcomeSelection === 'Loss' ? -Math.abs(exitRaw) : (currentTradeOutcomeSelection === 'Win' ? Math.abs(exitRaw) : 0);
-    exitAmount = Math.max(0, entryAmount + pnlAmount);
+  // Calculate clean tranches list
+  const validTranches = currentTradeTranches.filter(t => (parseFloat(t.shares) || 0) > 0 && (parseFloat(t.exitPrice) || 0) > 0);
+  
+  const totalSharesSold = validTranches.reduce((sum, t) => sum + (parseFloat(t.shares) || 0), 0);
+  if (totalSharesSold > shares) {
+    showToast(`Validation error: Sold shares (${totalSharesSold}) exceed initial shares (${shares})!`);
+    return;
   }
 
-  const pnlPct = entryAmount > 0 ? (pnlAmount / entryAmount) * 100 : 0;
+  const entryAmount = shares * entryPrice;
+  const direction = currentTradeSideSelection || 'Long';
+
+  let totalExitRevenue = 0;
+  let totalRealizedPnL = 0;
+
+  const processedTranches = validTranches.map(t => {
+    const tShares = parseFloat(t.shares) || 0;
+    const tPrice = parseFloat(t.exitPrice) || 0;
+    const tRevenue = tShares * tPrice;
+    totalExitRevenue += tRevenue;
+
+    let tPnL = 0;
+    let tPct = 0;
+    if (direction === 'Long') {
+      tPnL = (tPrice - entryPrice) * tShares;
+      tPct = entryPrice > 0 ? ((tPrice - entryPrice) / entryPrice) * 100 : 0;
+    } else {
+      tPnL = (entryPrice - tPrice) * tShares;
+      tPct = entryPrice > 0 ? ((entryPrice - tPrice) / entryPrice) * 100 : 0;
+    }
+    totalRealizedPnL += tPnL;
+
+    return {
+      id: t.id || 'tr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      shares: tShares,
+      exitPrice: tPrice,
+      pnl: Number(tPnL.toFixed(4)),
+      pnlPct: Number(tPct.toFixed(2)),
+      revenue: Number(tRevenue.toFixed(4))
+    };
+  });
+
+  const remainingShares = Math.max(0, shares - totalSharesSold);
+  const remainingCapital = remainingShares * entryPrice;
+  const avgExitPrice = totalSharesSold > 0 ? (totalExitRevenue / totalSharesSold) : 0;
+  const soldCostBasis = totalSharesSold * entryPrice;
+  const pnlPct = soldCostBasis > 0 ? (totalRealizedPnL / soldCostBasis) * 100 : 0;
+  const status = (shares > 0 && remainingShares <= 0.0001) ? 'CLOSED' : 'OPEN';
+
+  let finalOutcome = currentTradeOutcomeSelection;
+  if (totalRealizedPnL > 0.005) finalOutcome = 'Win';
+  else if (totalRealizedPnL < -0.005) finalOutcome = 'Loss';
+  else finalOutcome = 'Break-even';
 
   const trades = getTradingTrades();
+
+  const tradeData = {
+    ticker,
+    date,
+    direction,
+    outcome: finalOutcome,
+    shares,
+    entryPrice,
+    entryAmount: Number(entryAmount.toFixed(4)),
+    partialExits: processedTranches,
+    exitAmount: Number(totalExitRevenue.toFixed(4)),
+    pnlAmount: Number(totalRealizedPnL.toFixed(4)),
+    pnlPct: Number(pnlPct.toFixed(2)),
+    avgExitPrice: Number(avgExitPrice.toFixed(4)),
+    remainingShares: Number(remainingShares.toFixed(4)),
+    remainingCapital: Number(remainingCapital.toFixed(2)),
+    status,
+    setupTag,
+    mindset,
+    notes,
+    updatedAt: new Date().toISOString()
+  };
 
   if (editId) {
     const idx = trades.findIndex(t => t.id === editId);
     if (idx !== -1) {
       trades[idx] = {
         ...trades[idx],
-        ticker,
-        date,
-        direction: currentTradeSideSelection,
-        outcome: currentTradeOutcomeSelection,
-        entryAmount,
-        exitAmount,
-        pnlAmount,
-        pnlPct,
-        setupTag,
-        mindset,
-        notes,
-        updatedAt: new Date().toISOString()
+        ...tradeData
       };
-      showToast(`Trade updated: ${ticker} (${pnlAmount >= 0 ? '+' : ''}$${pnlAmount.toFixed(2)})`);
+      showToast(`Trade updated: ${ticker} (${totalRealizedPnL >= 0 ? '+' : ''}$${totalRealizedPnL.toFixed(2)})`);
     }
   } else {
     trades.unshift({
       id: 'trade_' + Date.now(),
-      ticker,
-      date,
-      direction: currentTradeSideSelection,
-      outcome: currentTradeOutcomeSelection,
-      entryAmount,
-      exitAmount,
-      pnlAmount,
-      pnlPct,
-      setupTag,
-      mindset,
-      notes,
+      ...tradeData,
       createdAt: new Date().toISOString()
     });
-    showToast(`Trade logged: ${ticker} (${pnlAmount >= 0 ? '+' : ''}$${pnlAmount.toFixed(2)})! 📈`);
+    showToast(`Trade logged: ${ticker} (${totalRealizedPnL >= 0 ? '+' : ''}$${totalRealizedPnL.toFixed(2)})! 📈`);
   }
 
   saveTradingTrades(trades);
   closeNewTradeModal();
   renderTradingSuite();
-  loadCardBadges(); // Updates dashboard card month progress!
+  loadCardBadges();
 }
 window.handleSaveTradeSubmit = handleSaveTradeSubmit;
 

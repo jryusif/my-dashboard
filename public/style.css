@@ -18889,6 +18889,394 @@ body.is-unauthenticated .btn-floating-braindump {
   color: var(--ink-soft);
 }
 
+.trading-modal-window {
+  max-width: 740px;
+  width: 94vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Entry Share & Capital Calculation Banner */
+.trade-entry-calc-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-top: 4px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.trade-entry-calc-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.trade-entry-calc-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.trade-entry-calc-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Scaling Out / Partial Exits Section */
+.trade-partial-exits-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(13, 17, 23, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 4px;
+}
+
+.trade-partial-exits-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.trade-partial-exits-title-group h3 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trade-partial-exits-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+/* Position Status Badge */
+.position-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.position-status-badge.is-open {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+}
+
+.position-status-badge.is-closed {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.2);
+}
+
+.position-status-badge.is-unfilled {
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+}
+
+/* Position Tracker Bar */
+.position-tracker-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.position-tracker-stat {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: var(--ink-soft);
+}
+
+.position-tracker-stat strong {
+  color: #fff;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Individual Tranche Card */
+.trade-tranche-card {
+  background: rgba(22, 27, 34, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.trade-tranche-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.trade-tranche-card.is-error {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.trade-tranche-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trade-tranche-index-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.trade-quick-chips-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tranche-pct-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.tranche-pct-chip:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.tranche-pct-chip.is-all {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+.tranche-pct-chip.is-all:hover {
+  background: rgba(34, 197, 94, 0.3);
+  border-color: #22c55e;
+  color: #fff;
+}
+
+.tranche-delete-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.tranche-delete-btn:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.trade-tranche-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .trade-tranche-inputs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.trade-tranche-inputs-grid .field-label {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #cbd5e1;
+}
+
+.trade-tranche-inputs-grid input {
+  width: 100%;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.trade-tranche-footer-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11.5px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tranche-metric-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tranche-metric-pill .lbl {
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.tranche-metric-pill .val {
+  font-weight: 700;
+  font-feature-settings: 'tnum' 1;
+}
+
+.tranche-metric-pill .val.is-win {
+  color: var(--trading-win);
+}
+
+.tranche-metric-pill .val.is-loss {
+  color: var(--trading-loss);
+}
+
+.tranche-metric-pill .val.is-neutral {
+  color: #94a3b8;
+}
+
+/* Add Tranche Button & Allocation Warning */
+.trade-tranche-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-add-tranche {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-add-tranche:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.btn-add-tranche:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-style: solid;
+}
+
+.trade-allocation-warning {
+  color: #fca5a5;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Expanded Performance Preview Card */
+.trade-pnl-calc-preview {
+  background: rgba(10, 14, 24, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pnl-preview-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 600px) {
+  .pnl-preview-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.pnl-metric-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pnl-metric-box .metric-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+
+.pnl-metric-box .metric-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  font-feature-settings: 'tnum' 1;
+}
+
 /* Capital Config Box & Deposits */
 .capital-config-box {
   background: rgba(255, 255, 255, 0.04);
