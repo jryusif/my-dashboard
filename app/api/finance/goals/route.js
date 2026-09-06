@@ -40,7 +40,7 @@ export async function GET(req) {
     });
 
     // Detect user's baseline saved cash / starting wealth
-    const cashAsset = await prisma.financialAsset.findFirst({
+    const cashAsset = await prisma.asset.findFirst({
       where: { userId: auth.userId, type: 'Cash' }
     });
     let savedCashBaseline = cashAsset?.purchasePrice || 0;
