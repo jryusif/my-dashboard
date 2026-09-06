@@ -1342,13 +1342,6 @@ window.openEditSpaceModal = openEditSpaceModal;
 
 const DASHBOARD_SECTIONS_DEF = [
   {
-    id: 'networth',
-    elementId: 'wealthCard',
-    title: 'Net Worth & Wealth Overview',
-    icon: '🪙',
-    desc: 'Biometric vault, live gold rates, liquid cash reserves & total portfolio valuation'
-  },
-  {
     id: 'cards',
     elementId: 'dashboardGrid',
     title: 'Focus Spaces & Pages Cards',
@@ -1364,7 +1357,7 @@ const DASHBOARD_SECTIONS_DEF = [
   }
 ];
 
-const DEFAULT_DASHBOARD_LAYOUT = ['networth', 'cards', 'planner'];
+const DEFAULT_DASHBOARD_LAYOUT = ['cards', 'planner'];
 
 function getDashboardLayoutStorageKey() {
   const uid = (currentUser && currentUser.id) ? currentUser.id : 'guest';
@@ -1396,7 +1389,7 @@ window.getDashboardLayout = getDashboardLayout;
 
 function sanitizeLayoutOrder(order) {
   if (!Array.isArray(order)) return [...DEFAULT_DASHBOARD_LAYOUT];
-  const supported = ['networth', 'cards', 'planner'];
+  const supported = ['cards', 'planner'];
   const filtered = order.filter(id => supported.includes(id));
   const unique = [...new Set(filtered)];
   // Add any missing sections
@@ -1450,14 +1443,13 @@ function applyDashboardLayout(order = null) {
   if (!container) return;
 
   const currentOrder = order || getDashboardLayout();
-  const topSection = currentOrder[0] || 'networth';
+  const topSection = currentOrder[0] || 'cards';
 
   // Mark container with top section attribute
   container.setAttribute('data-top-section', topSection);
 
   // Map of elements
   const elMap = {
-    networth: document.getElementById('wealthCard'),
     cards: document.getElementById('dashboardGrid'),
     planner: document.getElementById('weeklySection')
   };
@@ -1476,11 +1468,9 @@ function applyDashboardLayout(order = null) {
 window.applyDashboardLayout = applyDashboardLayout;
 
 function updateLayoutPillsUi(topSection, currentOrder) {
-  const btnNetworth = document.getElementById('btnLayoutNetworthFirst');
   const btnPlanner = document.getElementById('btnLayoutPlannerFirst');
   const btnCards = document.getElementById('btnLayoutCardsFirst');
 
-  if (btnNetworth) btnNetworth.classList.toggle('is-active', topSection === 'networth');
   if (btnPlanner) btnPlanner.classList.toggle('is-active', topSection === 'planner');
   if (btnCards) btnCards.classList.toggle('is-active', topSection === 'cards');
 }
@@ -1493,7 +1483,6 @@ function setDashboardTopSection(topKey) {
   saveDashboardLayout(newOrder, true);
   
   const labelMap = {
-    networth: '🪙 Net Worth & Wealth Overview',
     planner: '📅 Weekly Planner',
     cards: '🚀 Focus Spaces & Pages Cards'
   };
@@ -1504,11 +1493,9 @@ window.setDashboardTopSection = setDashboardTopSection;
 function setDashboardPreset(presetKey) {
   let newOrder;
   if (presetKey === 'planner-first') {
-    newOrder = ['planner', 'cards', 'networth'];
-  } else if (presetKey === 'cards-first') {
-    newOrder = ['cards', 'networth', 'planner'];
+    newOrder = ['planner', 'cards'];
   } else {
-    newOrder = ['networth', 'cards', 'planner'];
+    newOrder = ['cards', 'planner'];
   }
 
   saveDashboardLayout(newOrder, true);
@@ -1516,10 +1503,9 @@ function setDashboardPreset(presetKey) {
 
   const labelMap = {
     'planner-first': '📅 Weekly Planner First',
-    'cards-first': '🚀 Pages Cards First',
-    'networth-first': '🪙 Net Worth First'
+    'cards-first': '🚀 Pages Cards First'
   };
-  showToast(`Applied preset: ${labelMap[presetKey]}`);
+  showToast(`Applied preset: ${labelMap[presetKey] || presetKey}`);
 }
 window.setDashboardPreset = setDashboardPreset;
 
@@ -4823,6 +4809,8 @@ function renderWealthValue() {
 }
 
 async function loadWealthCard() {
+  const card = document.getElementById('wealthCard');
+  if (!card) return;
   if (!currentUser || !authToken) return;
   try {
     const curr = getUserCurrency();

@@ -809,112 +809,15 @@
             <span class="layout-dock-label">Sections Order:</span>
           </div>
           <div class="dashboard-layout-pills" role="group" aria-label="Dashboard Section Order">
-            <button type="button" class="btn-layout-pill is-active" id="btnLayoutNetworthFirst" data-top="networth" onclick="setDashboardTopSection('networth')" title="Show Net Worth &amp; Wealth Vault on top">
-              <span class="layout-pill-icon">🪙</span> Net Worth
+            <button type="button" class="btn-layout-pill is-active" id="btnLayoutCardsFirst" data-top="cards" onclick="setDashboardTopSection('cards')" title="Show Focus Spaces &amp; Pages on top">
+              <span class="layout-pill-icon">🚀</span> Pages Cards
             </button>
             <button type="button" class="btn-layout-pill" id="btnLayoutPlannerFirst" data-top="planner" onclick="setDashboardTopSection('planner')" title="Show Weekly Planner on top">
               <span class="layout-pill-icon">📅</span> Weekly Planner
             </button>
-            <button type="button" class="btn-layout-pill" id="btnLayoutCardsFirst" data-top="cards" onclick="setDashboardTopSection('cards')" title="Show Focus Spaces &amp; Pages on top">
-              <span class="layout-pill-icon">🚀</span> Pages Cards
-            </button>
             <button type="button" class="btn-layout-pill btn-layout-pill-gear" id="btnCustomizeLayoutModal" onclick="openDashboardLayoutModal()" title="Customize full section order and arrange visually">
               <span class="layout-pill-icon">⚙️</span> Reorder...
             </button>
-          </div>
-        </div>
-<!-- EXECUTIVE SOVEREIGN WEALTH & NET WORTH VAULT -->
-        <div class="wealth-card is-locked" id="wealthCard">
-          <!-- Top Row Header -->
-          <div class="wealth-card-top-header">
-            <div class="wealth-vault-title-wrap">
-              <div class="vault-icon-badge">🪙</div>
-              <div>
-                <div class="wealth-label-row">
-                  <span class="wealth-label">NET WORTH &amp; WEALTH OVERVIEW</span>
-                  <span class="vault-security-pill" id="vaultSecurityPill">
-                    <span class="security-dot"></span> <span id="vaultSecurityText">🔒 Biometrically Locked</span>
-                  </span>
-                </div>
-                <p class="wealth-sublabel" id="wealthSubLabel">Live portfolio valuation — gold, cash reserves &amp; liquid assets</p>
-              </div>
-            </div>
-
-            <div class="wealth-header-actions">
-              <button type="button" class="btn-vault-unlock" id="btnVaultUnlock" onclick="handleWealthUnlockTrigger()" aria-label="Unlock with Face ID or Password">
-                <span class="vault-btn-icon" id="vaultUnlockIcon">👤</span>
-                <span id="vaultUnlockBtnText">Unlock with Face ID / PIN</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Main Net Worth Figure Row -->
-          <div class="wealth-card-main-display">
-            <div class="wealth-value-wrap">
-              <div class="wealth-value is-hidden" id="wealthValue">••••••••••</div>
-              <div class="wealth-tier-badge" id="wealthTierBadge">👑 Sovereign Tier</div>
-            </div>
-          </div>
-
-          <!-- 4 Pillars Wealth Breakdown Micro-Cards Grid -->
-          <div class="wealth-pillars-grid" id="wealthPillarsGrid">
-            <!-- 1. Gold Bullion -->
-            <div class="wealth-pillar-card" onclick="openPage('Gold & Assets')" title="View Gold Bullion Vault">
-              <div class="pillar-top">
-                <span class="pillar-icon">🪙</span>
-                <span class="pillar-label">Physical Gold</span>
-              </div>
-              <div class="pillar-value is-hidden" id="pillarGoldVal">••••••</div>
-              <div class="pillar-sub" id="pillarGoldSub">Live 24K Valuation</div>
-            </div>
-
-            <!-- 2. Available Cash (Bank & Wallet Reserves) -->
-            <div class="wealth-pillar-card" onclick="openPage('Finance')" title="Manage Cash Reserves">
-              <div class="pillar-top">
-                <span class="pillar-icon">💵</span>
-                <span class="pillar-label">Available Cash</span>
-              </div>
-              <div class="pillar-value is-hidden" id="pillarCashVal">••••••</div>
-              <div class="pillar-sub" id="pillarCashSub">Bank &amp; Wallet Reserves</div>
-            </div>
-
-            <!-- 3. Investments / Equities -->
-            <div class="wealth-pillar-card" onclick="openPage(userCanAccessTrading() ? 'US Stocks Trading' : 'Finance')" title="Investments &amp; Equities">
-              <div class="pillar-top">
-                <span class="pillar-icon">📈</span>
-                <span class="pillar-label">Investments</span>
-              </div>
-              <div class="pillar-value is-hidden" id="pillarInvestVal">••••••</div>
-              <div class="pillar-sub" id="pillarInvestSub">Equities &amp; Holdings</div>
-            </div>
-
-            <!-- 4. Liabilities -->
-            <div class="wealth-pillar-card" onclick="openPage('Finance')" title="Liabilities & Debt">
-              <div class="pillar-top">
-                <span class="pillar-icon">🛡️</span>
-                <span class="pillar-label">Liabilities</span>
-              </div>
-              <div class="pillar-value is-hidden" id="pillarDebtVal">••••••</div>
-              <div class="pillar-sub" id="pillarDebtSub">Zero Debt / 100% Solvency</div>
-            </div>
-          </div>
-
-          <!-- Footer Quick Links -->
-          <div class="wealth-card-footer">
-            <div class="wealth-quick-links">
-              <button type="button" class="btn-wealth-quick" onclick="openPage('Gold & Assets')">
-                <span>🪙</span> Live Gold Rates
-              </button>
-              <button type="button" class="btn-wealth-quick" onclick="openPage('Finance')">
-                <span>💰</span> Cash Flow &amp; Budget
-              </button>
-              <button type="button" class="btn-wealth-quick" onclick="openPage('Analytics & Progress')">
-                <span>📊</span> Wealth Analytics
-              </button>
-            </div>
-            <div class="vault-auto-lock-note" id="vaultAutoLockNote">
-              <span>🛡️ End-to-End Encrypted Vault</span>
-            </div>
           </div>
         </div>
 
@@ -4304,21 +4207,18 @@
       <div class="modal-header">
         <div class="space-modal-badge">🎛️ PERSONALIZED WORKSPACE</div>
         <h2 id="dashboardLayoutModalTitle">Customize Dashboard Layout</h2>
-        <p class="subtitle">Arrange the 3 main overview blocks to match your daily workflow. Changes are automatically saved to your profile.</p>
+        <p class="subtitle">Arrange the main overview blocks to match your daily workflow. Changes are automatically saved to your profile.</p>
       </div>
 
       <!-- Quick Preset Buttons -->
       <div class="layout-modal-presets">
         <span class="layout-preset-label">Quick Presets:</span>
         <div class="layout-preset-btns">
-          <button type="button" class="btn-layout-preset" onclick="setDashboardPreset('networth-first')">
-            <span>🪙</span> Net Worth on Top
+          <button type="button" class="btn-layout-preset" onclick="setDashboardPreset('cards-first')">
+            <span>🚀</span> Pages Cards on Top
           </button>
           <button type="button" class="btn-layout-preset" onclick="setDashboardPreset('planner-first')">
             <span>📅</span> Weekly Planner on Top
-          </button>
-          <button type="button" class="btn-layout-preset" onclick="setDashboardPreset('cards-first')">
-            <span>🚀</span> Pages Cards on Top
           </button>
         </div>
       </div>

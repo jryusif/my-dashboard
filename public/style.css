@@ -1298,7 +1298,6 @@ body.is-scrolled .main-top-navbar,
   flex-direction: column;
 }
 
-.dashboard-section > #wealthCard,
 .dashboard-section > #dashboardGrid,
 .dashboard-section > #weeklySection {
   margin-bottom: 28px;
