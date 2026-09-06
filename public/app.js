@@ -10878,43 +10878,24 @@ let prevMinutesStr = null;
 let prevSecondsStr = null;
 
 function initSidebarState() {
-  const isMobileOrTablet = window.innerWidth <= 1024;
-  if (isMobileOrTablet) {
-    document.body.classList.remove('sidebar-mobile-open');
-    document.body.classList.add('sidebar-is-collapsed');
-  } else {
-    const isCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
-    document.body.classList.toggle('sidebar-is-collapsed', isCollapsed);
-  }
+  document.body.classList.remove('sidebar-mobile-open');
+  document.body.classList.add('sidebar-is-collapsed');
 }
 
 function toggleSidebar(collapsed) {
   const isMobileOrTablet = window.innerWidth <= 1024;
+  if (!isMobileOrTablet) {
+    // Side drawer is disabled on desktop; only available on tablets and mobile screens
+    return;
+  }
   
-  if (isMobileOrTablet) {
-    const willOpen = typeof collapsed === 'boolean'
-      ? !collapsed
-      : !document.body.classList.contains('sidebar-mobile-open');
-    
-    document.body.classList.toggle('sidebar-mobile-open', willOpen);
-    if (willOpen) {
-      showToast('📋 Tasks & Routines drawer opened');
-    }
-  } else {
-    const willCollapse = typeof collapsed === 'boolean' 
-      ? collapsed 
-      : !document.body.classList.contains('sidebar-is-collapsed');
-    
-    document.body.classList.toggle('sidebar-is-collapsed', willCollapse);
-    try {
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, willCollapse ? '1' : '0');
-    } catch (_) {}
-    
-    if (willCollapse) {
-      showToast('Sidebar hidden — Clock & Date transferred to main screen ⏰');
-    } else {
-      showToast('Sidebar restored 📌');
-    }
+  const willOpen = typeof collapsed === 'boolean'
+    ? !collapsed
+    : !document.body.classList.contains('sidebar-mobile-open');
+  
+  document.body.classList.toggle('sidebar-mobile-open', willOpen);
+  if (willOpen) {
+    showToast('📋 Tasks & Routines drawer opened');
   }
 }
 window.toggleSidebar = toggleSidebar;
@@ -10936,16 +10917,17 @@ if (btnSidebarToggle) {
 window.addEventListener('resize', () => {
   if (window.innerWidth > 1024) {
     document.body.classList.remove('sidebar-mobile-open');
-    const isCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
-    document.body.classList.toggle('sidebar-is-collapsed', isCollapsed);
+    document.body.classList.add('sidebar-is-collapsed');
   }
 });
 
-// Keyboard shortcut: Ctrl + \ or Cmd + \
+// Keyboard shortcut: Ctrl + \ or Cmd + \ (Tablets and mobile screens with keyboard attached)
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
-    e.preventDefault();
-    toggleSidebar();
+    if (window.innerWidth <= 1024) {
+      e.preventDefault();
+      toggleSidebar();
+    }
   }
 });
 
