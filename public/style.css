@@ -19659,6 +19659,254 @@ body.is-unauthenticated .btn-floating-braindump {
   }
 }
 
+/* ── Modern Recurring Modal Suite ────────────────────────────────── */
+.rec-custom-modal {
+  background: linear-gradient(150deg, rgba(20, 26, 44, 0.96) 0%, rgba(10, 14, 24, 0.98) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+}
+
+.modal-close-icon-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--ink-soft, rgba(255, 255, 255, 0.6));
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.modal-close-icon-btn:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #fb7185;
+  transform: rotate(90deg);
+}
+
+.rec-field-group {
+  margin-bottom: 14px;
+}
+
+.rec-modal-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: rgba(203, 213, 225, 0.75) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+  margin-bottom: 6px !important;
+  display: block !important;
+}
+
+/* ── Transaction Flow Toggle ── */
+.rec-flow-toggle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.rec-flow-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 14px !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--ink-soft, rgba(255, 255, 255, 0.65)) !important;
+  cursor: pointer !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  text-align: left !important;
+}
+
+.rec-flow-btn:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+.rec-flow-btn .flow-icon {
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.rec-flow-btn .flow-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.rec-flow-btn .flow-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.rec-flow-btn .flow-desc {
+  font-size: 10.5px;
+  color: var(--ink-soft, rgba(255, 255, 255, 0.45));
+  margin-top: 2px;
+}
+
+/* Income Active */
+.rec-flow-btn.active#btnRecTypeIncome,
+.rec-flow-btn.active.income {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.1) 100%) !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+.rec-flow-btn.active#btnRecTypeIncome .flow-icon,
+.rec-flow-btn.active.income .flow-icon {
+  background: rgba(16, 185, 129, 0.25) !important;
+  color: #34d399 !important;
+}
+.rec-flow-btn.active#btnRecTypeIncome .flow-name,
+.rec-flow-btn.active.income .flow-name {
+  color: #34d399 !important;
+}
+
+/* Expense Active */
+.rec-flow-btn.active#btnRecTypeExpense,
+.rec-flow-btn.active.expense {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.18) 0%, rgba(225, 29, 72, 0.1) 100%) !important;
+  border-color: #f43f5e !important;
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+.rec-flow-btn.active#btnRecTypeExpense .flow-icon,
+.rec-flow-btn.active.expense .flow-icon {
+  background: rgba(244, 63, 94, 0.25) !important;
+  color: #fb7185 !important;
+}
+.rec-flow-btn.active#btnRecTypeExpense .flow-name,
+.rec-flow-btn.active.expense .flow-name {
+  color: #fb7185 !important;
+}
+
+/* ── Inputs & Selects ── */
+.rec-modal-input,
+.rec-modal-select {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background: rgba(13, 17, 30, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  font-size: 13.5px !important;
+  color: #ffffff !important;
+  outline: none !important;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s !important;
+}
+
+.rec-modal-input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.rec-modal-input:focus,
+.rec-modal-select:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25) !important;
+  background: rgba(16, 22, 38, 0.9) !important;
+}
+
+.rec-modal-select option {
+  background: #0f131f !important;
+  color: #ffffff !important;
+  padding: 6px 10px !important;
+}
+
+/* ── Status Switch Box ── */
+.rec-status-switch-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  margin-top: 10px;
+}
+
+.rec-switch-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.rec-switch-desc {
+  font-size: 11px;
+  color: var(--ink-soft, rgba(255, 255, 255, 0.5));
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* ── Modal Actions Row ── */
+.rec-modal-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-rec-modal-cancel {
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft, rgba(255, 255, 255, 0.7));
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-rec-modal-cancel:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+
+.btn-rec-modal-save {
+  padding: 9px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.4);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-rec-modal-save:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 22px rgba(2, 132, 199, 0.55);
+  transform: translateY(-1.5px);
+}
+
+.btn-rec-modal-save:active {
+  transform: translateY(0) scale(0.98);
+}
+
 
 
 

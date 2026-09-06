@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=33.4" />
+<link rel="stylesheet" href="style.css?v=33.5" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -5429,41 +5429,52 @@
 
   <!-- Modal: Add / Edit Recurring Rule -->
   <div class="modal-backdrop" id="recurringFinanceModalBackdrop" hidden>
-    <div class="modal-dialog glass-panel" style="max-width: 540px;">
-      <div class="modal-header">
-        <h3 id="recurringModalTitle">➕ Add Fixed Recurring Item</h3>
-        <button type="button" class="modal-close-btn" id="closeRecurringFinanceModal" aria-label="Close">&times;</button>
+    <div class="modal rec-custom-modal" id="recurringFinanceModalDialog" style="max-width: 520px; padding: 26px 28px;">
+      <div class="modal-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 22px;">➕</span>
+          <h2 id="recurringModalTitle" style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; font-family: inherit; font-style: normal;">Add Fixed Recurring Item</h2>
+        </div>
+        <button type="button" class="modal-close-icon-btn" onclick="closeRecurringFinanceModal()" aria-label="Close modal">✕</button>
       </div>
-      <form id="recurringFinanceForm" class="modal-form">
+      <form id="recurringFinanceForm" class="modal-form" onsubmit="handleSaveRecurringRuleForm(event)">
         <input type="hidden" id="recurringRuleId" value="" />
 
         <!-- Type Selector Pills -->
-        <div class="field-group">
-          <label class="field-label">Transaction Flow Type *</label>
-          <div class="pill-toggle-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px;">
-            <button type="button" class="pill-toggle-btn active" id="btnRecTypeIncome" data-type="income">
-              <span>↗️</span> Fixed Income (Money In)
+        <div class="rec-field-group">
+          <label class="rec-modal-label">Transaction Flow Type *</label>
+          <div class="rec-flow-toggle-grid">
+            <button type="button" class="rec-flow-btn active" id="btnRecTypeIncome" onclick="setRecurringType('income')">
+              <span class="flow-icon">↗️</span>
+              <div class="flow-info">
+                <span class="flow-name">Fixed Income</span>
+                <span class="flow-desc">Salary, retainers, payouts (Money In)</span>
+              </div>
             </button>
-            <button type="button" class="pill-toggle-btn" id="btnRecTypeExpense" data-type="expense">
-              <span>↘️</span> Fixed Expense (Money Out)
+            <button type="button" class="rec-flow-btn" id="btnRecTypeExpense" onclick="setRecurringType('expense')">
+              <span class="flow-icon">↘️</span>
+              <div class="flow-info">
+                <span class="flow-name">Fixed Expense</span>
+                <span class="flow-desc">Rent, installments, bills (Money Out)</span>
+              </div>
             </button>
           </div>
           <input type="hidden" id="recurringTypeInput" value="income" />
         </div>
 
-        <div class="field-group">
-          <label for="recurringNameInput" class="field-label">Rule Title / Description *</label>
-          <input type="text" id="recurringNameInput" class="form-input" placeholder="e.g., Monthly Hospital Salary, Apartment Rent, Car Installment" required />
+        <div class="rec-field-group">
+          <label for="recurringNameInput" class="rec-modal-label">Rule Title / Description *</label>
+          <input type="text" id="recurringNameInput" class="rec-modal-input" placeholder="e.g., Monthly Hospital Salary, Apartment Rent, Car Installment" required />
         </div>
 
         <div class="form-row-2">
-          <div class="field-group">
-            <label for="recurringAmountInput" class="field-label">Amount ($) *</label>
-            <input type="number" id="recurringAmountInput" class="form-input" placeholder="0.00" step="0.01" min="0.01" required />
+          <div class="rec-field-group">
+            <label for="recurringAmountInput" class="rec-modal-label">Amount ($) *</label>
+            <input type="number" id="recurringAmountInput" class="rec-modal-input" placeholder="0.00" step="0.01" min="0.01" required />
           </div>
-          <div class="field-group">
-            <label for="recurringDayInput" class="field-label">Day of Each Month *</label>
-            <select id="recurringDayInput" class="form-select" required>
+          <div class="rec-field-group">
+            <label for="recurringDayInput" class="rec-modal-label">Day of Each Month *</label>
+            <select id="recurringDayInput" class="rec-modal-select" required>
               <option value="1">Day 1 (1st of month)</option>
               <option value="2">Day 2</option>
               <option value="3">Day 3</option>
@@ -5500,9 +5511,9 @@
         </div>
 
         <div class="form-row-2">
-          <div class="field-group">
-            <label for="recurringCategoryInput" class="field-label">Category *</label>
-            <select id="recurringCategoryInput" class="form-select" required>
+          <div class="rec-field-group">
+            <label for="recurringCategoryInput" class="rec-modal-label">Category *</label>
+            <select id="recurringCategoryInput" class="rec-modal-select" required>
               <option value="Salary">Salary &amp; Wages</option>
               <option value="Consulting / Freelance">Consulting &amp; Retainer</option>
               <option value="Clinical Practice">Clinical Practice</option>
@@ -5516,9 +5527,9 @@
               <option value="Other">Other Fixed</option>
             </select>
           </div>
-          <div class="field-group">
-            <label for="recurringAccountInput" class="field-label">Account / Method</label>
-            <select id="recurringAccountInput" class="form-select">
+          <div class="rec-field-group">
+            <label for="recurringAccountInput" class="rec-modal-label">Account / Method</label>
+            <select id="recurringAccountInput" class="rec-modal-select">
               <option value="Bank Transfer">Bank Transfer</option>
               <option value="Checking Account">Checking Account</option>
               <option value="Cash Wallet">Cash Wallet</option>
@@ -5528,25 +5539,27 @@
           </div>
         </div>
 
-        <div class="field-group">
-          <label for="recurringNotesInput" class="field-label">Notes / Details (Optional)</label>
-          <input type="text" id="recurringNotesInput" class="form-input" placeholder="e.g., Installment 12 of 36, Landlord account, etc." />
+        <div class="rec-field-group">
+          <label for="recurringNotesInput" class="rec-modal-label">Notes / Details (Optional)</label>
+          <input type="text" id="recurringNotesInput" class="rec-modal-input" placeholder="e.g., Installment 12 of 36, Landlord account, etc." />
         </div>
 
-        <div class="field-group" style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+        <!-- Rule Automation Switch Box -->
+        <div class="rec-status-switch-box">
           <div>
-            <div style="font-weight: 600; font-size: 13.5px; color: var(--ink);">Rule Status</div>
-            <div style="font-size: 12px; color: var(--ink-soft);">Active rules will automatically post each month on the designated day.</div>
+            <div class="rec-switch-title">Active Rule Automation</div>
+            <div class="rec-switch-desc">When active, funds will automatically post each month on the designated day.</div>
           </div>
-          <label class="toggle-switch">
+          <label class="switch-ui" style="margin: 0;">
             <input type="checkbox" id="recurringActiveToggle" checked />
-            <span class="toggle-slider"></span>
+            <span class="switch-slider"></span>
           </label>
         </div>
 
-        <div class="modal-actions" style="margin-top: 18px;">
-          <button type="button" class="btn-secondary" id="btnCancelRecurringFinanceModal">Cancel</button>
-          <button type="submit" class="btn-primary" id="btnSaveRecurringRule">Save Rule</button>
+        <!-- Modal Actions -->
+        <div class="rec-modal-actions-row">
+          <button type="button" class="btn-rec-modal-cancel" onclick="closeRecurringFinanceModal()">Cancel</button>
+          <button type="submit" class="btn-rec-modal-save" id="btnSaveRecurringRule">Save Recurring Rule</button>
         </div>
       </form>
     </div>
@@ -5558,6 +5571,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=33.4"></script>
+  <script src="app.js?v=33.5"></script>
 </body>
 </html>

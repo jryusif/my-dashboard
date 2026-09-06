@@ -7200,7 +7200,24 @@ function handleDeleteRecurringRule(ruleId) {
 }
 window.handleDeleteRecurringRule = handleDeleteRecurringRule;
 
-// Modal Open / Edit / Save Handlers
+// Modal Open / Edit / Save Handlers & Flow Type Switcher
+function setRecurringType(type) {
+  const normalized = type === 'expense' ? 'expense' : 'income';
+  const typeInput = document.getElementById('recurringTypeInput');
+  const btnIncome = document.getElementById('btnRecTypeIncome');
+  const btnExpense = document.getElementById('btnRecTypeExpense');
+
+  if (typeInput) typeInput.value = normalized;
+
+  if (btnIncome) {
+    btnIncome.classList.toggle('active', normalized === 'income');
+  }
+  if (btnExpense) {
+    btnExpense.classList.toggle('active', normalized === 'expense');
+  }
+}
+window.setRecurringType = setRecurringType;
+
 function openRecurringFinanceModal(ruleId = null) {
   const backdrop = document.getElementById('recurringFinanceModalBackdrop');
   if (!backdrop) return;
@@ -7208,7 +7225,6 @@ function openRecurringFinanceModal(ruleId = null) {
   const titleEl = document.getElementById('recurringModalTitle');
   const idInput = document.getElementById('recurringRuleId');
   const nameInput = document.getElementById('recurringNameInput');
-  const typeInput = document.getElementById('recurringTypeInput');
   const amountInput = document.getElementById('recurringAmountInput');
   const dayInput = document.getElementById('recurringDayInput');
   const catInput = document.getElementById('recurringCategoryInput');
@@ -7216,18 +7232,14 @@ function openRecurringFinanceModal(ruleId = null) {
   const notesInput = document.getElementById('recurringNotesInput');
   const activeToggle = document.getElementById('recurringActiveToggle');
 
-  const btnIncome = document.getElementById('btnRecTypeIncome');
-  const btnExpense = document.getElementById('btnRecTypeExpense');
-
   if (ruleId) {
     const rules = getRecurringRules();
     const rule = rules.find(r => r.id === ruleId);
     if (!rule) return;
 
-    if (titleEl) titleEl.textContent = '✏️ Edit Fixed Recurring Item';
+    if (titleEl) titleEl.textContent = 'Edit Fixed Recurring Item';
     if (idInput) idInput.value = rule.id;
     if (nameInput) nameInput.value = rule.name || '';
-    if (typeInput) typeInput.value = rule.type || 'income';
     if (amountInput) amountInput.value = rule.amount || '';
     if (dayInput) dayInput.value = rule.dayOfMonth || '1';
     if (catInput) catInput.value = rule.category || 'Salary';
@@ -7235,13 +7247,11 @@ function openRecurringFinanceModal(ruleId = null) {
     if (notesInput) notesInput.value = rule.notes || '';
     if (activeToggle) activeToggle.checked = Boolean(rule.active);
 
-    if (btnIncome) btnIncome.classList.toggle('active', rule.type === 'income');
-    if (btnExpense) btnExpense.classList.toggle('active', rule.type === 'expense');
+    setRecurringType(rule.type || 'income');
   } else {
-    if (titleEl) titleEl.textContent = '➕ Add Fixed Recurring Item';
+    if (titleEl) titleEl.textContent = 'Add Fixed Recurring Item';
     if (idInput) idInput.value = '';
     if (nameInput) nameInput.value = '';
-    if (typeInput) typeInput.value = 'income';
     if (amountInput) amountInput.value = '';
     if (dayInput) dayInput.value = '1';
     if (catInput) catInput.value = 'Salary';
@@ -7249,8 +7259,7 @@ function openRecurringFinanceModal(ruleId = null) {
     if (notesInput) notesInput.value = '';
     if (activeToggle) activeToggle.checked = true;
 
-    if (btnIncome) btnIncome.classList.add('active');
-    if (btnExpense) btnExpense.classList.remove('active');
+    setRecurringType('income');
   }
 
   backdrop.hidden = false;
@@ -7263,113 +7272,78 @@ function closeRecurringFinanceModal() {
 }
 window.closeRecurringFinanceModal = closeRecurringFinanceModal;
 
+async function handleSaveRecurringRuleForm(e) {
+  if (e) e.preventDefault();
+  const id = document.getElementById('recurringRuleId').value.trim();
+  const name = document.getElementById('recurringNameInput').value.trim();
+  const type = document.getElementById('recurringTypeInput').value || 'income';
+  const amount = parseFloat(document.getElementById('recurringAmountInput').value) || 0;
+  const dayOfMonth = parseInt(document.getElementById('recurringDayInput').value, 10) || 1;
+  const category = document.getElementById('recurringCategoryInput').value || 'General';
+  const account = document.getElementById('recurringAccountInput').value || 'Bank Transfer';
+  const notes = document.getElementById('recurringNotesInput').value.trim();
+  const active = document.getElementById('recurringActiveToggle').checked;
+
+  if (!name || isNaN(amount) || amount <= 0) {
+    alert('Please enter a valid rule title and positive amount.');
+    return;
+  }
+
+  let rules = getRecurringRules();
+  if (id) {
+    const idx = rules.findIndex(r => r.id === id);
+    if (idx !== -1) {
+      rules[idx] = {
+        ...rules[idx],
+        name,
+        type,
+        amount,
+        dayOfMonth,
+        category,
+        account,
+        notes,
+        active,
+        updatedAt: new Date().toISOString()
+      };
+    }
+  } else {
+    const newRule = {
+      id: 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      name,
+      type,
+      amount,
+      dayOfMonth,
+      category,
+      account,
+      notes,
+      active,
+      createdAt: new Date().toISOString()
+    };
+    rules.push(newRule);
+  }
+
+  saveRecurringRules(rules);
+  closeRecurringFinanceModal();
+  showToast(`Recurring rule "${name}" saved.`);
+
+  // Check if newly saved active rule is due today for current month
+  await runAutoRecurringFinance();
+  renderRecurringQuickLedgerCard();
+  loadRecurringFinanceHub();
+}
+window.handleSaveRecurringRuleForm = handleSaveRecurringRuleForm;
+
 // Wire up recurring modal and search filters
-document.addEventListener('DOMContentLoaded', () => {
-  const closeBtn = document.getElementById('closeRecurringFinanceModal');
-  const cancelBtn = document.getElementById('btnCancelRecurringFinanceModal');
+function initRecurringControls() {
   const form = document.getElementById('recurringFinanceForm');
-  const btnOpenModal = document.getElementById('btnOpenNewRecurringRuleModal');
-  const btnAutoCheck = document.getElementById('btnRunRecurringAutoCheck');
-
-  const btnIncome = document.getElementById('btnRecTypeIncome');
-  const btnExpense = document.getElementById('btnRecTypeExpense');
-  const typeInput = document.getElementById('recurringTypeInput');
-
-  if (closeBtn) closeBtn.addEventListener('click', closeRecurringFinanceModal);
-  if (cancelBtn) cancelBtn.addEventListener('click', closeRecurringFinanceModal);
-  if (btnOpenModal) btnOpenModal.addEventListener('click', () => openRecurringFinanceModal());
-
-  if (btnAutoCheck) {
-    btnAutoCheck.addEventListener('click', async () => {
-      btnAutoCheck.disabled = true;
-      btnAutoCheck.textContent = 'Checking…';
-      const applied = await runAutoRecurringFinance();
-      btnAutoCheck.disabled = false;
-      btnAutoCheck.innerHTML = '<span class="btn-icon">⚡</span> Auto-Apply Due Now';
-      if (applied === 0) {
-        showToast('All active recurring rules are up to date for this month.');
-      }
-    });
+  if (form && !form._bound) {
+    form._bound = true;
+    form.addEventListener('submit', handleSaveRecurringRuleForm);
   }
 
-  if (btnIncome && btnExpense && typeInput) {
-    btnIncome.addEventListener('click', () => {
-      btnIncome.classList.add('active');
-      btnExpense.classList.remove('active');
-      typeInput.value = 'income';
-    });
-    btnExpense.addEventListener('click', () => {
-      btnExpense.classList.add('active');
-      btnIncome.classList.remove('active');
-      typeInput.value = 'expense';
-    });
-  }
-
-  if (form) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = document.getElementById('recurringRuleId').value.trim();
-      const name = document.getElementById('recurringNameInput').value.trim();
-      const type = document.getElementById('recurringTypeInput').value || 'income';
-      const amount = parseFloat(document.getElementById('recurringAmountInput').value) || 0;
-      const dayOfMonth = parseInt(document.getElementById('recurringDayInput').value, 10) || 1;
-      const category = document.getElementById('recurringCategoryInput').value || 'General';
-      const account = document.getElementById('recurringAccountInput').value || 'Bank Transfer';
-      const notes = document.getElementById('recurringNotesInput').value.trim();
-      const active = document.getElementById('recurringActiveToggle').checked;
-
-      if (!name || isNaN(amount) || amount <= 0) {
-        alert('Please enter a valid rule title and positive amount.');
-        return;
-      }
-
-      let rules = getRecurringRules();
-      if (id) {
-        const idx = rules.findIndex(r => r.id === id);
-        if (idx !== -1) {
-          rules[idx] = {
-            ...rules[idx],
-            name,
-            type,
-            amount,
-            dayOfMonth,
-            category,
-            account,
-            notes,
-            active,
-            updatedAt: new Date().toISOString()
-          };
-        }
-      } else {
-        const newRule = {
-          id: 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          name,
-          type,
-          amount,
-          dayOfMonth,
-          category,
-          account,
-          notes,
-          active,
-          createdAt: new Date().toISOString()
-        };
-        rules.push(newRule);
-      }
-
-      saveRecurringRules(rules);
-      closeRecurringFinanceModal();
-      showToast(`Recurring rule "${name}" saved.`);
-
-      // Check if newly saved active rule is due today for current month
-      await runAutoRecurringFinance();
-      renderRecurringQuickLedgerCard();
-      loadRecurringFinanceHub();
-    });
-  }
-
-  // Filter Pills & Search
   const filterWrap = document.getElementById('finRecurringFilterPills');
-  if (filterWrap) {
+  if (filterWrap && !filterWrap._bound) {
+    filterWrap._bound = true;
     filterWrap.addEventListener('click', (e) => {
       const btn = e.target.closest('.fin-filter-pill');
       if (!btn) return;
@@ -7381,13 +7355,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const searchInput = document.getElementById('inputSearchRecurring');
-  if (searchInput) {
+  if (searchInput && !searchInput._bound) {
+    searchInput._bound = true;
     searchInput.addEventListener('input', (e) => {
       recurringFinanceSearchQuery = e.target.value;
       renderRecurringRulesList();
     });
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initRecurringControls);
+} else {
+  initRecurringControls();
+}
 
 // =============================================================================
 // UNIFIED GOLD & ASSETS PORTFOLIO
