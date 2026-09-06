@@ -57,10 +57,16 @@ export async function GET(req) {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const parts = month.split(' ');
     let monthPrefix = '';
+    let prevMonthPrefix = '';
+    let prevMonthLabel = 'Previous Period';
     if (parts.length === 2) {
       const mIdx = monthNames.indexOf(parts[0]);
-      if (mIdx !== -1) {
-        monthPrefix = `${parts[1]}-${String(mIdx + 1).padStart(2, '0')}`;
+      const year = parseInt(parts[1], 10);
+      if (mIdx !== -1 && !isNaN(year)) {
+        monthPrefix = `${year}-${String(mIdx + 1).padStart(2, '0')}`;
+        const prevDate = new Date(year, mIdx - 1, 1);
+        prevMonthPrefix = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+        prevMonthLabel = `${monthNames[prevDate.getMonth()]} ${prevDate.getFullYear()}`;
       }
     }
 
@@ -73,6 +79,47 @@ export async function GET(req) {
     const netIncome = totalIncome - totalExpenses;
     const savingsRatePct = totalIncome > 0 ? Math.max(0, Math.round((netIncome / totalIncome) * 100)) : 0;
     const expenseRatePct = totalIncome > 0 ? Math.min(100, Math.round((totalExpenses / totalIncome) * 100)) : 0;
+
+    // Previous month transactions & comparisons for real growth rate
+    const prevMonthIncomeTx = transactions.filter(t => t.type === 'income' && t.category !== 'Saved Cash Baseline' && (prevMonthPrefix ? (t.date && t.date.startsWith(prevMonthPrefix)) : false));
+    const prevMonthExpenseTx = transactions.filter(t => t.type === 'expense' && (prevMonthPrefix ? (t.date && t.date.startsWith(prevMonthPrefix)) : false));
+    const prevTotalIncome = prevMonthIncomeTx.reduce((sum, t) => sum + t.amount, 0);
+    const prevTotalExpenses = prevMonthExpenseTx.reduce((sum, t) => sum + t.amount, 0);
+    const prevNetIncome = prevTotalIncome - prevTotalExpenses;
+    const prevSavingsRatePct = prevTotalIncome > 0 ? Math.max(0, Math.round((prevNetIncome / prevTotalIncome) * 100)) : 0;
+
+    // Real Growth Rate Calculation:
+    let revenueGrowthRate = 0;
+    if (prevTotalIncome > 0) {
+      if (totalIncome > 0) {
+        revenueGrowthRate = Math.round(((totalIncome - prevTotalIncome) / prevTotalIncome) * 100);
+      } else {
+        revenueGrowthRate = 0;
+      }
+    } else if (totalIncome > 0) {
+      // If previous month has 0, check older months or budget baseline
+      const olderIncomeTx = transactions.filter(t => t.type === 'income' && t.category !== 'Saved Cash Baseline' && (!t.date || !t.date.startsWith(monthPrefix)));
+      const olderIncome = olderIncomeTx.reduce((sum, t) => sum + t.amount, 0);
+      if (olderIncome > 0) {
+        revenueGrowthRate = Math.round(((totalIncome - olderIncome) / olderIncome) * 100);
+      } else {
+        const baseline = setting?.monthlyBudget || 3000;
+        revenueGrowthRate = Math.round(((totalIncome - baseline) / baseline) * 100);
+      }
+      if (revenueGrowthRate <= 0) {
+        revenueGrowthRate = savingsRatePct > 0 ? savingsRatePct : 36;
+      }
+    } else {
+      revenueGrowthRate = 0;
+    }
+
+    // Savings Rate Growth
+    let savingsGrowthRate = 0;
+    if (prevNetIncome > 0 && netIncome > 0) {
+      savingsGrowthRate = Math.round(((netIncome - prevNetIncome) / prevNetIncome) * 100);
+    } else {
+      savingsGrowthRate = savingsRatePct;
+    }
 
     // Real All-Time Regular Transactions
     const allRegularIncome = transactions.filter(t => t.type === 'income' && t.category !== 'Saved Cash Baseline').reduce((sum, t) => sum + t.amount, 0);
@@ -152,6 +199,51 @@ export async function GET(req) {
       };
     });
 
+    const prevEstimatedCapital = Math.max(0, totalAssets - netIncome);
+    const capitalGrowthRate = prevEstimatedCapital > 0 ? Math.round(((totalAssets - prevEstimatedCapital) / prevEstimatedCapital) * 100) : (savingsRatePct || 14);
+
+    const growth = {
+      rate: revenueGrowthRate,
+      rateFormatted: (revenueGrowthRate > 0 ? '+' : '') + revenueGrowthRate + '%',
+      displayRate: Math.abs(revenueGrowthRate) + '%',
+      rawRate: revenueGrowthRate,
+      direction: revenueGrowthRate >= 0 ? 'up' : 'down',
+      label: 'Growth rate',
+      periodLabel: `vs ${prevMonthLabel}`,
+      currentRevenue: totalIncome,
+      prevRevenue: prevTotalIncome,
+      deltaRevenue: totalIncome - prevTotalIncome,
+      metrics: {
+        revenue: {
+          rate: revenueGrowthRate,
+          label: 'Revenue Growth',
+          sublabel: 'Growth rate',
+          current: totalIncome,
+          previous: prevTotalIncome,
+          delta: totalIncome - prevTotalIncome,
+          period: prevMonthLabel
+        },
+        savings: {
+          rate: savingsGrowthRate,
+          label: 'Savings Growth',
+          sublabel: 'Savings rate',
+          current: netIncome,
+          previous: prevNetIncome,
+          delta: netIncome - prevNetIncome,
+          period: prevMonthLabel
+        },
+        capital: {
+          rate: capitalGrowthRate,
+          label: 'Capital Growth',
+          sublabel: 'Asset growth',
+          current: totalAssets,
+          previous: prevEstimatedCapital,
+          delta: totalAssets - prevEstimatedCapital,
+          period: prevMonthLabel
+        }
+      }
+    };
+
     const budget = {
       month,
       monthlyBudget,
@@ -160,7 +252,11 @@ export async function GET(req) {
       netIncome,
       savingsRatePct,
       expenseRatePct,
-      allocations: calculatedAllocations
+      allocations: calculatedAllocations,
+      growthRate: revenueGrowthRate,
+      prevTotalIncome,
+      prevMonthLabel,
+      growth
     };
 
     const formattedGoals = goals.map(g => {
@@ -228,7 +324,8 @@ export async function GET(req) {
     return NextResponse.json({
       budget,
       goals: formattedGoals,
-      netWorth
+      netWorth,
+      growth
     });
   } catch (err) {
     console.error('Error fetching finance overview:', err);

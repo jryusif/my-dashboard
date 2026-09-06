@@ -552,7 +552,35 @@
                 </div>
               </div>
 
-              <!-- Card 2: Prioritized Tasks (Sunset Peach-Coral Mesh) -->
+              <!-- Card 2: Interactive Real Location & Weather Map (Reference Design) -->
+              <div class="kristin-map-weather-card" id="kristinMapWeatherCard" title="Live Local Weather & Regional Map">
+                <div id="kristinMapContainer" class="kristin-map-container"></div>
+                <!-- Ambient pulsating location pin -->
+                <div class="kristin-map-pin-badge" id="kristinMapPinBadge" title="Your Coordinates">
+                  <div class="kristin-pulse-ring"></div>
+                  <div class="kristin-pin-dot"></div>
+                </div>
+                <!-- Bottom Frosted Glassmorphism Overlay (Matching User's Reference Image) -->
+                <div class="kristin-map-overlay-glass">
+                  <div class="kristin-map-time-row">
+                    <span id="kristinMapTime">12:00</span> &bull; <span id="kristinMapGmt">GMT+2</span>
+                  </div>
+                  <div class="kristin-map-main-row">
+                    <div class="kristin-map-city-group" onclick="promptChangeLocation()" title="Click to refresh or detect location">
+                      <svg class="kristin-map-nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <polygon points="3 11 22 2 13 21 11 13 3 11" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <span class="kristin-map-city-name" id="kristinMapCity">Detecting...</span>
+                    </div>
+                    <div class="kristin-map-temp-val" id="kristinMapTemp">+16&deg;</div>
+                  </div>
+                </div>
+                <button type="button" class="kristin-map-locate-btn" onclick="refreshUserLocation(true)" title="Recenter to my current location">
+                  <span>🎯</span>
+                </button>
+              </div>
+
+              <!-- Card 3: Prioritized Tasks (Sunset Peach-Coral Mesh) -->
               <div class="kristin-card-coral">
                 <div class="kristin-task-head">
                   <span class="kristin-task-title">Prioritized<br>tasks</span>
@@ -738,66 +766,7 @@
               </button>
             </div>
 
-            <!-- Card 6: Developed Areas -->
-            <div class="kristin-developed-card">
-              <div>
-                <h2>Developed areas</h2>
-                <p>Most common areas of interests</p>
-              </div>
-
-              <div class="kristin-areas-list" id="kristinAreasList">
-                <!-- Area 1: Sport Skills -->
-                <div class="kristin-area-item" onclick="openPage('Workouts')" style="cursor:pointer;" title="View Workouts &amp; Performance">
-                  <span class="kristin-area-name">Sport Skills</span>
-                  <div class="kristin-area-bar-track">
-                    <div class="kristin-area-bar-fill" style="width: 71%;"></div>
-                  </div>
-                  <span class="kristin-area-pct">71%</span>
-                  <span class="kristin-area-trend down">↓</span>
-                </div>
-
-                <!-- Area 2: Blogging -->
-                <div class="kristin-area-item" onclick="openPage('Studies')" style="cursor:pointer;" title="View Studies &amp; Reading">
-                  <span class="kristin-area-name">Blogging</span>
-                  <div class="kristin-area-bar-track">
-                    <div class="kristin-area-bar-fill" style="width: 92%;"></div>
-                  </div>
-                  <span class="kristin-area-pct">92%</span>
-                  <span class="kristin-area-trend up">↑</span>
-                </div>
-
-                <!-- Area 3: Leadership -->
-                <div class="kristin-area-item" onclick="openPage('Work')" style="cursor:pointer;" title="View Work &amp; Career">
-                  <span class="kristin-area-name">Leadership</span>
-                  <div class="kristin-area-bar-track">
-                    <div class="kristin-area-bar-fill" style="width: 33%;"></div>
-                  </div>
-                  <span class="kristin-area-pct">33%</span>
-                  <span class="kristin-area-trend down">↓</span>
-                </div>
-
-                <!-- Area 4: Meditation -->
-                <div class="kristin-area-item" onclick="openPage('Religion')" style="cursor:pointer;" title="View Habits &amp; Mindfulness">
-                  <span class="kristin-area-name">Meditation</span>
-                  <div class="kristin-area-bar-track">
-                    <div class="kristin-area-bar-fill" style="width: 56%;"></div>
-                  </div>
-                  <span class="kristin-area-pct">56%</span>
-                  <span class="kristin-area-trend up">↑</span>
-                </div>
-
-                <!-- Area 5: Philosophy -->
-                <div class="kristin-area-item" onclick="openPage('Finance')" style="cursor:pointer;" title="View Finance &amp; Capital">
-                  <span class="kristin-area-name">Philosophy</span>
-                  <div class="kristin-area-bar-track">
-                    <div class="kristin-area-bar-fill" style="width: 79%;"></div>
-                  </div>
-                  <span class="kristin-area-pct">79%</span>
-                  <span class="kristin-area-trend up">↑</span>
-                </div>
-              </div>
             </div>
-
           </div>
 
         </div>
@@ -1250,6 +1219,23 @@
                 <div class="fin-kpi-trend-down" id="finKpiTxTrend">
                   <span>&#9660; 5 vs prev</span>
                 </div>
+              </div>
+
+              <!-- KPI Card 4: Circular Growth Rate Dial Widget (Matching User's Reference) -->
+              <div class="fin-growth-dial-widget" id="finGrowthDialWidget" onclick="cycleGrowthRateMetric()" role="button" tabindex="0" title="Click to cycle growth metric (Revenue / Savings / Capital)">
+                <svg class="fin-growth-dial-svg" viewBox="0 0 140 140" aria-hidden="true">
+                  <!-- Segment 3: Dark charcoal / slate track arc (left / top-left) -->
+                  <circle class="fin-dial-arc-gray" id="finDialArcGray" cx="70" cy="70" r="52" fill="none" stroke="#2c333e" stroke-width="5" stroke-linecap="round" stroke-dasharray="82 327" transform="rotate(185 70 70)" />
+                  <!-- Segment 2: Crisp white arc (bottom) -->
+                  <circle class="fin-dial-arc-white" id="finDialArcWhite" cx="70" cy="70" r="52" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 327" transform="rotate(82 70 70)" />
+                  <!-- Segment 1: Highlighted Coral-Salmon arc (top-right / growth) -->
+                  <circle class="fin-dial-arc-coral" id="finDialArcCoral" cx="70" cy="70" r="52" fill="none" stroke="#e06b53" stroke-width="11" stroke-linecap="round" stroke-dasharray="118 327" transform="rotate(-62 70 70)" />
+                </svg>
+                <div class="fin-growth-dial-center">
+                  <span class="fin-growth-dial-pct" id="finGrowthRateVal">36%</span>
+                  <span class="fin-growth-dial-label" id="finGrowthRateLabel">Growth rate</span>
+                </div>
+                <div class="fin-growth-dial-tooltip" id="finGrowthDialTooltip">vs previous month</div>
               </div>
             </div>
           </div>

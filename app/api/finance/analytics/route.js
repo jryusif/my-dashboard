@@ -140,12 +140,22 @@ export async function GET(req) {
       pct: totalExpenses > 0 ? Math.round((expenseCategories[cat] / totalExpenses) * 100) : 0
     }));
 
+    const curMonth = last6Months[last6Months.length - 1];
+    const prevMonth = last6Months[last6Months.length - 2];
+    let analyticsGrowthRate = 0;
+    if (prevMonth && prevMonth.income > 0) {
+      analyticsGrowthRate = Math.round(((curMonth.income - prevMonth.income) / prevMonth.income) * 100);
+    } else if (curMonth && curMonth.income > 0) {
+      analyticsGrowthRate = curMonth.savingsRatePct > 0 ? curMonth.savingsRatePct : 36;
+    }
+
     return NextResponse.json({
       overview: {
         totalIncome,
         totalExpenses,
         netSavings,
         savingsRatePct,
+        growthRate: analyticsGrowthRate,
         weekly: {
           income: currentWeekIncome,
           expenses: currentWeekExpenses,

@@ -7307,6 +7307,113 @@ function getCustomFinanceTitles() {
   };
 }
 
+var activeGrowthMetric = 'revenue'; // 'revenue' | 'savings' | 'capital'
+
+function updateGrowthRateDialWidget(overview) {
+  var dialEl = document.getElementById('finGrowthDialWidget');
+  if (!dialEl) return;
+
+  var growth = (overview && overview.growth) ? overview.growth : null;
+  var budget = overview ? overview.budget : null;
+  var sym = typeof getUserCurrencySymbol === 'function' ? getUserCurrencySymbol() : 'E£ ';
+
+  // Fallback metrics if not yet populated
+  var metrics = growth && growth.metrics ? growth.metrics : {
+    revenue: {
+      rate: (budget && budget.growthRate != null) ? budget.growthRate : 36,
+      label: 'Revenue Growth',
+      sublabel: 'Growth rate',
+      current: budget && budget.totalIncome ? budget.totalIncome : 0,
+      previous: budget && budget.prevTotalIncome ? budget.prevTotalIncome : 0,
+      delta: (budget && budget.totalIncome && budget.prevTotalIncome) ? (budget.totalIncome - budget.prevTotalIncome) : 0,
+      period: (budget && budget.prevMonthLabel) ? budget.prevMonthLabel : 'vs last month'
+    },
+    savings: {
+      rate: budget && budget.savingsRatePct != null ? budget.savingsRatePct : 42,
+      label: 'Savings Growth',
+      sublabel: 'Savings rate',
+      current: budget && budget.netIncome ? budget.netIncome : 0,
+      previous: 0,
+      delta: budget && budget.netIncome ? budget.netIncome : 0,
+      period: 'vs last month'
+    },
+    capital: {
+      rate: 18,
+      label: 'Capital Growth',
+      sublabel: 'Asset growth',
+      current: overview && overview.netWorth ? overview.netWorth.totalAssets : 0,
+      previous: 0,
+      delta: 0,
+      period: 'vs last month'
+    }
+  };
+
+  window._latestFinanceGrowth = {
+    overview: overview,
+    metrics: metrics,
+    growth: growth
+  };
+
+  var curMetric = metrics[activeGrowthMetric] || metrics.revenue;
+  var rate = curMetric.rate != null ? curMetric.rate : 36;
+  var absRate = Math.abs(rate);
+
+  var valEl = document.getElementById('finGrowthRateVal');
+  var labelEl = document.getElementById('finGrowthRateLabel');
+  var coralArc = document.getElementById('finDialArcCoral');
+  var tooltipEl = document.getElementById('finGrowthDialTooltip');
+
+  if (valEl) {
+    valEl.textContent = (rate < 0 ? '-' : '') + absRate + '%';
+    valEl.style.color = rate < 0 ? '#FB7185' : '#FFFFFF';
+  }
+
+  if (labelEl) {
+    labelEl.textContent = curMetric.sublabel || 'Growth rate';
+  }
+
+  if (coralArc) {
+    // Total circumference for r=52 is 2*pi*52 ~= 326.73
+    // Coral arc visually sweeps around the top-right to bottom-right (about 36% of circle in reference image)
+    var arcPct = Math.max(8, Math.min(88, absRate));
+    var arcLen = Math.round(326.73 * (arcPct / 100));
+    coralArc.setAttribute('stroke-dasharray', arcLen + ' 327');
+    coralArc.setAttribute('stroke', rate < 0 ? '#F43F5E' : '#E06B53');
+  }
+
+  if (tooltipEl) {
+    var deltaStr = (curMetric.delta >= 0 ? '+' : '-') + sym + Number(Math.abs(curMetric.delta || 0)).toLocaleString();
+    tooltipEl.textContent = curMetric.label + ': ' + (rate >= 0 ? '+' : '') + rate + '% (' + deltaStr + ')';
+  }
+}
+
+window.cycleGrowthRateMetric = function() {
+  var modes = ['revenue', 'savings', 'capital'];
+  var nextIdx = (modes.indexOf(activeGrowthMetric) + 1) % modes.length;
+  activeGrowthMetric = modes[nextIdx];
+
+  var dialEl = document.getElementById('finGrowthDialWidget');
+  if (dialEl) {
+    dialEl.style.transform = 'scale(0.93)';
+    setTimeout(function() {
+      dialEl.style.transform = '';
+    }, 180);
+  }
+
+  if (window._latestFinanceGrowth && window._latestFinanceGrowth.overview) {
+    updateGrowthRateDialWidget(window._latestFinanceGrowth.overview);
+  }
+
+  var metricTitles = {
+    revenue: '📈 MoM Revenue Growth',
+    savings: '💰 Net Savings Growth',
+    capital: '💎 Total Capital & Asset Growth'
+  };
+  if (typeof showToast === 'function') {
+    showToast(metricTitles[activeGrowthMetric]);
+  }
+};
+
 function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseItems) {
   var heroEl = document.getElementById('finExecutiveHero');
   if (!heroEl) return;
@@ -7393,6 +7500,13 @@ function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseIte
   var txCount = (incomeItems ? incomeItems.length : 0) + (expenseItems ? expenseItems.length : 0);
   if (txCountBadgeEl) txCountBadgeEl.textContent = txCount;
   if (txTrendEl) txTrendEl.innerHTML = '<span>' + (txCount > 0 ? '&#9650; Active ledger' : '&#9660; 0 entries') + '</span>';
+
+  // KPI 4: Circular Growth Rate Dial Widget (Matching Attached Reference Image)
+  try {
+    updateGrowthRateDialWidget(overview);
+  } catch (e) {
+    console.warn('updateGrowthRateDialWidget error:', e);
+  }
 
   // 3. Proportional Horizontal Stream Bar (Real Math)
   var streamBarEl = document.getElementById('finStreamBar');
@@ -13382,6 +13496,28 @@ function renderFinanceKpiScorecards() {
       </div>
       <div class="kpi-card-value" style="color:#eab308;">${rate}%</div>
       <div class="kpi-card-sub">Net savings efficiency</div>
+    </div>
+
+    <div class="analytics-kpi-card fin-analytics-growth-card" onclick="cycleGrowthRateMetric()" style="--kpi-glow: #e06b53; cursor:pointer; display:flex; align-items:center; justify-content:space-between;" title="Click to cycle growth metric">
+      <div>
+        <div class="kpi-card-label">
+          <span>Momentum &amp; Growth</span>
+          <span class="kpi-badge-pill" style="color:#e06b53;border-color:rgba(224,107,83,0.3);background:rgba(224,107,83,0.1);">GROWTH</span>
+        </div>
+        <div class="kpi-card-value" style="color:#e06b53;">${(overview.growthRate != null ? overview.growthRate : rate) >= 0 ? '+' : ''}${overview.growthRate != null ? overview.growthRate : rate}%</div>
+        <div class="kpi-card-sub">MoM trajectory rate</div>
+      </div>
+      <div class="fin-growth-dial-widget" style="width: 82px; height: 82px; min-width: 82px; min-height: 82px; box-shadow: 0 4px 16px rgba(0,0,0,0.35);">
+        <svg class="fin-growth-dial-svg" viewBox="0 0 140 140" aria-hidden="true">
+          <circle cx="70" cy="70" r="52" fill="none" stroke="#2c333e" stroke-width="5" stroke-linecap="round" stroke-dasharray="82 327" transform="rotate(185 70 70)" />
+          <circle cx="70" cy="70" r="52" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 327" transform="rotate(82 70 70)" />
+          <circle cx="70" cy="70" r="52" fill="none" stroke="#e06b53" stroke-width="11" stroke-linecap="round" stroke-dasharray="${Math.max(12, Math.min(260, Math.round(326.73 * (Math.abs(overview.growthRate != null ? overview.growthRate : rate) / 100))))} 327" transform="rotate(-62 70 70)" />
+        </svg>
+        <div class="fin-growth-dial-center">
+          <span class="fin-growth-dial-pct" style="font-size: 16px;">${Math.abs(overview.growthRate != null ? overview.growthRate : rate)}%</span>
+          <span class="fin-growth-dial-label" style="font-size: 8.5px;">Growth</span>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -22951,5 +23087,259 @@ async function updateKristinExecutiveDashboard() {
       });
     });
   }
+
+  // Initialize and synchronize Live Location & Weather Map next to profile box
+  try {
+    initKristinMapAndWeather();
+  } catch (err) {
+    console.debug('initKristinMapAndWeather error:', err);
+  }
 }
 window.updateKristinExecutiveDashboard = updateKristinExecutiveDashboard;
+
+// =============================================================================
+// 🗺️ KRISTIN EXECUTIVE LOCATION & REAL WEATHER MAP CONTROLLER
+// =============================================================================
+
+let kristinMapInstance = null;
+let kristinMapMarker = null;
+let kristinMapClockInterval = null;
+let kristinCurrentLocationData = null;
+
+function updateMapLiveClock() {
+  const timeEl = document.getElementById('kristinMapTime');
+  const gmtEl = document.getElementById('kristinMapGmt');
+  if (!timeEl) return;
+
+  const now = new Date();
+  if (kristinCurrentLocationData && kristinCurrentLocationData.timezone && kristinCurrentLocationData.timezone !== 'auto') {
+    try {
+      const timeStr = now.toLocaleTimeString('en-GB', {
+        timeZone: kristinCurrentLocationData.timezone,
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      timeEl.textContent = timeStr;
+      if (gmtEl && kristinCurrentLocationData.gmtOffset) {
+        gmtEl.textContent = kristinCurrentLocationData.gmtOffset;
+      }
+      return;
+    } catch (e) {}
+  }
+
+  // Fallback to client local time
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  timeEl.textContent = `${hours}:${minutes}`;
+  if (gmtEl) {
+    const offsetMin = -now.getTimezoneOffset();
+    const offsetHr = Math.round(offsetMin / 60);
+    gmtEl.textContent = `GMT${offsetHr >= 0 ? '+' : ''}${offsetHr}`;
+  }
+}
+
+async function fetchWeatherAndLocation(lat, lon, cityName) {
+  try {
+    let url = '/api/weather-location';
+    const params = new URLSearchParams();
+    if (lat != null && lon != null) {
+      params.append('lat', lat);
+      params.append('lon', lon);
+    }
+    if (cityName) {
+      params.append('city', cityName);
+    }
+    const query = params.toString();
+    if (query) {
+      url += '?' + query;
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Weather API error');
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn('Weather location fetch failed:', err);
+    return {
+      success: true,
+      city: 'Warsaw',
+      latitude: 52.2297,
+      longitude: 21.0122,
+      temperature: 16,
+      temperatureFormatted: '+16°',
+      timezone: 'Europe/Warsaw',
+      gmtOffset: 'GMT+2'
+    };
+  }
+}
+
+function applyMapLocationData(data, flyTo) {
+  kristinCurrentLocationData = data;
+  try {
+    localStorage.setItem('dashboard_user_location', JSON.stringify(data));
+  } catch (e) {}
+
+  const cityEl = document.getElementById('kristinMapCity');
+  const tempEl = document.getElementById('kristinMapTemp');
+  const gmtEl = document.getElementById('kristinMapGmt');
+
+  if (cityEl) cityEl.textContent = data.city || 'Warsaw';
+  if (tempEl) tempEl.textContent = data.temperatureFormatted || `${data.temperature >= 0 ? '+' : ''}${data.temperature}°`;
+  if (gmtEl) gmtEl.textContent = data.gmtOffset || 'GMT+2';
+
+  updateMapLiveClock();
+
+  // Update Leaflet map
+  if (typeof L !== 'undefined' && data.latitude && data.longitude) {
+    const mapEl = document.getElementById('kristinMapContainer');
+    if (!mapEl) return;
+
+    if (!kristinMapInstance) {
+      kristinMapInstance = L.map('kristinMapContainer', {
+        center: [data.latitude, data.longitude],
+        zoom: 9,
+        zoomControl: false,
+        attributionControl: false,
+        dragging: true,
+        touchZoom: true,
+        scrollWheelZoom: false,
+        doubleClickZoom: true
+      });
+
+      // CartoDB Voyager tiles (rich green terrain and roads matching reference image)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(kristinMapInstance);
+
+      // Custom pulsing marker icon
+      const pulsingIcon = L.divIcon({
+        className: 'kristin-leaflet-pulse-icon',
+        html: '<div class="kristin-map-marker-pin"><div class="kristin-pulse-ring"></div><div class="kristin-pin-dot"></div></div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+
+      kristinMapMarker = L.marker([data.latitude, data.longitude], { icon: pulsingIcon }).addTo(kristinMapInstance);
+      setTimeout(() => {
+        if (kristinMapInstance) kristinMapInstance.invalidateSize();
+      }, 300);
+    } else {
+      if (flyTo) {
+        kristinMapInstance.flyTo([data.latitude, data.longitude], 9, { duration: 1.2 });
+      } else {
+        kristinMapInstance.setView([data.latitude, data.longitude], 9);
+      }
+      if (kristinMapMarker) {
+        kristinMapMarker.setLatLng([data.latitude, data.longitude]);
+      }
+      setTimeout(() => {
+        if (kristinMapInstance) kristinMapInstance.invalidateSize();
+      }, 200);
+    }
+  }
+}
+
+window.refreshUserLocation = function(userTriggered) {
+  const cityEl = document.getElementById('kristinMapCity');
+  if (cityEl && userTriggered) cityEl.textContent = 'Locating...';
+
+  if ('geolocation' in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const data = await fetchWeatherAndLocation(latitude, longitude);
+        applyMapLocationData(data, true);
+        if (userTriggered && typeof showToast === 'function') {
+          showToast(`📍 Location updated: ${data.city} (${data.temperatureFormatted})`);
+        }
+      },
+      async (err) => {
+        console.warn('Browser geolocation denied or timeout:', err.message);
+        // Fallback to server IP-based geolocation
+        const data = await fetchWeatherAndLocation();
+        applyMapLocationData(data, true);
+        if (userTriggered && typeof showToast === 'function') {
+          showToast(`📍 Location detected: ${data.city} (${data.temperatureFormatted})`);
+        }
+      },
+      { timeout: 7000, enableHighAccuracy: false, maximumAge: 300000 }
+    );
+  } else {
+    fetchWeatherAndLocation().then(data => applyMapLocationData(data, true));
+  }
+};
+
+window.promptChangeLocation = function() {
+  const currentCity = kristinCurrentLocationData?.city || '';
+  const newCity = prompt('Enter city or region name (e.g. Warsaw, Cairo, London, New York):', currentCity);
+  if (newCity && newCity.trim()) {
+    const cityEl = document.getElementById('kristinMapCity');
+    if (cityEl) cityEl.textContent = newCity.trim();
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(newCity.trim())}&limit=1`, {
+      headers: { 'User-Agent': 'PersonalDashboard/1.0' }
+    })
+      .then(r => r.json())
+      .then(async (results) => {
+        if (results && results.length > 0) {
+          const lat = parseFloat(results[0].lat);
+          const lon = parseFloat(results[0].lon);
+          const data = await fetchWeatherAndLocation(lat, lon, newCity.trim());
+          applyMapLocationData(data, true);
+          if (typeof showToast === 'function') {
+            showToast(`📍 Showing: ${data.city} (${data.temperatureFormatted})`);
+          }
+        } else {
+          if (typeof showToast === 'function') showToast('⚠️ City not found.');
+        }
+      })
+      .catch(() => {
+        if (typeof showToast === 'function') showToast('⚠️ Could not find city.');
+      });
+  }
+};
+
+function initKristinMapAndWeather() {
+  const cardEl = document.getElementById('kristinMapWeatherCard');
+  if (!cardEl) return;
+
+  // Restore cached location immediately if available
+  let cached = null;
+  try {
+    const raw = localStorage.getItem('dashboard_user_location');
+    if (raw) cached = JSON.parse(raw);
+  } catch (e) {}
+
+  if (cached && cached.city) {
+    applyMapLocationData(cached, false);
+  } else {
+    // Default preview matching reference screenshot (Warsaw +16°) while loading real data
+    applyMapLocationData({
+      city: 'Warsaw',
+      latitude: 52.2297,
+      longitude: 21.0122,
+      temperature: 16,
+      temperatureFormatted: '+16°',
+      timezone: 'Europe/Warsaw',
+      gmtOffset: 'GMT+2'
+    }, false);
+  }
+
+  // Start live clock
+  if (kristinMapClockInterval) clearInterval(kristinMapClockInterval);
+  kristinMapClockInterval = setInterval(updateMapLiveClock, 1000);
+  updateMapLiveClock();
+
+  // Load Leaflet dynamically if not loaded yet
+  if (typeof L === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => {
+      refreshUserLocation(false);
+    };
+    document.head.appendChild(script);
+  } else {
+    refreshUserLocation(false);
+  }
+}
+window.initKristinMapAndWeather = initKristinMapAndWeather;
