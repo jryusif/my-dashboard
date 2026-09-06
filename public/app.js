@@ -16462,10 +16462,15 @@ const THEMES_LIST = [
   }
 ];
 
-let currentActiveTheme = 'cyber-cyan';
+let currentActiveTheme = 'kristin-light';
 
 function initTheme() {
-  const saved = localStorage.getItem('antigravity_theme') || 'kristin-light';
+  let saved = localStorage.getItem('antigravity_theme');
+  if (!saved || saved === 'cyber-cyan' || !localStorage.getItem('antigravity_kristin_migrated')) {
+    saved = 'kristin-light';
+    localStorage.setItem('antigravity_theme', 'kristin-light');
+    localStorage.setItem('antigravity_kristin_migrated', 'true');
+  }
   setTheme(saved, false);
 }
 window.initTheme = initTheme;
