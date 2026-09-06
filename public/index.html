@@ -674,65 +674,101 @@
                ----------------------------------------------------- -->
           <div class="kristin-mid-row">
 
-            <!-- Card 4: Focusing / Productivity Analytics -->
-            <div class="kristin-focusing-card">
+            <!-- Card 4: Focusing / Productivity Analytics (Fully Interactive) -->
+            <div class="kristin-focusing-card" id="kristinFocusingCard">
               <div class="kristin-focusing-header">
                 <div>
                   <h2>Focusing</h2>
-                  <p>Productivity analytics</p>
+                  <p id="kristinFocusSubtitle">Productivity analytics &bull; 4 weeks aggregated</p>
                 </div>
-                <button type="button" class="kristin-range-dropdown">Range: Last month ⌵</button>
+                <div class="kristin-range-dropdown-wrap" id="kristinRangeWrap">
+                  <button type="button" class="kristin-range-dropdown" id="kristinRangeDropdownBtn" onclick="toggleKristinRangeMenu(event)" title="Select Analytics Horizon">
+                    <span id="kristinRangeSelectedText">Range: Last month</span> <span>⌵</span>
+                  </button>
+                  <div class="kristin-range-menu" id="kristinRangeMenu" hidden>
+                    <button type="button" class="kristin-range-option active" onclick="selectKristinFocusRange('month', 'Last month')">Last month (4 Weeks)</button>
+                    <button type="button" class="kristin-range-option" onclick="selectKristinFocusRange('week', 'Last 7 days')">Last 7 days (Daily)</button>
+                    <button type="button" class="kristin-range-option" onclick="selectKristinFocusRange('quarter', 'Last 3 months')">Last 3 months (Quarterly)</button>
+                    <button type="button" class="kristin-range-option" onclick="selectKristinFocusRange('year', 'Year 2026')">Year to date (Monthly)</button>
+                  </div>
+                </div>
               </div>
 
               <div class="kristin-focusing-main-row">
                 <!-- Left Month Selector -->
-                <div class="kristin-month-selector">
-                  <button type="button" class="kristin-chevron-btn" title="Previous Month">︿</button>
-                  <span class="kristin-month-label">Aug</span>
-                  <span class="kristin-month-label is-active">Sep</span>
-                  <span class="kristin-month-label">Oct</span>
-                  <span class="kristin-month-label">Nov</span>
-                  <button type="button" class="kristin-chevron-btn" title="Next Month">﹀</button>
+                <div class="kristin-month-selector" id="kristinMonthSelector">
+                  <button type="button" class="kristin-chevron-btn" id="kristinMonthPrevBtn" onclick="shiftKristinMonths(-1)" title="Previous Months">︿</button>
+                  <div class="kristin-month-labels-list" id="kristinMonthLabelsList">
+                    <!-- Populated dynamically via JS -->
+                  </div>
+                  <button type="button" class="kristin-chevron-btn" id="kristinMonthNextBtn" onclick="shiftKristinMonths(1)" title="Next Months">﹀</button>
                 </div>
 
                 <!-- Center Wave Stage -->
-                <div class="kristin-wave-stage">
-                  <svg viewBox="0 0 450 140" class="kristin-wave-svg" preserveAspectRatio="none">
+                <div class="kristin-wave-stage" id="kristinWaveStage">
+                  <svg viewBox="0 0 450 140" class="kristin-wave-svg" id="kristinWaveSvg" preserveAspectRatio="none">
                     <defs>
                       <pattern id="kristinDots" width="16" height="16" patternUnits="userSpaceOnUse">
                         <circle cx="2" cy="2" r="0.9" fill="#CBD5E1" opacity="0.6" />
                       </pattern>
+                      <linearGradient id="coralWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#F87171" stop-opacity="0.28"/>
+                        <stop offset="100%" stop-color="#F87171" stop-opacity="0.0"/>
+                      </linearGradient>
+                      <linearGradient id="purpleWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#818CF8" stop-opacity="0.28"/>
+                        <stop offset="100%" stop-color="#818CF8" stop-opacity="0.0"/>
+                      </linearGradient>
                     </defs>
                     <rect x="0" y="0" width="450" height="140" fill="url(#kristinDots)" opacity="0.75" />
-                    <line x1="165" y1="15" x2="165" y2="135" stroke="#CBD5E1" stroke-dasharray="3 3" stroke-width="1.2" />
-                    <path d="M 0 100 C 60 115, 100 70, 165 40 C 220 15, 260 120, 330 90 C 390 65, 420 105, 450 95" fill="none" stroke="#818CF8" stroke-width="3" stroke-linecap="round" />
-                    <path d="M 0 65 C 50 65, 90 35, 130 55 C 165 75, 200 125, 250 85 C 300 45, 360 60, 410 70 C 430 75, 440 90, 450 100" fill="none" stroke="#F87171" stroke-width="3" stroke-linecap="round" />
-                    <circle cx="165" cy="40" r="5" fill="#FFFFFF" stroke="#818CF8" stroke-width="3" />
+                    
+                    <!-- Dynamic Wave Area Fills & Smooth Spline Paths -->
+                    <path id="kristinPurpleArea" fill="url(#purpleWaveGrad)" opacity="0.4" />
+                    <path id="kristinCoralArea" fill="url(#coralWaveGrad)" opacity="0.4" />
+                    <path id="kristinPurplePath" fill="none" stroke="#818CF8" stroke-width="3.2" stroke-linecap="round" />
+                    <path id="kristinCoralPath" fill="none" stroke="#F87171" stroke-width="3.2" stroke-linecap="round" />
+
+                    <!-- Vertical dashed indicator line -->
+                    <line id="kristinWaveGuideLine" x1="165" y1="10" x2="165" y2="135" stroke="#CBD5E1" stroke-dasharray="3 3" stroke-width="1.2" />
+
+                    <!-- Active Data Points Circles -->
+                    <circle id="kristinCoralPoint" cx="165" cy="70" r="5" fill="#FFFFFF" stroke="#F87171" stroke-width="3" />
+                    <circle id="kristinPurplePoint" cx="165" cy="40" r="5" fill="#FFFFFF" stroke="#818CF8" stroke-width="3" />
                   </svg>
 
-                  <div class="kristin-wave-tooltip">
-                    <div class="kristin-wave-tooltip-title">Week 8</div>
-                    <div class="kristin-wave-tooltip-sub">Unbalanced</div>
+                  <!-- Dynamic Floating Tooltip -->
+                  <div class="kristin-wave-tooltip" id="kristinWaveTooltip">
+                    <div class="kristin-wave-tooltip-title" id="kristinWaveTooltipTitle">Week 8</div>
+                    <div class="kristin-wave-tooltip-sub" id="kristinWaveTooltipSub">Unbalanced</div>
+                    <div class="kristin-wave-tooltip-metrics" id="kristinWaveTooltipMetrics">
+                      <span class="coral-txt" id="kristinTipMax">Max: 68%</span> &bull; <span class="purple-txt" id="kristinTipMin">Min: 32%</span>
+                    </div>
                   </div>
                 </div>
 
                 <!-- Right Hero Focus Stat -->
-                <div class="kristin-focus-stat-col">
-                  <div class="kristin-focus-big-pct">41%</div>
+                <div class="kristin-focus-stat-col" id="kristinFocusStatCol" onclick="openAnalyticsPage('overview')" title="Click to open comprehensive analytics">
+                  <div class="kristin-focus-big-pct" id="kristinFocusBigPct">41%</div>
                   <div class="kristin-focus-stat-label">Avg. Conc-ion</div>
+                  <span class="kristin-focus-trend-badge" id="kristinFocusTrendBadge">↑ +4% vs prior</span>
                 </div>
               </div>
 
-              <!-- Bottom Legend -->
+              <!-- Bottom Interactive Legend -->
               <div class="kristin-focusing-legend">
-                <div class="kristin-legend-item">
-                  <span class="kristin-legend-dot coral"></span>
-                  <span>Maximum of focus</span>
+                <div class="kristin-focusing-legend-left">
+                  <button type="button" class="kristin-legend-btn active" id="kristinLegendCoralBtn" onclick="toggleKristinFocusCurve('coral')" title="Toggle Maximum Focus Curve">
+                    <span class="kristin-legend-dot coral"></span>
+                    <span>Maximum of focus</span>
+                  </button>
+                  <button type="button" class="kristin-legend-btn active" id="kristinLegendPurpleBtn" onclick="toggleKristinFocusCurve('purple')" title="Toggle Min / Lack of Focus Curve">
+                    <span class="kristin-legend-dot purple"></span>
+                    <span>Min or lack of focus</span>
+                  </button>
                 </div>
-                <div class="kristin-legend-item">
-                  <span class="kristin-legend-dot purple"></span>
-                  <span>Min or lack of focus</span>
-                </div>
+                <button type="button" class="kristin-legend-deep-link" onclick="openAnalyticsPage('overview')" title="Deep Dive into Productivity Analytics">
+                  Analytics &rarr;
+                </button>
               </div>
             </div>
 

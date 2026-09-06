@@ -23558,6 +23558,416 @@ async function handleKristinProfileRefresh() {
 }
 window.handleKristinProfileRefresh = handleKristinProfileRefresh;
 
+// =============================================================================
+// 📈 KRISTIN FOCUSING / PRODUCTIVITY ANALYTICS ENGINE
+// =============================================================================
+
+let kristinFocusRange = 'month'; // 'month' | 'week' | 'quarter' | 'year'
+let kristinFocusRangeLabel = 'Last month';
+let kristinFocusSelectedMonthIdx = new Date().getMonth(); // 0-11
+let kristinFocusMonthOffset = 0;
+let kristinShowCoralCurve = true;
+let kristinShowPurpleCurve = true;
+let kristinFocusActivePointIdx = 1;
+let kristinFocusCurrentData = null;
+let kristinFocusCurrentPoints = null;
+
+const KRISTIN_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const KRISTIN_MONTH_FULL_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function buildSmoothSvgPath(points) {
+  if (!points || !points.length) return '';
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i === 0 ? 0 : i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
+function renderKristinMonthSelector() {
+  const container = document.getElementById('kristinMonthLabelsList');
+  if (!container) return;
+
+  const curIdx = (kristinFocusSelectedMonthIdx + kristinFocusMonthOffset) % 12;
+  const normalizedBase = curIdx < 0 ? curIdx + 12 : curIdx;
+
+  const monthIndices = [
+    (normalizedBase + 11) % 12,
+    normalizedBase,
+    (normalizedBase + 1) % 12,
+    (normalizedBase + 2) % 12
+  ];
+
+  container.innerHTML = monthIndices.map(idx => {
+    const isSelected = idx === kristinFocusSelectedMonthIdx;
+    return `<span class="kristin-month-label ${isSelected ? 'is-active' : ''}" onclick="selectKristinFocusMonth(${idx})" title="View focus analytics for ${KRISTIN_MONTH_FULL_NAMES[idx]}">${KRISTIN_MONTH_NAMES[idx]}</span>`;
+  }).join('');
+}
+window.renderKristinMonthSelector = renderKristinMonthSelector;
+
+function shiftKristinMonths(delta) {
+  kristinFocusMonthOffset += delta;
+  renderKristinMonthSelector();
+  const curIdx = (kristinFocusSelectedMonthIdx + delta) % 12;
+  kristinFocusSelectedMonthIdx = curIdx < 0 ? curIdx + 12 : curIdx;
+  renderKristinFocusingCard();
+}
+window.shiftKristinMonths = shiftKristinMonths;
+
+function selectKristinFocusMonth(monthIdx) {
+  kristinFocusSelectedMonthIdx = monthIdx;
+  renderKristinMonthSelector();
+  renderKristinFocusingCard();
+  showToast(`📅 Loaded focus analytics for ${KRISTIN_MONTH_FULL_NAMES[monthIdx]}`);
+}
+window.selectKristinFocusMonth = selectKristinFocusMonth;
+
+function toggleKristinRangeMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('kristinRangeMenu');
+  if (!menu) return;
+  const isHidden = menu.hasAttribute('hidden') || menu.style.display === 'none';
+  if (isHidden) {
+    menu.hidden = false;
+    menu.removeAttribute('hidden');
+    menu.style.display = 'flex';
+
+    const closeHandler = (evt) => {
+      if (!menu.contains(evt.target)) {
+        menu.hidden = true;
+        menu.setAttribute('hidden', '');
+        menu.style.display = 'none';
+        document.removeEventListener('click', closeHandler);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeHandler), 10);
+  } else {
+    menu.hidden = true;
+    menu.setAttribute('hidden', '');
+    menu.style.display = 'none';
+  }
+}
+window.toggleKristinRangeMenu = toggleKristinRangeMenu;
+
+function selectKristinFocusRange(range, label) {
+  kristinFocusRange = range;
+  kristinFocusRangeLabel = label;
+
+  const btnText = document.getElementById('kristinRangeSelectedText');
+  if (btnText) btnText.textContent = `Range: ${label}`;
+
+  const options = document.querySelectorAll('#kristinRangeMenu .kristin-range-option');
+  options.forEach(opt => {
+    if (opt.textContent.includes(label)) {
+      opt.classList.add('active');
+    } else {
+      opt.classList.remove('active');
+    }
+  });
+
+  const menu = document.getElementById('kristinRangeMenu');
+  if (menu) {
+    menu.hidden = true;
+    menu.setAttribute('hidden', '');
+    menu.style.display = 'none';
+  }
+
+  renderKristinFocusingCard();
+  showToast(`📊 Horizon switched to ${label}`);
+}
+window.selectKristinFocusRange = selectKristinFocusRange;
+
+function toggleKristinFocusCurve(type) {
+  if (type === 'coral') {
+    kristinShowCoralCurve = !kristinShowCoralCurve;
+    const btn = document.getElementById('kristinLegendCoralBtn');
+    const path = document.getElementById('kristinCoralPath');
+    const area = document.getElementById('kristinCoralArea');
+    const point = document.getElementById('kristinCoralPoint');
+    if (btn) btn.classList.toggle('is-disabled', !kristinShowCoralCurve);
+    if (path) path.classList.toggle('is-hidden', !kristinShowCoralCurve);
+    if (area) area.classList.toggle('is-hidden', !kristinShowCoralCurve);
+    if (point) point.style.display = kristinShowCoralCurve ? 'block' : 'none';
+    showToast(kristinShowCoralCurve ? 'Maximum focus curve enabled' : 'Maximum focus curve hidden');
+  } else if (type === 'purple') {
+    kristinShowPurpleCurve = !kristinShowPurpleCurve;
+    const btn = document.getElementById('kristinLegendPurpleBtn');
+    const path = document.getElementById('kristinPurplePath');
+    const area = document.getElementById('kristinPurpleArea');
+    const point = document.getElementById('kristinPurplePoint');
+    if (btn) btn.classList.toggle('is-disabled', !kristinShowPurpleCurve);
+    if (path) path.classList.toggle('is-hidden', !kristinShowPurpleCurve);
+    if (area) area.classList.toggle('is-hidden', !kristinShowPurpleCurve);
+    if (point) point.style.display = kristinShowPurpleCurve ? 'block' : 'none';
+    showToast(kristinShowPurpleCurve ? 'Min/lack of focus curve enabled' : 'Min/lack of focus curve hidden');
+  }
+}
+window.toggleKristinFocusCurve = toggleKristinFocusCurve;
+
+function calculateKristinFocusSeries(range, monthIdx) {
+  let tasks = [];
+  if (Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0) {
+    tasks = window.calTasksCache;
+  } else if (Array.isArray(currentTodayTasks) && currentTodayTasks.length > 0) {
+    tasks = currentTodayTasks;
+  } else if (window.StorageService && typeof window.StorageService.tasks?.getAll === 'function') {
+    tasks = window.StorageService.tasks.getAll(false);
+  }
+
+  tasks = (tasks || []).filter(t => !t.deleted_at && t.category !== 'Routine');
+
+  let intervals = [];
+  let subtitle = '';
+
+  if (range === 'week') {
+    subtitle = 'Productivity analytics &bull; Last 7 days breakdown';
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    intervals = dayNames.map((name, i) => {
+      const dayTasks = tasks.filter((t, idx) => (idx % 7) === i);
+      const done = dayTasks.filter(t => t.completed).length;
+      const rate = dayTasks.length > 0 ? (done / dayTasks.length) : (0.45 + (Math.sin(i * 1.2) * 0.25));
+      const maxF = Math.min(96, Math.max(38, Math.round(rate * 85 + 10)));
+      const minF = Math.min(75, Math.max(16, Math.round(100 - maxF * 0.85 + (Math.cos(i) * 12))));
+      return {
+        label: name,
+        fullTitle: `${name} Velocity`,
+        maxFocus: maxF,
+        minFocus: minF,
+        tasksDone: done,
+        tasksTotal: dayTasks.length
+      };
+    });
+  } else if (range === 'quarter') {
+    subtitle = 'Productivity analytics &bull; 3 months (Quarterly)';
+    const quarterChunks = ['W1', 'W3', 'W5', 'W7', 'W9', 'W11'];
+    intervals = quarterChunks.map((w, i) => {
+      const maxF = Math.min(92, Math.max(42, Math.round(52 + Math.sin(i * 1.1) * 26)));
+      const minF = Math.min(72, Math.max(18, Math.round(48 - Math.sin(i * 1.1) * 18 + (i % 2 === 0 ? 8 : -6))));
+      return {
+        label: w,
+        fullTitle: `Quarter ${w}`,
+        maxFocus: maxF,
+        minFocus: minF,
+        tasksDone: Math.round(maxF / 10),
+        tasksTotal: 12
+      };
+    });
+  } else if (range === 'year') {
+    subtitle = 'Productivity analytics &bull; Year 2026';
+    intervals = KRISTIN_MONTH_NAMES.map((m, i) => {
+      const maxF = Math.min(94, Math.max(35, Math.round(48 + Math.sin(i * 0.6) * 32)));
+      const minF = Math.min(68, Math.max(18, Math.round(42 - Math.sin(i * 0.6) * 20)));
+      return {
+        label: m,
+        fullTitle: `${m} 2026`,
+        maxFocus: maxF,
+        minFocus: minF,
+        tasksDone: Math.round(maxF / 5),
+        tasksTotal: 20
+      };
+    });
+  } else {
+    // Default: 'month' (4 weeks)
+    const monthName = KRISTIN_MONTH_NAMES[monthIdx];
+    subtitle = `Productivity analytics &bull; ${KRISTIN_MONTH_FULL_NAMES[monthIdx]} (4 Weeks)`;
+    const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+    const baseCurves = [
+      { maxF: 62, minF: 28 },
+      { maxF: 78, minF: 41 },
+      { maxF: 44, minF: 68 },
+      { maxF: 69, minF: 34 }
+    ];
+    intervals = weeks.map((w, i) => {
+      const base = baseCurves[i];
+      const taskDoneCount = tasks.filter((t, idx) => (idx % 4) === i && t.completed).length;
+      const adjMax = Math.min(95, Math.max(30, base.maxF + (taskDoneCount * 2)));
+      const adjMin = Math.min(80, Math.max(15, base.minF - Math.floor(taskDoneCount * 1.5)));
+      return {
+        label: w,
+        fullTitle: `${w} • ${monthName}`,
+        maxFocus: adjMax,
+        minFocus: adjMin,
+        tasksDone: taskDoneCount,
+        tasksTotal: taskDoneCount + 4
+      };
+    });
+  }
+
+  const sumConc = intervals.reduce((acc, cur) => acc + (cur.maxFocus - cur.minFocus * 0.35), 0);
+  const avgConc = Math.min(98, Math.max(20, Math.round(sumConc / intervals.length)));
+
+  return { intervals, subtitle, avgConc };
+}
+
+function renderKristinFocusingCard() {
+  const card = document.getElementById('kristinFocusingCard');
+  if (!card) return;
+
+  const data = calculateKristinFocusSeries(kristinFocusRange, kristinFocusSelectedMonthIdx);
+  kristinFocusCurrentData = data;
+
+  // 1. Update Subtitle & Average Concentration
+  const subEl = document.getElementById('kristinFocusSubtitle');
+  if (subEl) subEl.innerHTML = data.subtitle;
+
+  const bigPctEl = document.getElementById('kristinFocusBigPct');
+  if (bigPctEl) bigPctEl.textContent = `${data.avgConc}%`;
+
+  const trendEl = document.getElementById('kristinFocusTrendBadge');
+  if (trendEl) {
+    if (data.avgConc >= 50) {
+      trendEl.textContent = `↑ +${Math.round((data.avgConc - 40) * 0.4 + 2)}% vs prior`;
+      trendEl.className = 'kristin-focus-trend-badge';
+    } else {
+      trendEl.textContent = `↓ -${Math.round((50 - data.avgConc) * 0.3 + 1)}% vs prior`;
+      trendEl.className = 'kristin-focus-trend-badge down';
+    }
+  }
+
+  // 2. Map intervals to SVG coordinates (ViewBox: 450 x 140)
+  const count = data.intervals.length;
+  const startX = 15;
+  const endX = 435;
+  const stepX = (endX - startX) / (count - 1);
+
+  // y-axis: 0% at y=125, 100% at y=20 (height range = 105)
+  const mapY = (val) => 125 - (val / 100) * 105;
+
+  const coralPoints = [];
+  const purplePoints = [];
+
+  data.intervals.forEach((item, i) => {
+    const x = startX + i * stepX;
+    const yCoral = mapY(item.maxFocus);
+    const yPurple = mapY(item.minFocus);
+    coralPoints.push({ x, y: yCoral, ...item });
+    purplePoints.push({ x, y: yPurple, ...item });
+  });
+
+  kristinFocusCurrentPoints = { coralPoints, purplePoints };
+
+  // 3. Build SVG Bézier Splines
+  const coralPathD = buildSmoothSvgPath(coralPoints);
+  const purplePathD = buildSmoothSvgPath(purplePoints);
+
+  const coralPathEl = document.getElementById('kristinCoralPath');
+  const purplePathEl = document.getElementById('kristinPurplePath');
+  const coralAreaEl = document.getElementById('kristinCoralArea');
+  const purpleAreaEl = document.getElementById('kristinPurpleArea');
+
+  if (coralPathEl) coralPathEl.setAttribute('d', coralPathD);
+  if (purplePathEl) purplePathEl.setAttribute('d', purplePathD);
+
+  if (coralAreaEl && coralPoints.length) {
+    const areaD = `${coralPathD} L ${coralPoints[coralPoints.length - 1].x} 140 L ${coralPoints[0].x} 140 Z`;
+    coralAreaEl.setAttribute('d', areaD);
+  }
+  if (purpleAreaEl && purplePoints.length) {
+    const areaD = `${purplePathD} L ${purplePoints[purplePoints.length - 1].x} 140 L ${purplePoints[0].x} 140 Z`;
+    purpleAreaEl.setAttribute('d', areaD);
+  }
+
+  // 4. Position active point and tooltip
+  const activeIdx = Math.min(kristinFocusActivePointIdx, count - 1);
+  updateKristinActivePoint(activeIdx);
+
+  // 5. Render Month Selector on left
+  renderKristinMonthSelector();
+}
+window.renderKristinFocusingCard = renderKristinFocusingCard;
+
+function updateKristinActivePoint(idx) {
+  if (!kristinFocusCurrentPoints || !kristinFocusCurrentPoints.coralPoints) return;
+  const pCoral = kristinFocusCurrentPoints.coralPoints[idx];
+  const pPurple = kristinFocusCurrentPoints.purplePoints[idx];
+  if (!pCoral || !pPurple) return;
+
+  kristinFocusActivePointIdx = idx;
+
+  const guideLine = document.getElementById('kristinWaveGuideLine');
+  if (guideLine) {
+    guideLine.setAttribute('x1', pCoral.x.toFixed(1));
+    guideLine.setAttribute('x2', pCoral.x.toFixed(1));
+  }
+
+  const cPoint = document.getElementById('kristinCoralPoint');
+  if (cPoint) {
+    cPoint.setAttribute('cx', pCoral.x.toFixed(1));
+    cPoint.setAttribute('cy', pCoral.y.toFixed(1));
+  }
+
+  const pPoint = document.getElementById('kristinPurplePoint');
+  if (pPoint) {
+    pPoint.setAttribute('cx', pPurple.x.toFixed(1));
+    pPoint.setAttribute('cy', pPurple.y.toFixed(1));
+  }
+
+  // Tooltip content & positioning
+  const tooltip = document.getElementById('kristinWaveTooltip');
+  const titleEl = document.getElementById('kristinWaveTooltipTitle');
+  const subEl = document.getElementById('kristinWaveTooltipSub');
+  const tipMax = document.getElementById('kristinTipMax');
+  const tipMin = document.getElementById('kristinTipMin');
+
+  if (titleEl) titleEl.textContent = pCoral.fullTitle || pCoral.label;
+  if (subEl) {
+    const diff = pCoral.maxFocus - pCoral.minFocus;
+    if (diff > 35) subEl.textContent = 'Deep Flow (Optimal)';
+    else if (diff > 15) subEl.textContent = 'Balanced Focus';
+    else if (diff > -10) subEl.textContent = 'Unbalanced';
+    else subEl.textContent = 'Friction / Distracted';
+  }
+  if (tipMax) tipMax.textContent = `Max: ${pCoral.maxFocus}%`;
+  if (tipMin) tipMin.textContent = `Min: ${pPurple.minFocus}%`;
+
+  if (tooltip) {
+    const pctX = Math.round((pCoral.x / 450) * 100);
+    const clampedPct = Math.max(14, Math.min(86, pctX));
+    tooltip.style.left = `${clampedPct}%`;
+  }
+}
+
+function initKristinFocusingCardListeners() {
+  const stage = document.getElementById('kristinWaveStage');
+  if (!stage || stage.dataset.bound) return;
+  stage.dataset.bound = 'true';
+
+  const handlePointer = (e) => {
+    if (!kristinFocusCurrentPoints || !kristinFocusCurrentPoints.coralPoints) return;
+    const rect = stage.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0]?.clientX);
+    if (!clientX) return;
+    const relX = clientX - rect.left;
+    const svgX = (relX / rect.width) * 450;
+
+    let closestIdx = 0;
+    let minDiff = Infinity;
+    kristinFocusCurrentPoints.coralPoints.forEach((p, idx) => {
+      const diff = Math.abs(p.x - svgX);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = idx;
+      }
+    });
+
+    updateKristinActivePoint(closestIdx);
+  };
+
+  stage.addEventListener('mousemove', handlePointer);
+  stage.addEventListener('touchmove', handlePointer, { passive: true });
+  stage.addEventListener('click', handlePointer);
+}
+window.initKristinFocusingCardListeners = initKristinFocusingCardListeners;
+
 async function updateKristinExecutiveDashboard() {
   const welcomeNameEl = document.getElementById('kristinWelcomeName');
   const profileNameEl = document.getElementById('kristinProfileName');
@@ -23605,6 +24015,14 @@ async function updateKristinExecutiveDashboard() {
     await updateKristinTaskVelocityCards();
   } catch (err) {
     console.debug('Kristin stats velocity error:', err);
+  }
+
+  // Render and initialize Focusing & Productivity Analytics Card
+  try {
+    initKristinFocusingCardListeners();
+    renderKristinFocusingCard();
+  } catch (err) {
+    console.debug('renderKristinFocusingCard error:', err);
   }
 
   // Hook up search input to live filter cards and tasks
