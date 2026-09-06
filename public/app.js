@@ -599,8 +599,16 @@ async function loadTasks() {
           sync_status: 'synced',
         });
       } else {
+        const updates = {};
         if (match.completed !== Boolean(apiTask.completed)) {
-          window.StorageService.tasks.update(match.id, { completed: Boolean(apiTask.completed) });
+          updates.completed = Boolean(apiTask.completed);
+        }
+        const apiPrio = (apiTask.priority || 'medium').toLowerCase();
+        if (match.priority !== apiPrio) {
+          updates.priority = apiPrio;
+        }
+        if (Object.keys(updates).length > 0) {
+          window.StorageService.tasks.update(match.id, updates);
         }
       }
     });
@@ -23142,20 +23150,11 @@ async function renderKristinHighPriorityTasks() {
     return taskDate <= todayStr;
   });
 
-  // Filter high/urgent priority tasks
+  // Filter high/urgent priority tasks only (Strictly High and Urgent)
   let highPrioTasks = todayOrOverdue.filter(t => {
-    const p = (t.priority || '').toLowerCase();
+    const p = (t.priority || '').trim().toLowerCase();
     return p === 'high' || p === 'urgent';
   });
-
-  // If there are no high/urgent priority tasks specifically, show today's active pending tasks
-  // so the user still has actionable tasks on their dashboard
-  if (highPrioTasks.length === 0) {
-    const todayTasksOnly = todayOrOverdue.filter(t => (t.date || t.dueDate) === todayStr);
-    if (todayTasksOnly.length > 0) {
-      highPrioTasks = todayTasksOnly;
-    }
-  }
 
   // Sort: pending first, then urgent before high, then by time or title
   highPrioTasks.sort((a, b) => {

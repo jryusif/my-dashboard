@@ -30,6 +30,7 @@ export async function PATCH(req, { params }) {
     if (body.category !== undefined) updateData.category = body.category;
     if (body.segment !== undefined) updateData.segment = body.segment;
     if (body.timeBlock !== undefined) updateData.timeBlock = body.timeBlock;
+    if (body.priority !== undefined) updateData.priority = body.priority;
 
     const updated = await prisma.task.update({
       where: { id },

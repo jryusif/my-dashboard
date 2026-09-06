@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=38.0" />
+<link rel="stylesheet" href="style.css?v=39.0" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -579,26 +579,32 @@
 
             <!-- Card 3: Task Velocity Column (Coral & Cyan Stack) -->
             <div class="kristin-task-cards-stack">
-              <!-- Prioritized Tasks (Sunset Peach-Coral Mesh) -->
-              <div class="kristin-card-coral" id="kristinCardCoral" onclick="focusKristinPriorityTasks()" role="button" tabindex="0" title="Click to view and manage Prioritized Tasks">
+              <!-- Prioritized Tasks: High & Urgent -->
+              <div class="kristin-card-coral" id="kristinCardCoral" onclick="focusKristinPriorityTasks()" role="button" tabindex="0" title="Click to view and manage High Priority & Urgent Tasks">
                 <div class="kristin-task-head">
-                  <span class="kristin-task-title">Prioritized<br>tasks</span>
-                  <div class="kristin-frosted-circle">⏱</div>
+                  <div>
+                    <span class="kristin-task-title">Prioritized<br>tasks</span>
+                    <span class="kristin-card-scope-badge coral">High &amp; Urgent</span>
+                  </div>
+                  <div class="kristin-frosted-circle" title="High Priority &amp; Urgent">🔥</div>
                 </div>
                 <div class="kristin-task-body">
                   <div class="kristin-hero-pct" id="kristinPrioritizedPct">0%</div>
-                  <div class="kristin-hero-sub" id="kristinPrioritizedSub">Avg. Completed</div>
+                  <div class="kristin-hero-sub" id="kristinPrioritizedSub">0 high/urgent tasks</div>
                 </div>
                 <div class="kristin-card-mini-track">
                   <div class="kristin-card-mini-bar coral" id="kristinPrioritizedBar" style="width: 0%;"></div>
                 </div>
               </div>
 
-              <!-- Additional Tasks (Sky Cyan Mesh) -->
-              <div class="kristin-card-cyan" id="kristinCardCyan" onclick="focusKristinAdditionalTasks()" role="button" tabindex="0" title="Click to view and manage Additional Tasks in Planner">
+              <!-- Additional Tasks: Standard & The Rest -->
+              <div class="kristin-card-cyan" id="kristinCardCyan" onclick="focusKristinAdditionalTasks()" role="button" tabindex="0" title="Click to view and manage Additional Tasks (Medium, Low &amp; Standard)">
                 <div class="kristin-task-head">
-                  <span class="kristin-task-title">Additional<br>tasks</span>
-                  <div class="kristin-frosted-circle">✓</div>
+                  <div>
+                    <span class="kristin-task-title">Additional<br>tasks</span>
+                    <span class="kristin-card-scope-badge cyan">The Rest</span>
+                  </div>
+                  <div class="kristin-frosted-circle" title="Standard, Medium &amp; Low Priority">✓</div>
                 </div>
                 <div class="kristin-task-body">
                   <div class="kristin-hero-pct" id="kristinAdditionalPct">0%</div>

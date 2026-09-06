@@ -71,6 +71,7 @@ model Task {
   segment     String?
   date        String   // 'YYYY-MM-DD'
   completed   Boolean  @default(false)
+  priority    String   @default("Medium") // 'Urgent' | 'High' | 'Medium' | 'Low'
   timeBlock   String?  @map("time_block")
   order       Int      @default(0)
   createdAt   DateTime @default(now()) @map("created_at")

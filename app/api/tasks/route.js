@@ -108,6 +108,7 @@ export async function POST(req) {
       segment: segment || null,
       date,
       completed: Boolean(completed),
+      priority: priority || 'Medium',
       timeBlock: timeBlock || null
     };
 
