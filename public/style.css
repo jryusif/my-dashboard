@@ -23898,6 +23898,155 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   font-weight: 600;
 }
 
+/* =====================================================================
+   Light Theme Adaptations for My Activity Card
+   ===================================================================== */
+body[data-theme="kristin-light"] .my-activity-card,
+[data-theme="kristin-light"] .my-activity-card {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
+  color: #0F172A;
+}
+
+body[data-theme="kristin-light"] .my-activity-title,
+[data-theme="kristin-light"] .my-activity-title {
+  color: #0F172A;
+}
+
+body[data-theme="kristin-light"] .my-activity-pill-btn,
+[data-theme="kristin-light"] .my-activity-pill-btn {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+  color: #0F172A;
+}
+
+body[data-theme="kristin-light"] .my-activity-pill-btn:hover,
+[data-theme="kristin-light"] .my-activity-pill-btn:hover {
+  background: #EDF2F7;
+  border-color: #CBD5E1;
+}
+
+body[data-theme="kristin-light"] .my-activity-chevron,
+[data-theme="kristin-light"] .my-activity-chevron {
+  stroke: #64748B;
+}
+
+body[data-theme="kristin-light"] .my-activity-icon-btn,
+[data-theme="kristin-light"] .my-activity-icon-btn {
+  color: #64748B;
+}
+
+body[data-theme="kristin-light"] .my-activity-icon-btn:hover,
+[data-theme="kristin-light"] .my-activity-icon-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+body[data-theme="kristin-light"] .my-activity-menu,
+[data-theme="kristin-light"] .my-activity-menu {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
+body[data-theme="kristin-light"] .my-activity-menu-item,
+[data-theme="kristin-light"] .my-activity-menu-item {
+  color: #475569;
+}
+
+body[data-theme="kristin-light"] .my-activity-menu-item:hover,
+[data-theme="kristin-light"] .my-activity-menu-item:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+body[data-theme="kristin-light"] .my-activity-menu-item.active,
+[data-theme="kristin-light"] .my-activity-menu-item.active {
+  background: #EFF6FF;
+  color: #2563EB;
+  font-weight: 700;
+}
+
+body[data-theme="kristin-light"] .my-activity-big-stat,
+[data-theme="kristin-light"] .my-activity-big-stat {
+  color: #0F172A;
+}
+
+body[data-theme="kristin-light"] .my-activity-trend-badge,
+[data-theme="kristin-light"] .my-activity-trend-badge {
+  color: #10B981;
+}
+
+body[data-theme="kristin-light"] .my-activity-task-pill,
+[data-theme="kristin-light"] .my-activity-task-pill {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #0F172A;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+body[data-theme="kristin-light"] .my-activity-guide-line,
+[data-theme="kristin-light"] .my-activity-guide-line {
+  background: #CBD5E1;
+}
+
+body[data-theme="kristin-light"] .my-activity-guide-knob,
+[data-theme="kristin-light"] .my-activity-guide-knob {
+  background: #FFFFFF;
+  border: 2.5px solid #0F172A;
+  box-shadow: 0 0 10px rgba(15, 23, 42, 0.25);
+}
+
+body[data-theme="kristin-light"] .my-activity-capsule,
+[data-theme="kristin-light"] .my-activity-capsule {
+  background: repeating-linear-gradient(
+    -45deg,
+    #F8FAFC,
+    #F8FAFC 4px,
+    #E2E8F0 4px,
+    #E2E8F0 7px
+  );
+  border-color: #E2E8F0;
+}
+
+body[data-theme="kristin-light"] .my-activity-fill,
+[data-theme="kristin-light"] .my-activity-fill {
+  background: #CBD5E1;
+}
+
+body[data-theme="kristin-light"] .my-activity-pillar-item.is-active .my-activity-fill,
+[data-theme="kristin-light"] .my-activity-pillar-item.is-active .my-activity-fill {
+  background: #1E293B;
+}
+
+body[data-theme="kristin-light"] .my-activity-bar-pct,
+[data-theme="kristin-light"] .my-activity-bar-pct {
+  color: #475569;
+}
+
+body[data-theme="kristin-light"] .my-activity-bar-pct.is-danger,
+[data-theme="kristin-light"] .my-activity-bar-pct.is-danger {
+  color: #EF4444;
+}
+
+body[data-theme="kristin-light"] .my-activity-pillar-item.is-active .my-activity-bar-pct,
+[data-theme="kristin-light"] .my-activity-pillar-item.is-active .my-activity-bar-pct {
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+body[data-theme="kristin-light"] .my-activity-label,
+[data-theme="kristin-light"] .my-activity-label {
+  color: #64748B;
+}
+
+body[data-theme="kristin-light"] .my-activity-pillar-item.is-active .my-activity-label,
+[data-theme="kristin-light"] .my-activity-pillar-item.is-active .my-activity-label {
+  color: #0F172A;
+  font-weight: 700;
+}
+
 @media (max-width: 600px) {
   .my-activity-card {
     padding: 20px 16px 18px;

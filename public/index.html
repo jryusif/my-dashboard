@@ -17,6 +17,8 @@
 <script>
   (function() {
     try {
+      var savedTheme = localStorage.getItem('antigravity_theme') || 'kristin-light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
       var token = localStorage.getItem('antigravity_token');
       var user = localStorage.getItem('antigravity_user');
       if (token && user && user !== 'null') {
@@ -420,7 +422,7 @@
         <div class="nav-right-zone">
           <div class="nav-cluster-trio" id="navClusterTrio">
             <!-- 1. Dark & Light Theme Switch Pill -->
-            <div class="nav-theme-switch-pill is-dark-active" id="navThemeSwitchPill" onclick="toggleNavTheme(event)" title="Toggle Dark / Light Theme" role="switch" aria-checked="true">
+            <div class="nav-theme-switch-pill is-light-active" id="navThemeSwitchPill" onclick="toggleNavTheme(event)" title="Toggle Dark / Light Theme" role="switch" aria-checked="false">
               <div class="nav-theme-switch-knob" id="navThemeSwitchKnob"></div>
               <button type="button" class="nav-theme-btn is-moon" id="navThemeMoonBtn" onclick="setThemeFromNav('dark', event)" title="Dark Theme" aria-label="Dark Theme">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -529,7 +531,7 @@
               <input type="text" id="kristinQuickSearch" placeholder="Search..." autocomplete="off" />
             </div>
 
-            <div class="nav-theme-switch-pill is-dark-active kristin-welcome-theme-pill" id="welcomeThemeSwitchPill" onclick="toggleNavTheme(event)" title="Toggle Dark / Light Theme" role="switch" aria-checked="true">
+            <div class="nav-theme-switch-pill is-light-active kristin-welcome-theme-pill" id="welcomeThemeSwitchPill" onclick="toggleNavTheme(event)" title="Toggle Dark / Light Theme" role="switch" aria-checked="false">
               <div class="nav-theme-switch-knob"></div>
               <button type="button" class="nav-theme-btn is-moon" onclick="setThemeFromNav('dark', event)" title="Dark Theme" aria-label="Dark Theme">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

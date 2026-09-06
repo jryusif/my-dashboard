@@ -17385,9 +17385,10 @@ window.setThemeFromNav = setThemeFromNav;
 
 function initTheme() {
   let saved = localStorage.getItem('antigravity_theme');
-  if (!saved || saved === 'cyber-cyan' || !localStorage.getItem('antigravity_kristin_migrated')) {
+  if (!saved || saved === 'cyber-cyan' || !localStorage.getItem('antigravity_light_default_v2')) {
     saved = 'kristin-light';
     localStorage.setItem('antigravity_theme', 'kristin-light');
+    localStorage.setItem('antigravity_light_default_v2', 'true');
     localStorage.setItem('antigravity_kristin_migrated', 'true');
   }
   setTheme(saved, false);
