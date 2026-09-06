@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=33.9" />
+<link rel="stylesheet" href="style.css?v=35.0" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -1256,6 +1256,335 @@
             <h1>Finances</h1>
           </div>
         </header>
+
+        <!-- Executive Finance Command & Revenue Center (Reference Redesign) -->
+        <div id="finExecutiveHero" class="fin-exec-container">
+          <!-- 1. Top Account & Stream Capsules Bar -->
+          <div class="fin-top-bar">
+            <div class="fin-capsules-scroll" id="finTopCapsulesBar">
+              <button type="button" class="fin-btn-add-circle" id="btnFinQuickAdd" onclick="document.getElementById('incomeEntryInput') ? document.getElementById('incomeEntryInput').focus() : openPage('Finance')" title="Add Transaction / Entry">+</button>
+              <div class="fin-capsule-item active" onclick="filterFinExecutiveView('all')">
+                <div class="fin-capsule-avatar" style="background:#E0F2FE; color:#0369A1;">💎</div>
+                <span>Total Wealth</span>
+              </div>
+              <div class="fin-capsule-item" onclick="filterFinExecutiveView('cash')">
+                <div class="fin-capsule-avatar" style="background:#DCFCE7; color:#15803D;">💵</div>
+                <span>Liquid Cash</span>
+              </div>
+              <div class="fin-capsule-item" onclick="filterFinExecutiveView('gold')">
+                <div class="fin-capsule-avatar" style="background:#FEF3C7; color:#B45309;">🪙</div>
+                <span>Gold Bullion</span>
+              </div>
+              <div class="fin-capsule-item" onclick="filterFinExecutiveView('investments')">
+                <div class="fin-capsule-avatar" style="background:#EDE9FE; color:#6D28D9;">📈</div>
+                <span>Investments</span>
+              </div>
+              <div class="fin-capsule-item" onclick="filterFinExecutiveView('income')">
+                <div class="fin-capsule-avatar" style="background:#FFE4E6; color:#BE123C;">🏢</div>
+                <span>Revenue Flow</span>
+              </div>
+            </div>
+
+            <div class="fin-top-controls">
+              <button type="button" class="fin-timeframe-toggle" onclick="handleShiftFinanceMonth(0)" title="Current Monthly Range">
+                <span class="fin-toggle-switch"></span>
+                <span id="finTimeframeLabel">Active Month</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Hero Metric Row & 3 Mini KPI Cards -->
+          <div class="fin-hero-row">
+            <div class="fin-hero-left">
+              <div class="fin-hero-eyebrow">Revenue &amp; Capital Volume</div>
+              <div class="fin-hero-main-stat">
+                <span class="fin-hero-amount" id="finHeroAmount">$0</span><span class="fin-hero-amount-cents" id="finHeroCents">.00</span>
+                <span class="fin-badge-trend" id="finHeroTrendBadge">&#9650; 0.0%</span>
+                <span class="fin-badge-delta" id="finHeroDeltaBadge">+$0</span>
+              </div>
+              <div class="fin-hero-subtext" id="finHeroSubtext" onclick="handleShiftFinanceMonth(-1)" title="Compare with previous period">
+                vs prev. $0.00 &nbsp;·&nbsp; <span id="finHeroDateRange">Recent Period</span> &#9662;
+              </div>
+            </div>
+
+            <div class="fin-hero-kpi-cards">
+              <!-- KPI Card 1: Top Stream -->
+              <div class="fin-kpi-card" id="finKpiCardTopStream">
+                <div>
+                  <div class="fin-kpi-label"><span>Top stream</span></div>
+                  <div class="fin-kpi-val" id="finKpiTopStreamVal">$0</div>
+                </div>
+                <div class="fin-kpi-sub-pill" id="finKpiTopStreamPill">
+                  <span class="avatar" style="background:#E0F2FE;">⚡</span>
+                  <span id="finKpiTopStreamName">Primary &gt;</span>
+                </div>
+              </div>
+
+              <!-- KPI Card 2: Premier Asset / Best Deal (Obsidian Dark) -->
+              <div class="fin-kpi-card fin-kpi-dark" id="finKpiCardBestDeal">
+                <div>
+                  <div class="fin-kpi-label">
+                    <span>Best deal / asset</span>
+                    <span class="fin-kpi-star">&#9733;</span>
+                  </div>
+                  <div class="fin-kpi-val" id="finKpiBestDealVal">$0</div>
+                </div>
+                <div class="fin-kpi-sub-pill" id="finKpiBestDealPill">
+                  <span id="finKpiBestDealName">Gold Reserve &gt;</span>
+                </div>
+              </div>
+
+              <!-- KPI Card 3: Transactions Count -->
+              <div class="fin-kpi-card" id="finKpiCardTxCount">
+                <div>
+                  <div class="fin-kpi-label"><span>Transactions</span></div>
+                  <div class="fin-kpi-badge-count" id="finKpiTxCountBadge">0</div>
+                </div>
+                <div class="fin-kpi-trend-down" id="finKpiTxTrend">
+                  <span>&#9660; 5 vs prev</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Proportional Horizontal Stream Bar -->
+          <div class="fin-stream-bar" id="finStreamBar">
+            <div class="fin-stream-segment" style="flex: 4;">
+              <span class="fin-stream-avatar" style="background:#FFE4E6; color:#BE123C;">🏢</span>
+              <span>Primary Income</span>
+              <span class="fin-stream-pct">43.0%</span>
+            </div>
+            <div class="fin-stream-segment" style="flex: 3;">
+              <span class="fin-stream-avatar" style="background:#FEF3C7; color:#B45309;">🪙</span>
+              <span>Gold Reserves</span>
+              <span class="fin-stream-pct">29.6%</span>
+            </div>
+            <div class="fin-stream-segment" style="flex: 2;">
+              <span class="fin-stream-avatar" style="background:#EDE9FE; color:#6D28D9;">📈</span>
+              <span>Investments</span>
+              <span class="fin-stream-pct">22.1%</span>
+            </div>
+            <div class="fin-stream-segment" style="flex: 1;">
+              <span class="fin-stream-avatar" style="background:#DCFCE7; color:#15803D;">💵</span>
+              <span>Cash</span>
+              <span class="fin-stream-pct">5.3%</span>
+            </div>
+          </div>
+
+          <!-- 4. 3-Column Bento Grid -->
+          <div class="fin-bento-grid">
+            <!-- Left Column: Category breakdown + Deep-dive Coral Card -->
+            <div class="fin-col-left">
+              <!-- Top Left: Sources Breakdown List -->
+              <div class="fin-card">
+                <div class="fin-card-head">
+                  <div class="fin-card-head-left">
+                    <button type="button" class="fin-icon-btn" title="Categories">&#9776; &#9662;</button>
+                    <span>Revenue &amp; Allocations</span>
+                  </div>
+                  <button type="button" class="fin-btn-filter-pill" onclick="openPage('Finance')">Filters &#9776;</button>
+                </div>
+                <div class="fin-source-rows" id="finSourceRows">
+                  <!-- Injected dynamically -->
+                </div>
+              </div>
+
+              <!-- Bottom Left: Deep-dive Coral Card & Hatched Matrix -->
+              <div class="fin-card" style="padding: 18px 20px;">
+                <div class="fin-card-head" style="margin-bottom: 12px;">
+                  <div class="fin-card-head-left">
+                    <span style="font-size: 16px;">🏢</span>
+                    <span id="finDeepDiveTitle">Primary Stream &#9662;</span>
+                  </div>
+                  <div class="fin-quick-pills-row" style="gap: 4px;">
+                    <button type="button" class="fin-quick-pill" style="padding: 3px 10px; font-size: 11px; background:#0F172A; color:#FFF; border-color:#0F172A;">Revenue</button>
+                    <button type="button" class="fin-quick-pill" style="padding: 3px 10px; font-size: 11px;">Pace</button>
+                    <button type="button" class="fin-quick-pill" style="padding: 3px 10px; font-size: 11px;">Net</button>
+                  </div>
+                </div>
+
+                <div class="fin-deepdive-split">
+                  <!-- Coral Left Block -->
+                  <div class="fin-coral-block">
+                    <span class="fin-coral-vertical-label">AVERAGE MONTHLY</span>
+                    <div class="fin-coral-inner">
+                      <div>
+                        <div class="fin-coral-item-label">Revenue</div>
+                        <div class="fin-coral-item-val" id="finCoralRevenueVal">$18,550</div>
+                      </div>
+                      <div>
+                        <div class="fin-coral-item-label">Cash Flow Pace</div>
+                        <div class="fin-coral-item-val" id="finCoralPaceVal">92% <span class="fin-coral-subval">on target</span></div>
+                      </div>
+                      <div>
+                        <div class="fin-coral-item-label">Net Surplus</div>
+                        <div class="fin-coral-item-val" id="finCoralSurplusVal">+68%</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Right Hatched Bar Comparison Matrix -->
+                  <div class="fin-hatched-matrix" id="finHatchedMatrix">
+                    <div class="fin-matrix-gridlines">
+                      <div class="fin-gridline-row"><span class="fin-gridline-val">$14,500</span></div>
+                      <div class="fin-gridline-row"><span class="fin-gridline-val">$11,000</span></div>
+                      <div class="fin-gridline-row"><span class="fin-gridline-val">$7,500</span></div>
+                      <div class="fin-gridline-row"><span class="fin-gridline-val">$4,000</span></div>
+                    </div>
+                    <div class="fin-matrix-bars-row">
+                      <div class="fin-matrix-bar-group">
+                        <div class="fin-bar-solid-light" style="height: 55px;"></div>
+                        <div class="fin-bar-hatched" style="height: 65px;">
+                          <div class="fin-bar-tag">$6,900</div>
+                        </div>
+                      </div>
+                      <div class="fin-matrix-bar-group">
+                        <div class="fin-bar-solid-light" style="height: 75px;"></div>
+                        <div class="fin-bar-hatched" style="height: 105px;">
+                          <div class="fin-bar-tag">$11,035</div>
+                        </div>
+                      </div>
+                      <div class="fin-matrix-bar-group">
+                        <div class="fin-bar-solid-light" style="height: 60px;"></div>
+                        <div class="fin-bar-hatched" style="height: 85px;">
+                          <div class="fin-bar-tag">$9,280</div>
+                        </div>
+                      </div>
+                      <div class="fin-matrix-bar-group">
+                        <div class="fin-bar-solid-light" style="height: 80px;"></div>
+                        <div class="fin-bar-hatched" style="height: 70px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Middle Column: 3D Capsule Pillars -->
+            <div class="fin-card fin-card-middle">
+              <div class="fin-card-head">
+                <div class="fin-card-head-left">
+                  <button type="button" class="fin-icon-btn" title="Pillars">&#9644;&#9644;&#9644; &#9662;</button>
+                  <span>Allocation Pillars</span>
+                </div>
+                <button type="button" class="fin-btn-filter-pill" onclick="openPage('Finance')">Filters &#9776;</button>
+              </div>
+
+              <div class="fin-capsule-pillars-stage" id="fin3dPillarsStage">
+                <div class="fin-3d-pillar-wrap">
+                  <div class="fin-3d-pillar fin-pillar-hatched" style="height: 140px;">
+                    <div class="fin-pillar-icon" style="color:#BE123C;">🏢</div>
+                  </div>
+                </div>
+                <div class="fin-3d-pillar-wrap">
+                  <div class="fin-3d-pillar" style="height: 200px;">
+                    <div class="fin-pillar-icon" style="color:#B45309;">🪙</div>
+                  </div>
+                </div>
+                <div class="fin-3d-pillar-wrap">
+                  <div class="fin-3d-pillar fin-pillar-hatched" style="height: 110px;">
+                    <div class="fin-pillar-icon" style="color:#2563EB;">📈</div>
+                  </div>
+                </div>
+                <div class="fin-3d-pillar-wrap">
+                  <div class="fin-3d-pillar" style="height: 165px;">
+                    <div class="fin-pillar-icon" style="color:#15803D;">💵</div>
+                  </div>
+                </div>
+                <div class="fin-3d-pillar-wrap">
+                  <div class="fin-3d-pillar fin-pillar-hatched" style="height: 125px;">
+                    <div class="fin-pillar-icon" style="color:#64748B;">🛍️</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="fin-pillar-caption" onclick="openPage('Finance')">
+                <span>Volume amount by category</span> &#9662;
+              </div>
+            </div>
+
+            <!-- Right Column: Leaderboard, Platform Carousel, & Dynamic Sparkline -->
+            <div class="fin-col-right">
+              <div class="fin-card" style="padding: 20px;">
+                <!-- Leaderboard Table -->
+                <table class="fin-leaderboard-table">
+                  <thead>
+                    <tr>
+                      <th>STREAM / ACCOUNT</th>
+                      <th>REVENUE</th>
+                      <th style="text-align:right;">TRANSACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody id="finLeaderboardBody">
+                    <!-- Injected dynamically -->
+                  </tbody>
+                </table>
+
+                <!-- Quick Filter Badges -->
+                <div class="fin-quick-pills-row" style="margin-top: 14px;">
+                  <button type="button" class="fin-quick-pill" onclick="openPage('Finance')">Top streams &#128170;</button>
+                  <button type="button" class="fin-quick-pill" onclick="openPage('Finance')">High margin &#128293;</button>
+                  <button type="button" class="fin-quick-pill" onclick="openRecurringFinanceModal()">Active rules &#9889;</button>
+                </div>
+
+                <!-- Work with platforms / Capital allocation card -->
+                <div class="fin-platform-carousel-wrap">
+                  <div class="fin-platform-section-title">Portfolio Distribution</div>
+                  <div class="fin-platform-cards-row" id="finPlatformCardsRow">
+                    <div class="fin-platform-stat-card">
+                      <div class="fin-platform-brand">
+                        <span style="font-size: 16px;">🏢</span> Primary Stream
+                      </div>
+                      <div style="display:flex; align-items:baseline;">
+                        <span class="fin-platform-big-pct" id="finPlatformMainPct">45.3%</span>
+                        <span class="fin-platform-big-amt" id="finPlatformMainAmt">$71,048</span>
+                      </div>
+                    </div>
+                    <div class="fin-platform-stat-card" style="opacity: 0.85;">
+                      <div class="fin-platform-brand">
+                        <span style="font-size: 16px;">🪙</span> Gold Asset
+                      </div>
+                      <div style="display:flex; align-items:baseline;">
+                        <span class="fin-platform-big-pct">28.1%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sales dynamic weekly curve -->
+                <div class="fin-sparkline-section">
+                  <div class="fin-sparkline-title">Cashflow Dynamic</div>
+                  <div class="fin-sparkline-weeks">
+                    <span>W 1</span>
+                    <span>W 3</span>
+                    <span>W 5</span>
+                    <span>W 7</span>
+                  </div>
+                  <div class="fin-sparkline-svg-wrap">
+                    <svg class="fin-sparkline-svg" viewBox="0 0 320 60" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="finWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stop-color="#E11D48" stop-opacity="0.25"/>
+                          <stop offset="100%" stop-color="#E11D48" stop-opacity="0.0"/>
+                        </linearGradient>
+                      </defs>
+                      <path d="M 0,42 C 40,48 70,30 100,38 C 130,46 160,18 200,15 C 230,12 250,32 280,24 C 300,18 310,22 320,20 L 320,60 L 0,60 Z" fill="url(#finWaveGrad)"/>
+                      <path d="M 0,42 C 40,48 70,30 100,38 C 130,46 160,18 200,15 C 230,12 250,32 280,24 C 300,18 310,22 320,20" fill="none" stroke="#E11D48" stroke-width="2.2" stroke-linecap="round"/>
+                      <!-- Floating waypoint markers -->
+                      <circle cx="200" cy="15" r="3.5" fill="#FFFFFF" stroke="#E11D48" stroke-width="2"/>
+                      <circle cx="280" cy="24" r="3.5" fill="#FFFFFF" stroke="#E11D48" stroke-width="2"/>
+                    </svg>
+                  </div>
+                  <div class="fin-sparkline-baseline">
+                    <div class="fin-sparkline-badge-dot" style="background:#BE123C;" title="Primary Income">🏢</div>
+                    <div class="fin-sparkline-badge-dot" style="background:#B45309;" title="Gold Bullion">🪙</div>
+                    <div class="fin-sparkline-badge-dot" style="background:#2563EB;" title="Investments">📈</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Finance View Switcher Tabs -->
         <div class="category-view-tabs" id="financeViewTabs">
@@ -6169,6 +6498,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=34.0"></script>
+  <script src="app.js?v=35.0"></script>
 </body>
 </html>

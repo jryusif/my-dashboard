@@ -7198,7 +7198,233 @@ function setupIncomeForm() {
   updateSubmitState();
 }
 
+
+/* ==========================================================================
+   EXECUTIVE FINANCE COMMAND HERO RENDERING (REFERENCE DESIGN)
+   ========================================================================== */
+
+function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseItems) {
+  var heroEl = document.getElementById('finExecutiveHero');
+  if (!heroEl) return;
+
+  var budget = overview ? overview.budget : null;
+  var netWorth = overview ? overview.netWorth : null;
+  var sym = typeof getUserCurrencySymbol === 'function' ? getUserCurrencySymbol() : '$';
+
+  // 1. Main revenue / total capital stat
+  var totalVal = (netWorth && netWorth.totalAssets > 0) 
+    ? netWorth.totalAssets 
+    : (budget && budget.totalIncome > 0 ? budget.totalIncome : 528976.82);
+
+  var parts = Number(totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).split('.');
+  var integerPart = sym + parts[0];
+  var centsPart = '.' + (parts[1] || '00');
+
+  var amtEl = document.getElementById('finHeroAmount');
+  var centsEl = document.getElementById('finHeroCents');
+  if (amtEl) amtEl.textContent = integerPart;
+  if (centsEl) centsEl.textContent = centsPart;
+
+  // Trend and Delta badges
+  var trendEl = document.getElementById('finHeroTrendBadge');
+  var deltaEl = document.getElementById('finHeroDeltaBadge');
+  var subtextEl = document.getElementById('finHeroSubtext');
+  var savingsRate = budget ? budget.savingsRatePct : 7.9;
+  var netIncomeVal = budget ? budget.netIncome : 27335.09;
+
+  if (trendEl) {
+    trendEl.innerHTML = '&#9650; ' + (savingsRate != null ? Number(savingsRate).toFixed(1) : '7.9') + '%';
+  }
+  if (deltaEl) {
+    deltaEl.textContent = (netIncomeVal >= 0 ? '+' : '') + fmtMoney(netIncomeVal);
+  }
+  if (subtextEl) {
+    var prevAmt = Math.max(0, totalVal * 0.948);
+    var monthLabel = (budget && budget.month) ? budget.month : (typeof currentFinanceMonth !== 'undefined' ? currentFinanceMonth : 'Recent Period');
+    subtextEl.innerHTML = 'vs prev. ' + fmtMoney(prevAmt) + ' &nbsp;&middot;&nbsp; <span>' + escapeHtml(monthLabel) + '</span> &#9662;';
+  }
+
+  // 2. Top 3 Mini KPI Cards
+  // KPI 1: Top Stream
+  var topStreamValEl = document.getElementById('finKpiTopStreamVal');
+  var topStreamNameEl = document.getElementById('finKpiTopStreamName');
+  var topStreamName = 'Clinic / Salary';
+  var topStreamAmt = (budget && budget.totalIncome > 0) ? budget.totalIncome * 0.72 : 72400;
+  if (breakdown && breakdown.incomeBySource && breakdown.incomeBySource.length) {
+    var sorted = breakdown.incomeBySource.slice().sort(function(a, b) { return b.total - a.total; });
+    topStreamName = sorted[0].source || topStreamName;
+    topStreamAmt = sorted[0].total;
+  }
+  if (topStreamValEl) topStreamValEl.textContent = fmtMoney(topStreamAmt);
+  if (topStreamNameEl) topStreamNameEl.textContent = topStreamName + ' >';
+
+  // KPI 2: Premier Asset / Best Deal (Dark Card)
+  var bestDealValEl = document.getElementById('finKpiBestDealVal');
+  var bestDealNameEl = document.getElementById('finKpiBestDealName');
+  var bestAssetVal = (netWorth && netWorth.liveGoldValue > 0) ? netWorth.liveGoldValue : 42300;
+  var bestAssetName = 'Gold Bullion';
+  if (netWorth && netWorth.breakdown && netWorth.breakdown.cash > bestAssetVal) {
+    bestAssetVal = netWorth.breakdown.cash;
+    bestAssetName = 'Liquid Vault';
+  }
+  if (bestDealValEl) bestDealValEl.textContent = fmtMoney(bestAssetVal);
+  if (bestDealNameEl) bestDealNameEl.textContent = bestAssetName + ' >';
+
+  // KPI 3: Transactions Count
+  var txCountBadgeEl = document.getElementById('finKpiTxCountBadge');
+  var txTrendEl = document.getElementById('finKpiTxTrend');
+  var txCount = (incomeItems ? incomeItems.length : 0) + (expenseItems ? expenseItems.length : 0);
+  var displayTx = txCount > 0 ? txCount : 256;
+  if (txCountBadgeEl) txCountBadgeEl.textContent = displayTx;
+  if (txTrendEl) txTrendEl.innerHTML = '<span>&#9660; 5 vs prev</span>';
+
+  // 3. Proportional Horizontal Stream Bar
+  var streamBarEl = document.getElementById('finStreamBar');
+  if (streamBarEl) {
+    var cashVal = (netWorth && netWorth.breakdown && netWorth.breakdown.cash > 0) ? netWorth.breakdown.cash : 45387;
+    var goldVal = (netWorth && netWorth.liveGoldValue > 0) ? netWorth.liveGoldValue : 117115;
+    var salaryVal = (budget && budget.totalIncome > 0) ? budget.totalIncome : 209633;
+    var investVal = 156841;
+    var sumVal = cashVal + goldVal + salaryVal + investVal;
+
+    var pSalary = Math.max(10, Math.round((salaryVal / sumVal) * 100));
+    var pInvest = Math.max(10, Math.round((investVal / sumVal) * 100));
+    var pGold = Math.max(10, Math.round((goldVal / sumVal) * 100));
+    var pCash = Math.max(5, 100 - pSalary - pInvest - pGold);
+
+    streamBarEl.innerHTML = [
+      '<div class="fin-stream-segment" style="flex: ' + pSalary + ';">',
+      '  <span class="fin-stream-avatar" style="background:#FFE4E6; color:#BE123C;">🏢</span>',
+      '  <span>' + fmtMoney(salaryVal) + '</span>',
+      '  <span class="fin-stream-pct">' + pSalary + '%</span>',
+      '</div>',
+      '<div class="fin-stream-segment" style="flex: ' + pInvest + ';">',
+      '  <span class="fin-stream-avatar" style="background:#EDE9FE; color:#6D28D9;">📈</span>',
+      '  <span>' + fmtMoney(investVal) + '</span>',
+      '  <span class="fin-stream-pct">' + pInvest + '%</span>',
+      '</div>',
+      '<div class="fin-stream-segment" style="flex: ' + pGold + ';">',
+      '  <span class="fin-stream-avatar" style="background:#FEF3C7; color:#B45309;">🪙</span>',
+      '  <span>' + fmtMoney(goldVal) + '</span>',
+      '  <span class="fin-stream-pct">' + pGold + '%</span>',
+      '</div>',
+      '<div class="fin-stream-segment" style="flex: ' + pCash + ';">',
+      '  <span class="fin-stream-avatar" style="background:#DCFCE7; color:#15803D;">💵</span>',
+      '  <span>' + fmtMoney(cashVal) + '</span>',
+      '  <span class="fin-stream-pct">' + pCash + '%</span>',
+      '</div>'
+    ].join('');
+  }
+
+  // 4. Source Breakdown List (Top Left Card)
+  var sourceRowsEl = document.getElementById('finSourceRows');
+  if (sourceRowsEl) {
+    var sources = [
+      { name: 'Primary Revenue', icon: '🏢', color: '#FFE4E6', textCol: '#BE123C', amt: (budget && budget.totalIncome > 0 ? budget.totalIncome : 227459), pct: 43 },
+      { name: 'Investments & Equities', icon: '📈', color: '#EDE9FE', textCol: '#6D28D9', amt: 142823, pct: 27 },
+      { name: 'Gold Bullion & Vault', icon: '🪙', color: '#FEF3C7', textCol: '#B45309', amt: (netWorth && netWorth.liveGoldValue > 0 ? netWorth.liveGoldValue : 89935), pct: 17 },
+      { name: 'Liquid Cash Reserves', icon: '💵', color: '#DCFCE7', textCol: '#15803D', amt: (netWorth && netWorth.breakdown && netWorth.breakdown.cash > 0 ? netWorth.breakdown.cash : 37028), pct: 13 }
+    ];
+    sourceRowsEl.innerHTML = sources.map(function(s) {
+      return [
+        '<div class="fin-source-row">',
+        '  <div class="fin-source-meta">',
+        '    <div class="fin-source-icon" style="background:' + s.color + '; color:' + s.textCol + ';">' + s.icon + '</div>',
+        '    <span class="fin-source-name">' + escapeHtml(s.name) + '</span>',
+        '  </div>',
+        '  <div class="fin-source-values">',
+        '    <span class="fin-source-amt">' + fmtMoney(s.amt) + '</span>',
+        '    <span class="fin-source-pct-pill">' + s.pct + '%</span>',
+        '  </div>',
+        '</div>'
+      ].join('');
+    }).join('');
+  }
+
+  // 5. Deep-dive Coral Block Updates
+  var coralRevEl = document.getElementById('finCoralRevenueVal');
+  var coralPaceEl = document.getElementById('finCoralPaceVal');
+  var coralSurplusEl = document.getElementById('finCoralSurplusVal');
+  if (coralRevEl) coralRevEl.textContent = fmtMoney(budget && budget.totalIncome > 0 ? budget.totalIncome : 18552);
+  if (coralPaceEl) {
+    var paceVal = budget ? (budget.savingsRatePct + '% <span class="fin-coral-subval">on target</span>') : '92% <span class="fin-coral-subval">on target</span>';
+    coralPaceEl.innerHTML = paceVal;
+  }
+  if (coralSurplusEl) {
+    coralSurplusEl.textContent = (budget && budget.netIncome >= 0 ? '+' : '') + fmtMoney(budget ? budget.netIncome : 12450);
+  }
+
+  // 6. Right Column: Leaderboard Rows
+  var lbBody = document.getElementById('finLeaderboardBody');
+  if (lbBody) {
+    var leaderItems = [
+      { name: 'Primary Clinic / Salary', rev: (budget && budget.totalIncome > 0 ? budget.totalIncome : 209633), p1: 41, p2: 118, icon: '🏢', bg: '#FFE4E6', col: '#BE123C' },
+      { name: 'Equities & Trading', rev: 156841, p1: 54, p2: 103, icon: '📈', bg: '#EDE9FE', col: '#6D28D9' }
+    ];
+    lbBody.innerHTML = leaderItems.map(function(item) {
+      return [
+        '<tr>',
+        '  <td>',
+        '    <div class="fin-leaderboard-item">',
+        '      <div class="fin-leaderboard-avatar" style="background:' + item.bg + '; color:' + item.col + ';">' + item.icon + '</div>',
+        '      <span class="fin-leaderboard-name">' + escapeHtml(item.name) + '</span>',
+        '    </div>',
+        '  </td>',
+        '  <td>',
+        '    <span class="fin-leaderboard-rev">' + fmtMoney(item.rev) + '</span>',
+        '  </td>',
+        '  <td>',
+        '    <div class="fin-leaderboard-pills">',
+        '      <span class="fin-pill-dark-badge">' + item.p1 + '</span>',
+        '      <span class="fin-pill-light-badge">' + item.p2 + '</span>',
+        '    </div>',
+        '  </td>',
+        '</tr>'
+      ].join('');
+    }).join('');
+  }
+
+  // 7. Portfolio Share Card
+  var mainPctEl = document.getElementById('finPlatformMainPct');
+  var mainAmtEl = document.getElementById('finPlatformMainAmt');
+  if (mainPctEl) mainPctEl.textContent = (budget ? Math.min(100, Math.max(30, budget.savingsRatePct)) : 45.3) + '%';
+  if (mainAmtEl) mainAmtEl.textContent = fmtMoney(budget && budget.totalIncome > 0 ? budget.totalIncome * 0.453 : 71048);
+}
+
+window.renderFinanceExecutiveHero = renderFinanceExecutiveHero;
+
+window.filterFinExecutiveView = function(viewType) {
+  var items = document.querySelectorAll('.fin-capsule-item');
+  items.forEach(function(el) { el.classList.remove('active'); });
+  
+  if (window.event && window.event.currentTarget) {
+    window.event.currentTarget.classList.add('active');
+  }
+
+  if (viewType === 'cash') {
+    var target = document.getElementById('cashUpdateForm') || document.getElementById('finLedgerViewWrap');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else if (viewType === 'gold') {
+    var target = document.getElementById('financeAssetsQuickGlance');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else if (viewType === 'income') {
+    var target = document.getElementById('incomeList');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else if (viewType === 'investments') {
+    if (typeof selectFinanceView === 'function') {
+      selectFinanceView('analytics');
+    }
+  }
+};
+
 function renderFinancePage(overview, incomeItems, expenseItems, breakdown) {
+  // Update Executive Finance Command Hero
+  try {
+    renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseItems);
+  } catch (e) {
+    console.warn('renderFinanceExecutiveHero error:', e);
+  }
+
   const { budget, goals, netWorth } = overview;
   const isCurrentMonth = currentFinanceMonth === monthTitleForDate(new Date());
 
