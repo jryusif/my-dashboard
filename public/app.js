@@ -7285,7 +7285,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnAutoCheck.textContent = 'Checking…';
       const applied = await runAutoRecurringFinance();
       btnAutoCheck.disabled = false;
-      btnAutoCheck.innerHTML = '<span>⚡</span> Auto-Apply Due Now';
+      btnAutoCheck.innerHTML = '<span class="btn-icon">⚡</span> Auto-Apply Due Now';
       if (applied === 0) {
         showToast('All active recurring rules are up to date for this month.');
       }
