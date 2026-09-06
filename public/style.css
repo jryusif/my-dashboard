@@ -20955,3 +20955,745 @@ body.is-unauthenticated .btn-floating-braindump {
 
 
 
+
+/* =====================================================================
+   NEKA BIOMETRIC WORKOUT & PERFORMANCE COMMAND CENTER
+   Ultra-High-End Biometric Health & Fitness System
+   ===================================================================== */
+
+.neka-workout-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Master Dual-Zone Command Center Grid */
+.neka-workout-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 20px;
+  width: 100%;
+  align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+  .neka-workout-hero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* -------------------------------------------------------------
+   LEFT ZONE: Ethereal Frosted Bio-Anatomy Stage
+   ------------------------------------------------------------- */
+.neka-bio-stage {
+  background: #FFFFFF;
+  border-radius: 28px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 680px;
+  padding: 32px 36px 28px;
+  color: #111827;
+}
+
+/* Ambient studio spotlight effect inside stage */
+.neka-bio-stage::before {
+  content: '';
+  position: absolute;
+  top: 15%;
+  left: 30%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(235, 248, 240, 0.85) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Stage Header */
+.neka-stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 10;
+}
+
+.neka-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.neka-brand-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #B4F000;
+  font-size: 14px;
+}
+
+.neka-brand-name {
+  font-family: var(--font-display, var(--font-body));
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.neka-stage-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #F3F4F6;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #E5E7EB;
+}
+
+.neka-stage-ctrl-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 50%;
+  color: #4B5563;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.neka-stage-ctrl-btn:hover {
+  color: #111827;
+  background: #E5E7EB;
+}
+
+/* Stage Title Block */
+.neka-stage-title-wrap {
+  position: relative;
+  z-index: 10;
+  margin-top: 12px;
+  max-width: 320px;
+}
+
+.neka-stage-title {
+  font-family: var(--font-display, var(--font-body));
+  font-size: clamp(34px, 4vw, 44px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: #0F172A;
+  margin: 0 0 6px 0;
+}
+
+.neka-stage-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Floating Vertical Toolbar (Left Edge) */
+.neka-floating-toolbar {
+  position: absolute;
+  left: 36px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  padding: 8px 6px;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+  z-index: 15;
+}
+
+.neka-toolbar-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neka-toolbar-btn:hover,
+.neka-toolbar-btn.is-active {
+  background: #0F172A;
+  color: #B4F000;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+/* Center Anatomical Silhouette Stage */
+.neka-center-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.neka-silhouette-img {
+  height: 92%;
+  width: auto;
+  max-width: 80%;
+  object-fit: contain;
+  opacity: 0.95;
+  filter: contrast(1.03) brightness(1.02);
+  user-select: none;
+  transform: translateX(4%);
+}
+
+/* Interactive Biometric Hotspots & Lead Lines */
+.neka-hotspots-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.neka-hotspot-item {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.neka-hotspot-item:hover {
+  transform: scale(1.06);
+}
+
+/* Pulse Dot */
+.neka-pulse-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #A3E635;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 14px #A3E635, 0 0 0 4px rgba(163, 230, 53, 0.25);
+  position: relative;
+  display: inline-block;
+}
+
+.neka-pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid rgba(163, 230, 53, 0.6);
+  animation: nekaPulseRing 2.2s infinite ease-out;
+}
+
+@keyframes nekaPulseRing {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Floating Micro Callouts */
+.neka-callout-card {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 8px 12px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+}
+
+.neka-callout-card:hover {
+  border-color: #A3E635;
+  box-shadow: 0 10px 28px rgba(163, 230, 53, 0.2);
+  transform: translateY(-2px);
+}
+
+.neka-callout-val {
+  font-family: var(--font-display, var(--font-body));
+  font-size: 20px;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.1;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.neka-callout-val span.sub {
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.neka-callout-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.neka-callout-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.neka-callout-badge.optimal {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.neka-callout-badge.high {
+  background: #FEF3C7;
+  color: #B45309;
+}
+
+.neka-callout-badge.normal {
+  background: #E0F2FE;
+  color: #0369A1;
+}
+
+/* Placement of the 4 Specific Callouts matching user image */
+.neka-callout-heart {
+  right: 20%;
+  top: 40%;
+}
+
+.neka-callout-arm {
+  left: 36px;
+  bottom: 22%;
+}
+
+.neka-callout-arterial {
+  right: 12%;
+  top: 18%;
+}
+
+.neka-callout-rhythm {
+  right: 12%;
+  top: 30%;
+}
+
+/* Bottom Timeline Scrubber: "Today's Data" */
+.neka-stage-bottom-bar {
+  position: relative;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.neka-timeline-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.neka-timeline-slider-wrap {
+  display: flex;
+  align-items: center;
+  background: #F1F5F9;
+  border-radius: 999px;
+  padding: 4px 6px;
+  gap: 4px;
+  flex: 1;
+  max-width: 540px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.neka-timeline-slider-wrap::-webkit-scrollbar { display: none; }
+
+.neka-time-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748B;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.neka-time-chip:hover {
+  color: #0F172A;
+}
+
+.neka-time-chip.is-active {
+  background: linear-gradient(90deg, #10B981 0%, #A3E635 100%);
+  color: #064E3B;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+.neka-timeline-expand-btn {
+  background: #F1F5F9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+.neka-timeline-expand-btn:hover {
+  background: #0F172A;
+  color: #FFFFFF;
+}
+
+/* -------------------------------------------------------------
+   RIGHT ZONE: Bento Grid of Glowing Ambient Mesh Cards
+   ------------------------------------------------------------- */
+.neka-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-content: stretch;
+}
+
+@media (max-width: 680px) {
+  .neka-bento-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Base Bento Card */
+.neka-card {
+  border-radius: 24px;
+  position: relative;
+  overflow: hidden;
+  padding: 22px 24px;
+  color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 200px;
+}
+
+.neka-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.45);
+}
+
+.neka-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+.neka-card-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.95;
+}
+
+.neka-card-subpill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.neka-card-arrow {
+  font-size: 13px;
+  opacity: 0.8;
+  transition: transform 0.2s ease;
+}
+.neka-card:hover .neka-card-arrow {
+  transform: translate(2px, -2px);
+  opacity: 1;
+}
+
+.neka-card-body {
+  position: relative;
+  z-index: 2;
+  margin: 10px 0 6px;
+}
+
+.neka-hero-num {
+  font-family: var(--font-display, var(--font-body));
+  font-size: clamp(34px, 3.5vw, 44px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.neka-hero-num span.unit {
+  font-size: 15px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.neka-card-status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+  margin-left: auto;
+}
+
+/* Card Visual Canvases / SVG Containers */
+.neka-vis-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  margin-top: auto;
+}
+
+/* 1. Emerald / Forest Aurora Mesh (Card 1: Heart Age / Weekly Volume) */
+.neka-card-green {
+  background: radial-gradient(circle at 80% 20%, #8FB365 0%, transparent 50%),
+              radial-gradient(circle at 20% 80%, #153319 0%, transparent 60%),
+              linear-gradient(145deg, #1E4620 0%, #295F31 45%, #4C7D3C 100%);
+  grid-row: span 2;
+  min-height: 420px;
+}
+
+/* 2. Amber-Peach Sunset Mesh (Card 2: Blood Oxygen / Session Completion) */
+.neka-card-amber {
+  background: radial-gradient(circle at 80% 10%, #FDE047 0%, transparent 45%),
+              radial-gradient(circle at 10% 90%, #92400E 0%, transparent 60%),
+              linear-gradient(140deg, #D97706 0%, #EA580C 50%, #F59E0B 100%);
+}
+
+/* 3. Sunset Mauve to Slate Mesh (Card 3: Inflammation / Intensity & PR) */
+.neka-card-sunset {
+  background: radial-gradient(circle at 10% 20%, #FB7185 0%, transparent 55%),
+              radial-gradient(circle at 90% 80%, #1E293B 0%, transparent 65%),
+              linear-gradient(145deg, #E11D48 0%, #9F1239 40%, #334155 100%);
+}
+
+/* 4. Solar Gold Ember Mesh (Card 4: +2000 Measurements / Total Volume) */
+.neka-card-ember {
+  background: radial-gradient(circle at 75% 25%, #FDE047 0%, transparent 40%),
+              linear-gradient(135deg, #B45309 0%, #D97706 50%, #78350F 100%);
+}
+
+/* 5. Olive Chartreuse Mesh (Card 5: 16 Bloodwork / Rest Timer) */
+.neka-card-olive {
+  background: radial-gradient(circle at 20% 20%, #BEF264 0%, transparent 45%),
+              linear-gradient(145deg, #365314 0%, #4D7C0F 55%, #142E06 100%);
+}
+
+/* 6. Cinematic Athletic Insight Card (Card 6) */
+.neka-card-video {
+  background: url('/workout_insight_thumb.jpg') center/cover no-repeat;
+  position: relative;
+  cursor: pointer;
+  min-height: 180px;
+}
+
+.neka-card-video::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.92) 0%, rgba(15, 23, 42, 0.35) 60%, rgba(15, 23, 42, 0.1) 100%);
+  z-index: 1;
+}
+
+.neka-card-video .neka-card-head,
+.neka-card-video .neka-card-body,
+.neka-card-video .neka-video-footer {
+  position: relative;
+  z-index: 2;
+}
+
+.neka-video-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.neka-video-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.25;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.neka-video-play-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #A3E635;
+  color: #064E3B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  box-shadow: 0 4px 14px rgba(163, 230, 53, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.neka-card-video:hover .neka-video-play-icon {
+  transform: scale(1.12);
+}
+
+/* Mathematical Visualizations (SVG Styles) */
+.neka-wireframe-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.neka-node-dot {
+  fill: #A3E635;
+  filter: drop-shadow(0 0 6px #A3E635);
+  animation: nekaPulseNode 2s infinite ease-in-out alternate;
+}
+
+@keyframes nekaPulseNode {
+  0% { transform: scale(0.9); opacity: 0.85; }
+  100% { transform: scale(1.25); opacity: 1; }
+}
+
+.neka-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+  margin-top: 8px;
+}
+
+/* Quick Rest Timer in Card 5 */
+.neka-in-card-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.neka-mini-timer-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.neka-mini-timer-btn:hover {
+  background: #A3E635;
+  border-color: #A3E635;
+  color: #064E3B;
+  box-shadow: 0 0 12px rgba(163, 230, 53, 0.4);
+}
+
+/* -------------------------------------------------------------
+   EXERCISE DECK SECTION (Below Biometric Stage)
+   ------------------------------------------------------------- */
+.neka-deck-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.neka-deck-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.neka-deck-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.neka-deck-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Set Bubble checkmark enhancement */
+.darebee-bubble.is-filled {
+  background: #10B981 !important;
+  border-color: #A3E635 !important;
+  color: #064E3B !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.45) !important;
+  font-weight: 900;
+}
