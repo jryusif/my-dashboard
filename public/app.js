@@ -7436,14 +7436,47 @@ function openRecurringFinanceModal(ruleId = null) {
   }
 
   backdrop.hidden = false;
+  backdrop.style.display = 'flex';
 }
 window.openRecurringFinanceModal = openRecurringFinanceModal;
 
 function closeRecurringFinanceModal() {
   const backdrop = document.getElementById('recurringFinanceModalBackdrop');
-  if (backdrop) backdrop.hidden = true;
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.style.display = 'none';
+  }
 }
 window.closeRecurringFinanceModal = closeRecurringFinanceModal;
+
+// Button handler for "Auto-Apply Due Now"
+async function handleRunRecurringAutoCheck() {
+  const btn = document.getElementById('btnRunRecurringAutoCheck');
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-icon">⏳</span> Checking...';
+  }
+
+  try {
+    const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
+    const applied = await runAutoRecurringFinance(monthTitle);
+    if (applied === 0) {
+      showToast(`⚡ All scheduled rules for ${escapeHtml(monthTitle)} are already up to date!`);
+    }
+    renderRecurringQuickLedgerCard();
+    loadRecurringFinanceHub();
+  } catch (err) {
+    console.warn('Error during recurring auto-apply check:', err);
+    showToast('Failed to check due recurring rules.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml || '<span class="btn-icon">⚡</span> Auto-Apply Due Now';
+    }
+  }
+}
+window.handleRunRecurringAutoCheck = handleRunRecurringAutoCheck;
 
 async function handleSaveRecurringRuleForm(e) {
   if (e) e.preventDefault();
@@ -7508,6 +7541,43 @@ window.handleSaveRecurringRuleForm = handleSaveRecurringRuleForm;
 
 // Wire up recurring modal and search filters
 function initRecurringControls() {
+  // Add Fixed Item button
+  const btnOpen = document.getElementById('btnOpenNewRecurringRuleModal');
+  if (btnOpen && !btnOpen._bound) {
+    btnOpen._bound = true;
+    btnOpen.addEventListener('click', (e) => {
+      e.preventDefault();
+      openRecurringFinanceModal();
+    });
+  }
+
+  // Auto-Apply Due Now button
+  const btnCheck = document.getElementById('btnRunRecurringAutoCheck');
+  if (btnCheck && !btnCheck._bound) {
+    btnCheck._bound = true;
+    btnCheck.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleRunRecurringAutoCheck();
+    });
+  }
+
+  // Backdrop click-outside-to-close & Escape key
+  const backdrop = document.getElementById('recurringFinanceModalBackdrop');
+  if (backdrop && !backdrop._bound) {
+    backdrop._bound = true;
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) {
+        closeRecurringFinanceModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && backdrop && !backdrop.hidden) {
+      closeRecurringFinanceModal();
+    }
+  });
+
   const form = document.getElementById('recurringFinanceForm');
   if (form && !form._bound) {
     form._bound = true;
