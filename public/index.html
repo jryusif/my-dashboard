@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=35.0" />
+<link rel="stylesheet" href="style.css?v=36.0" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -1286,6 +1286,10 @@
             </div>
 
             <div class="fin-top-controls">
+              <button type="button" class="fin-timeframe-toggle" id="btnFinCustomizeTop" onclick="openFinanceCustomizeModal()" title="Customize Titles, Data &amp; Investments">
+                <span>⚙️</span>
+                <span>Customize</span>
+              </button>
               <button type="button" class="fin-timeframe-toggle" onclick="handleShiftFinanceMonth(0)" title="Current Monthly Range">
                 <span class="fin-toggle-switch"></span>
                 <span id="finTimeframeLabel">Active Month</span>
@@ -1382,7 +1386,7 @@
                     <button type="button" class="fin-icon-btn" title="Categories">&#9776; &#9662;</button>
                     <span>Revenue &amp; Allocations</span>
                   </div>
-                  <button type="button" class="fin-btn-filter-pill" onclick="openPage('Finance')">Filters &#9776;</button>
+                  <button type="button" class="fin-btn-filter-pill" onclick="openFinanceCustomizeModal()" title="Customize Streams, Data & Targets">Customize ⚙️</button>
                 </div>
                 <div class="fin-source-rows" id="finSourceRows">
                   <!-- Injected dynamically -->
@@ -1406,7 +1410,7 @@
                 <div class="fin-deepdive-split">
                   <!-- Coral Left Block -->
                   <div class="fin-coral-block">
-                    <span class="fin-coral-vertical-label">AVERAGE MONTHLY</span>
+                    <div class="fin-coral-top-eyebrow">⚡ AVERAGE MONTHLY</div>
                     <div class="fin-coral-inner">
                       <div>
                         <div class="fin-coral-item-label">Revenue</div>
@@ -1467,7 +1471,7 @@
                   <button type="button" class="fin-icon-btn" title="Pillars">&#9644;&#9644;&#9644; &#9662;</button>
                   <span>Allocation Pillars</span>
                 </div>
-                <button type="button" class="fin-btn-filter-pill" onclick="openPage('Finance')">Filters &#9776;</button>
+                <button type="button" class="fin-btn-filter-pill" onclick="openFinanceCustomizeModal()" title="Customize Streams, Data & Targets">Customize ⚙️</button>
               </div>
 
               <div class="fin-capsule-pillars-stage" id="fin3dPillarsStage">
@@ -1800,6 +1804,111 @@
             </div>
           </div>
         </div>
+      
+        <!-- Finance Customization & Real Data Settings Modal -->
+        <div class="fin-modal-backdrop" id="finCustomizeModalBackdrop" onclick="if(event.target === this) closeFinanceCustomizeModal()">
+          <div class="fin-modal-card" role="dialog" aria-modal="true" aria-labelledby="finCustomModalTitle">
+            <div class="fin-modal-header">
+              <h3 id="finCustomModalTitle">⚙️ Customize Finance Streams &amp; Data</h3>
+              <button type="button" class="fin-modal-close" onclick="closeFinanceCustomizeModal()" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="fin-modal-tabs">
+              <button type="button" class="fin-modal-tab-btn active" data-tab="titles" onclick="switchFinCustomTab('titles')">🏷️ Custom Titles</button>
+              <button type="button" class="fin-modal-tab-btn" data-tab="investments" onclick="switchFinCustomTab('investments')">📈 Investments &amp; Assets</button>
+              <button type="button" class="fin-modal-tab-btn" data-tab="targets" onclick="switchFinCustomTab('targets')">🎯 Targets &amp; Currency</button>
+            </div>
+
+            <div class="fin-modal-body">
+              <!-- Tab 1: Custom Stream Titles -->
+              <div class="fin-custom-tab-pane" id="finCustomTabTitles">
+                <div class="fin-custom-group">
+                  <label class="fin-custom-label" for="inputCustPrimaryTitle">Primary Revenue Stream Title</label>
+                  <p class="fin-custom-sub">Custom title for your main income (e.g. Clinic Practice, Salary, Consulting)</p>
+                  <input type="text" id="inputCustPrimaryTitle" class="fin-custom-input" placeholder="e.g. Dental Clinic Practice" />
+                </div>
+                <div class="fin-custom-group">
+                  <label class="fin-custom-label" for="inputCustInvestTitle">Equities &amp; Investment Stream Title</label>
+                  <p class="fin-custom-sub">Custom title for stock portfolios, dividends, or trading</p>
+                  <input type="text" id="inputCustInvestTitle" class="fin-custom-input" placeholder="e.g. Equities &amp; US Stocks" />
+                </div>
+                <div class="fin-custom-group">
+                  <label class="fin-custom-label" for="inputCustGoldTitle">Gold &amp; Precious Metals Title</label>
+                  <p class="fin-custom-sub">Custom title for your physical bullion or metals vault</p>
+                  <input type="text" id="inputCustGoldTitle" class="fin-custom-input" placeholder="e.g. 21k/24k Gold Bullion Vault" />
+                </div>
+                <div class="fin-custom-group">
+                  <label class="fin-custom-label" for="inputCustCashTitle">Liquid Reserves Title</label>
+                  <p class="fin-custom-sub">Custom title for money you already have and cash reserves</p>
+                  <input type="text" id="inputCustCashTitle" class="fin-custom-input" placeholder="e.g. Liquid Vault &amp; Bank Accounts" />
+                </div>
+              </div>
+
+              <!-- Tab 2: Quick Investment / Asset Entry -->
+              <div class="fin-custom-tab-pane" id="finCustomTabInvestments" hidden>
+                <p class="fin-custom-sub" style="margin-bottom: 12px;">Add or update investment assets (stocks, crypto, funds, real estate) to integrate them into your live Net Worth math.</p>
+                <div class="fin-custom-group">
+                  <label class="fin-custom-label" for="inputCustAssetName">Asset Name</label>
+                  <input type="text" id="inputCustAssetName" class="fin-custom-input" placeholder="e.g. S&amp;P 500 ETF, Apple Inc., Real Estate Unit" />
+                </div>
+                <div style="display: flex; gap: 12px;">
+                  <div class="fin-custom-group" style="flex: 1;">
+                    <label class="fin-custom-label" for="selectCustAssetType">Asset Type</label>
+                    <select id="selectCustAssetType" class="fin-custom-input">
+                      <option value="Stock">Stock / Equities</option>
+                      <option value="Gold Bullion">Gold Bullion</option>
+                      <option value="Cash">Cash Account</option>
+                      <option value="Crypto">Cryptocurrency</option>
+                      <option value="Real Estate">Real Estate</option>
+                      <option value="Other">Other Asset</option>
+                    </select>
+                  </div>
+                  <div class="fin-custom-group" style="flex: 1;">
+                    <label class="fin-custom-label" for="inputCustAssetVal">Current Total Value</label>
+                    <input type="number" id="inputCustAssetVal" class="fin-custom-input" step="0.01" min="0" placeholder="0.00" />
+                  </div>
+                </div>
+                <button type="button" class="fin-btn-save" style="margin-top: 8px; align-self: flex-start;" onclick="handleSaveCustomAsset()">➕ Save Asset to Portfolio</button>
+              </div>
+
+              <!-- Tab 3: Targets, Currency & Budget Envelopes -->
+              <div class="fin-custom-tab-pane" id="finCustomTabTargets" hidden>
+                <div style="display: flex; gap: 12px;">
+                  <div class="fin-custom-group" style="flex: 1;">
+                    <label class="fin-custom-label" for="selectCustCurrency">System Currency</label>
+                    <select id="selectCustCurrency" class="fin-custom-input">
+                      <option value="EGP">EGP (Egyptian Pound — E£)</option>
+                      <option value="USD">USD (US Dollar — $)</option>
+                      <option value="EUR">EUR (Euro — €)</option>
+                      <option value="GBP">GBP (British Pound — £)</option>
+                      <option value="SAR">SAR (Saudi Riyal — SAR)</option>
+                      <option value="AED">AED (Emirati Dirham — AED)</option>
+                      <option value="KWD">KWD (Kuwaiti Dinar — KWD)</option>
+                      <option value="QAR">QAR (Qatari Riyal — QAR)</option>
+                    </select>
+                  </div>
+                  <div class="fin-custom-group" style="flex: 1;">
+                    <label class="fin-custom-label" for="inputCustSavingsTarget">Target Savings Rate (%)</label>
+                    <input type="number" id="inputCustSavingsTarget" class="fin-custom-input" min="0" max="100" placeholder="68" />
+                  </div>
+                </div>
+                <div class="fin-custom-group" style="margin-top: 12px;">
+                  <label class="fin-custom-label">Budget Allocation Envelopes (%)</label>
+                  <p class="fin-custom-sub">Customize category allocation weights for the 3D pillars and budget tracking</p>
+                  <div id="finAllocEnvelopesWrap" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+                    <!-- Injected dynamically -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="fin-modal-footer">
+              <button type="button" class="fin-btn-cancel" onclick="closeFinanceCustomizeModal()">Cancel</button>
+              <button type="button" class="fin-btn-save" onclick="handleSaveAllFinanceCustomization()">💾 Save &amp; Recalculate</button>
+            </div>
+          </div>
+        </div>
+
       </section>
 
       <!-- Gold & Assets page -->
@@ -6498,6 +6607,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=35.0"></script>
+  <script src="app.js?v=36.0"></script>
 </body>
 </html>

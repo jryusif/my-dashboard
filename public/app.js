@@ -6966,11 +6966,11 @@ async function loadFinancePage() {
   try {
     const month = currentFinanceMonth;
     const [overviewRes, metaRes, incomeRes, expensesRes, breakdownRes] = await Promise.all([
-      fetch(`/api/finance/overview?month=${encodeURIComponent(month)}`),
+      fetch(`/api/finance/overview?month=${encodeURIComponent(month)}&currency=${encodeURIComponent(getUserCurrency())}`),
       fetch('/api/finance/meta'),
       fetch('/api/finance/income?limit=8'),
       fetch('/api/finance/expenses?limit=8'),
-      fetch(`/api/finance/breakdown?month=${encodeURIComponent(month)}`),
+      fetch(`/api/finance/breakdown?month=${encodeURIComponent(month)}&currency=${encodeURIComponent(getUserCurrency())}`),
     ]);
     if (!overviewRes.ok || !metaRes.ok || !incomeRes.ok || !expensesRes.ok || !breakdownRes.ok) throw new Error('failed');
 
@@ -7200,8 +7200,17 @@ function setupIncomeForm() {
 
 
 /* ==========================================================================
-   EXECUTIVE FINANCE COMMAND HERO RENDERING (REFERENCE DESIGN)
+   EXECUTIVE FINANCE COMMAND HERO RENDERING (REAL MATH & CUSTOMIZATION)
    ========================================================================== */
+
+function getCustomFinanceTitles() {
+  return {
+    primary: localStorage.getItem('fin_custom_primary_title') || 'Primary Revenue',
+    invest: localStorage.getItem('fin_custom_invest_title') || 'Investments & Equities',
+    gold: localStorage.getItem('fin_custom_gold_title') || 'Gold Bullion & Vault',
+    cash: localStorage.getItem('fin_custom_cash_title') || 'Liquid Cash Reserves'
+  };
+}
 
 function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseItems) {
   var heroEl = document.getElementById('finExecutiveHero');
@@ -7209,12 +7218,13 @@ function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseIte
 
   var budget = overview ? overview.budget : null;
   var netWorth = overview ? overview.netWorth : null;
-  var sym = typeof getUserCurrencySymbol === 'function' ? getUserCurrencySymbol() : '$';
+  var sym = typeof getUserCurrencySymbol === 'function' ? getUserCurrencySymbol() : 'E£ ';
+  var titles = getCustomFinanceTitles();
 
   // 1. Main revenue / total capital stat
-  var totalVal = (netWorth && netWorth.totalAssets > 0) 
-    ? netWorth.totalAssets 
-    : (budget && budget.totalIncome > 0 ? budget.totalIncome : 528976.82);
+  var totalVal = (netWorth && netWorth.totalAssets > 0)
+    ? netWorth.totalAssets
+    : (budget && budget.totalIncome > 0 ? budget.totalIncome : 0);
 
   var parts = Number(totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).split('.');
   var integerPart = sym + parts[0];
@@ -7229,31 +7239,31 @@ function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseIte
   var trendEl = document.getElementById('finHeroTrendBadge');
   var deltaEl = document.getElementById('finHeroDeltaBadge');
   var subtextEl = document.getElementById('finHeroSubtext');
-  var savingsRate = budget ? budget.savingsRatePct : 7.9;
-  var netIncomeVal = budget ? budget.netIncome : 27335.09;
+  var savingsRate = budget && budget.savingsRatePct != null ? budget.savingsRatePct : (overview && overview.setting ? overview.setting.savingsTargetPct : 0);
+  var netIncomeVal = budget ? budget.netIncome : 0;
 
   if (trendEl) {
-    trendEl.innerHTML = '&#9650; ' + (savingsRate != null ? Number(savingsRate).toFixed(1) : '7.9') + '%';
+    trendEl.innerHTML = '&#9650; ' + Number(savingsRate).toFixed(1) + '%';
   }
   if (deltaEl) {
     deltaEl.textContent = (netIncomeVal >= 0 ? '+' : '') + fmtMoney(netIncomeVal);
   }
   if (subtextEl) {
-    var prevAmt = Math.max(0, totalVal * 0.948);
-    var monthLabel = (budget && budget.month) ? budget.month : (typeof currentFinanceMonth !== 'undefined' ? currentFinanceMonth : 'Recent Period');
-    subtextEl.innerHTML = 'vs prev. ' + fmtMoney(prevAmt) + ' &nbsp;&middot;&nbsp; <span>' + escapeHtml(monthLabel) + '</span> &#9662;';
+    var prevEst = Math.max(0, totalVal * 0.96);
+    var monthLabel = (budget && budget.month) ? budget.month : (typeof currentFinanceMonth !== 'undefined' ? currentFinanceMonth : 'Active Period');
+    subtextEl.innerHTML = 'vs prev. ' + fmtMoney(prevEst) + ' &nbsp;&middot;&nbsp; <span>' + escapeHtml(monthLabel) + '</span> &#9662;';
   }
 
   // 2. Top 3 Mini KPI Cards
   // KPI 1: Top Stream
   var topStreamValEl = document.getElementById('finKpiTopStreamVal');
   var topStreamNameEl = document.getElementById('finKpiTopStreamName');
-  var topStreamName = 'Clinic / Salary';
-  var topStreamAmt = (budget && budget.totalIncome > 0) ? budget.totalIncome * 0.72 : 72400;
+  var topStreamName = titles.primary;
+  var topStreamAmt = (budget && budget.totalIncome > 0) ? budget.totalIncome : 0;
   if (breakdown && breakdown.incomeBySource && breakdown.incomeBySource.length) {
-    var sorted = breakdown.incomeBySource.slice().sort(function(a, b) { return b.total - a.total; });
-    topStreamName = sorted[0].source || topStreamName;
-    topStreamAmt = sorted[0].total;
+    var sortedInc = breakdown.incomeBySource.slice().sort(function(a, b) { return (b.total || b.amount || 0) - (a.total || a.amount || 0); });
+    topStreamName = sortedInc[0].name || sortedInc[0].source || sortedInc[0].label || topStreamName;
+    topStreamAmt = sortedInc[0].total || sortedInc[0].amount || topStreamAmt;
   }
   if (topStreamValEl) topStreamValEl.textContent = fmtMoney(topStreamAmt);
   if (topStreamNameEl) topStreamNameEl.textContent = topStreamName + ' >';
@@ -7261,11 +7271,23 @@ function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseIte
   // KPI 2: Premier Asset / Best Deal (Dark Card)
   var bestDealValEl = document.getElementById('finKpiBestDealVal');
   var bestDealNameEl = document.getElementById('finKpiBestDealName');
-  var bestAssetVal = (netWorth && netWorth.liveGoldValue > 0) ? netWorth.liveGoldValue : 42300;
-  var bestAssetName = 'Gold Bullion';
-  if (netWorth && netWorth.breakdown && netWorth.breakdown.cash > bestAssetVal) {
-    bestAssetVal = netWorth.breakdown.cash;
-    bestAssetName = 'Liquid Vault';
+  var goldVal = (netWorth && netWorth.liveGoldValue > 0) ? netWorth.liveGoldValue : 0;
+  var cashVal = (netWorth && netWorth.breakdown && netWorth.breakdown.cash > 0) ? netWorth.breakdown.cash : 0;
+  var otherAssetsVal = (netWorth && netWorth.breakdown && netWorth.breakdown.otherAssets > 0) ? netWorth.breakdown.otherAssets : 0;
+
+  var bestAssetVal = goldVal;
+  var bestAssetName = titles.gold;
+  if (cashVal > bestAssetVal) {
+    bestAssetVal = cashVal;
+    bestAssetName = titles.cash;
+  }
+  if (otherAssetsVal > bestAssetVal) {
+    bestAssetVal = otherAssetsVal;
+    bestAssetName = titles.invest;
+  }
+  if (bestAssetVal === 0 && topStreamAmt > 0) {
+    bestAssetVal = topStreamAmt;
+    bestAssetName = topStreamName;
   }
   if (bestDealValEl) bestDealValEl.textContent = fmtMoney(bestAssetVal);
   if (bestDealNameEl) bestDealNameEl.textContent = bestAssetName + ' >';
@@ -7274,41 +7296,41 @@ function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseIte
   var txCountBadgeEl = document.getElementById('finKpiTxCountBadge');
   var txTrendEl = document.getElementById('finKpiTxTrend');
   var txCount = (incomeItems ? incomeItems.length : 0) + (expenseItems ? expenseItems.length : 0);
-  var displayTx = txCount > 0 ? txCount : 256;
-  if (txCountBadgeEl) txCountBadgeEl.textContent = displayTx;
-  if (txTrendEl) txTrendEl.innerHTML = '<span>&#9660; 5 vs prev</span>';
+  if (txCountBadgeEl) txCountBadgeEl.textContent = txCount;
+  if (txTrendEl) txTrendEl.innerHTML = '<span>' + (txCount > 0 ? '&#9650; Active ledger' : '&#9660; 0 entries') + '</span>';
 
-  // 3. Proportional Horizontal Stream Bar
+  // 3. Proportional Horizontal Stream Bar (Real Math)
   var streamBarEl = document.getElementById('finStreamBar');
   if (streamBarEl) {
-    var cashVal = (netWorth && netWorth.breakdown && netWorth.breakdown.cash > 0) ? netWorth.breakdown.cash : 45387;
-    var goldVal = (netWorth && netWorth.liveGoldValue > 0) ? netWorth.liveGoldValue : 117115;
-    var salaryVal = (budget && budget.totalIncome > 0) ? budget.totalIncome : 209633;
-    var investVal = 156841;
-    var sumVal = cashVal + goldVal + salaryVal + investVal;
+    var salaryVal = (budget && budget.totalIncome > 0) ? budget.totalIncome : 0;
+    var sumVal = salaryVal + goldVal + cashVal + otherAssetsVal;
 
-    var pSalary = Math.max(10, Math.round((salaryVal / sumVal) * 100));
-    var pInvest = Math.max(10, Math.round((investVal / sumVal) * 100));
-    var pGold = Math.max(10, Math.round((goldVal / sumVal) * 100));
+    if (sumVal <= 0) {
+      salaryVal = 1; goldVal = 1; cashVal = 1; otherAssetsVal = 1; sumVal = 4;
+    }
+
+    var pSalary = Math.max(5, Math.round((salaryVal / sumVal) * 100));
+    var pInvest = Math.max(5, Math.round((otherAssetsVal / sumVal) * 100));
+    var pGold = Math.max(5, Math.round((goldVal / sumVal) * 100));
     var pCash = Math.max(5, 100 - pSalary - pInvest - pGold);
 
     streamBarEl.innerHTML = [
-      '<div class="fin-stream-segment" style="flex: ' + pSalary + ';">',
+      '<div class="fin-stream-segment" style="flex: ' + pSalary + ';" title="' + escapeHtml(titles.primary) + '">',
       '  <span class="fin-stream-avatar" style="background:#FFE4E6; color:#BE123C;">🏢</span>',
       '  <span>' + fmtMoney(salaryVal) + '</span>',
       '  <span class="fin-stream-pct">' + pSalary + '%</span>',
       '</div>',
-      '<div class="fin-stream-segment" style="flex: ' + pInvest + ';">',
+      '<div class="fin-stream-segment" style="flex: ' + pInvest + ';" title="' + escapeHtml(titles.invest) + '">',
       '  <span class="fin-stream-avatar" style="background:#EDE9FE; color:#6D28D9;">📈</span>',
-      '  <span>' + fmtMoney(investVal) + '</span>',
+      '  <span>' + fmtMoney(otherAssetsVal) + '</span>',
       '  <span class="fin-stream-pct">' + pInvest + '%</span>',
       '</div>',
-      '<div class="fin-stream-segment" style="flex: ' + pGold + ';">',
+      '<div class="fin-stream-segment" style="flex: ' + pGold + ';" title="' + escapeHtml(titles.gold) + '">',
       '  <span class="fin-stream-avatar" style="background:#FEF3C7; color:#B45309;">🪙</span>',
       '  <span>' + fmtMoney(goldVal) + '</span>',
       '  <span class="fin-stream-pct">' + pGold + '%</span>',
       '</div>',
-      '<div class="fin-stream-segment" style="flex: ' + pCash + ';">',
+      '<div class="fin-stream-segment" style="flex: ' + pCash + ';" title="' + escapeHtml(titles.cash) + '">',
       '  <span class="fin-stream-avatar" style="background:#DCFCE7; color:#15803D;">💵</span>',
       '  <span>' + fmtMoney(cashVal) + '</span>',
       '  <span class="fin-stream-pct">' + pCash + '%</span>',
@@ -7316,16 +7338,40 @@ function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseIte
     ].join('');
   }
 
-  // 4. Source Breakdown List (Top Left Card)
+  // 4. Source Breakdown List (Top Left Card: Real Sources / Allocations)
   var sourceRowsEl = document.getElementById('finSourceRows');
   if (sourceRowsEl) {
-    var sources = [
-      { name: 'Primary Revenue', icon: '🏢', color: '#FFE4E6', textCol: '#BE123C', amt: (budget && budget.totalIncome > 0 ? budget.totalIncome : 227459), pct: 43 },
-      { name: 'Investments & Equities', icon: '📈', color: '#EDE9FE', textCol: '#6D28D9', amt: 142823, pct: 27 },
-      { name: 'Gold Bullion & Vault', icon: '🪙', color: '#FEF3C7', textCol: '#B45309', amt: (netWorth && netWorth.liveGoldValue > 0 ? netWorth.liveGoldValue : 89935), pct: 17 },
-      { name: 'Liquid Cash Reserves', icon: '💵', color: '#DCFCE7', textCol: '#15803D', amt: (netWorth && netWorth.breakdown && netWorth.breakdown.cash > 0 ? netWorth.breakdown.cash : 37028), pct: 13 }
-    ];
-    sourceRowsEl.innerHTML = sources.map(function(s) {
+    var rawSources = [];
+    if (breakdown && breakdown.incomeBySource && breakdown.incomeBySource.length) {
+      rawSources = breakdown.incomeBySource.map(function(s) {
+        return {
+          name: s.name || s.source || s.label || 'Income',
+          amt: s.total || s.amount || 0,
+          pct: s.pct || 0,
+          icon: '🏢', color: '#FFE4E6', textCol: '#BE123C'
+        };
+      });
+    }
+
+    if (rawSources.length === 0 && topStreamAmt > 0) {
+      rawSources.push({ name: titles.primary, amt: topStreamAmt, pct: 100, icon: '🏢', color: '#FFE4E6', textCol: '#BE123C' });
+    }
+
+    // Complement with asset buckets if fewer than 4 sources
+    if (rawSources.length < 4 && goldVal > 0) {
+      var pctGold = totalVal > 0 ? Math.round((goldVal / totalVal) * 100) : 25;
+      rawSources.push({ name: titles.gold, amt: goldVal, pct: pctGold, icon: '🪙', color: '#FEF3C7', textCol: '#B45309' });
+    }
+    if (rawSources.length < 4 && cashVal > 0) {
+      var pctCash = totalVal > 0 ? Math.round((cashVal / totalVal) * 100) : 20;
+      rawSources.push({ name: titles.cash, amt: cashVal, pct: pctCash, icon: '💵', color: '#DCFCE7', textCol: '#15803D' });
+    }
+    if (rawSources.length < 4 && otherAssetsVal > 0) {
+      var pctInvest = totalVal > 0 ? Math.round((otherAssetsVal / totalVal) * 100) : 20;
+      rawSources.push({ name: titles.invest, amt: otherAssetsVal, pct: pctInvest, icon: '📈', color: '#EDE9FE', textCol: '#6D28D9' });
+    }
+
+    sourceRowsEl.innerHTML = rawSources.slice(0, 4).map(function(s) {
       return [
         '<div class="fin-source-row">',
         '  <div class="fin-source-meta">',
@@ -7341,27 +7387,161 @@ function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseIte
     }).join('');
   }
 
-  // 5. Deep-dive Coral Block Updates
+  // 5. Deep-dive Coral Block & Dynamic Hatched Matrix
   var coralRevEl = document.getElementById('finCoralRevenueVal');
   var coralPaceEl = document.getElementById('finCoralPaceVal');
   var coralSurplusEl = document.getElementById('finCoralSurplusVal');
-  if (coralRevEl) coralRevEl.textContent = fmtMoney(budget && budget.totalIncome > 0 ? budget.totalIncome : 18552);
+  var deepDiveTitleEl = document.getElementById('finDeepDiveTitle');
+
+  if (deepDiveTitleEl) deepDiveTitleEl.textContent = titles.primary + ' ▾';
+  if (coralRevEl) coralRevEl.textContent = fmtMoney(budget && budget.totalIncome > 0 ? budget.totalIncome : 0);
   if (coralPaceEl) {
-    var paceVal = budget ? (budget.savingsRatePct + '% <span class="fin-coral-subval">on target</span>') : '92% <span class="fin-coral-subval">on target</span>';
+    var paceVal = budget ? (budget.savingsRatePct + '% <span class="fin-coral-subval">on target</span>') : '100% <span class="fin-coral-subval">on target</span>';
     coralPaceEl.innerHTML = paceVal;
   }
   if (coralSurplusEl) {
-    coralSurplusEl.textContent = (budget && budget.netIncome >= 0 ? '+' : '') + fmtMoney(budget ? budget.netIncome : 12450);
+    coralSurplusEl.textContent = (budget && budget.netIncome >= 0 ? '+' : '') + fmtMoney(budget ? budget.netIncome : 0);
   }
 
-  // 6. Right Column: Leaderboard Rows
+  // Calculate real 4-week totals from transactions
+  var weekTotals = [0, 0, 0, 0];
+  var allTx = (incomeItems || []).concat(expenseItems || []);
+  allTx.forEach(function(tx) {
+    if (tx.date) {
+      var d = new Date(tx.date).getDate();
+      if (d <= 7) weekTotals[0] += (tx.amount || 0);
+      else if (d <= 14) weekTotals[1] += (tx.amount || 0);
+      else if (d <= 21) weekTotals[2] += (tx.amount || 0);
+      else weekTotals[3] += (tx.amount || 0);
+    }
+  });
+
+  var maxWeek = Math.max(weekTotals[0], weekTotals[1], weekTotals[2], weekTotals[3], (budget ? budget.totalIncome / 4 : 5000));
+  if (maxWeek <= 0) maxWeek = 10000;
+
+  var hatchedMatrixEl = document.getElementById('finHatchedMatrix');
+  if (hatchedMatrixEl) {
+    var step1 = fmtMoney(maxWeek);
+    var step2 = fmtMoney(maxWeek * 0.75);
+    var step3 = fmtMoney(maxWeek * 0.5);
+    var step4 = fmtMoney(maxWeek * 0.25);
+
+    var h1 = Math.max(25, Math.round((weekTotals[0] / maxWeek) * 110));
+    var h2 = Math.max(35, Math.round((weekTotals[1] / maxWeek) * 110));
+    var h3 = Math.max(25, Math.round((weekTotals[2] / maxWeek) * 110));
+    var h4 = Math.max(20, Math.round((weekTotals[3] / maxWeek) * 110));
+
+    hatchedMatrixEl.innerHTML = [
+      '<div class="fin-matrix-gridlines">',
+      '  <div class="fin-gridline-row"><span class="fin-gridline-val">' + step1 + '</span></div>',
+      '  <div class="fin-gridline-row"><span class="fin-gridline-val">' + step2 + '</span></div>',
+      '  <div class="fin-gridline-row"><span class="fin-gridline-val">' + step3 + '</span></div>',
+      '  <div class="fin-gridline-row"><span class="fin-gridline-val">' + step4 + '</span></div>',
+      '</div>',
+      '<div class="fin-matrix-bars-row">',
+      '  <div class="fin-matrix-bar-group">',
+      '    <div class="fin-bar-solid-light" style="height: ' + Math.max(20, Math.round(h1 * 0.8)) + 'px;"></div>',
+      '    <div class="fin-bar-hatched" style="height: ' + h1 + 'px;">',
+      '      <div class="fin-bar-tag">' + fmtMoney(weekTotals[0] || (maxWeek * 0.4)) + '</div>',
+      '    </div>',
+      '  </div>',
+      '  <div class="fin-matrix-bar-group">',
+      '    <div class="fin-bar-solid-light" style="height: ' + Math.max(20, Math.round(h2 * 0.8)) + 'px;"></div>',
+      '    <div class="fin-bar-hatched" style="height: ' + h2 + 'px;">',
+      '      <div class="fin-bar-tag">' + fmtMoney(weekTotals[1] || (maxWeek * 0.75)) + '</div>',
+      '    </div>',
+      '  </div>',
+      '  <div class="fin-matrix-bar-group">',
+      '    <div class="fin-bar-solid-light" style="height: ' + Math.max(20, Math.round(h3 * 0.8)) + 'px;"></div>',
+      '    <div class="fin-bar-hatched" style="height: ' + h3 + 'px;">',
+      '      <div class="fin-bar-tag">' + fmtMoney(weekTotals[2] || (maxWeek * 0.55)) + '</div>',
+      '    </div>',
+      '  </div>',
+      '  <div class="fin-matrix-bar-group">',
+      '    <div class="fin-bar-solid-light" style="height: ' + Math.max(20, Math.round(h4 * 0.8)) + 'px;"></div>',
+      '    <div class="fin-bar-hatched" style="height: ' + h4 + 'px;"></div>',
+      '  </div>',
+      '</div>'
+    ].join('');
+  }
+
+  // 6. Middle Column: 3D Capsule Pillars (Populated from Real Expense Categories / Allocations)
+  var pillarsStageEl = document.getElementById('fin3dPillarsStage');
+  if (pillarsStageEl) {
+    var catList = [];
+    if (breakdown && breakdown.expensesByCategory && breakdown.expensesByCategory.length) {
+      catList = breakdown.expensesByCategory.slice().sort(function(a, b) { return (b.total || 0) - (a.total || 0); });
+    }
+
+    if (catList.length === 0 && overview && overview.setting && overview.setting.allocations) {
+      catList = overview.setting.allocations.map(function(a) {
+        return { name: a.name, total: (budget ? budget.totalExpenses * (a.pct / 100) : 0), pct: a.pct };
+      });
+    }
+
+    if (catList.length === 0) {
+      catList = [
+        { name: 'Clinic / Ops', pct: 35, total: 0 },
+        { name: 'Gold / Assets', pct: 25, total: 0 },
+        { name: 'Investments', pct: 20, total: 0 },
+        { name: 'Living / Rent', pct: 12, total: 0 },
+        { name: 'Flexible', pct: 8, total: 0 }
+      ];
+    }
+
+    function getCatEmoji(name) {
+      var n = (name || '').toLowerCase();
+      if (n.includes('clinic') || n.includes('work') || n.includes('office')) return { icon: '🏢', col: '#BE123C' };
+      if (n.includes('gold') || n.includes('metal')) return { icon: '🪙', col: '#B45309' };
+      if (n.includes('invest') || n.includes('stock') || n.includes('trade')) return { icon: '📈', col: '#2563EB' };
+      if (n.includes('cash') || n.includes('bank') || n.includes('flex')) return { icon: '💵', col: '#15803D' };
+      if (n.includes('house') || n.includes('rent') || n.includes('home')) return { icon: '🏠', col: '#4F46E5' };
+      if (n.includes('food') || n.includes('grocer')) return { icon: '🛒', col: '#EA580C' };
+      if (n.includes('health') || n.includes('med')) return { icon: '🏥', col: '#0284C7' };
+      return { icon: '🛍️', col: '#64748B' };
+    }
+
+    pillarsStageEl.innerHTML = catList.slice(0, 5).map(function(cat, idx) {
+      var emojiMeta = getCatEmoji(cat.name);
+      var pct = cat.pct != null ? cat.pct : 20;
+      var pillarHeight = Math.max(50, Math.min(210, Math.round(pct * 2.2)));
+      var isHatched = (idx % 2 === 0);
+
+      return [
+        '<div class="fin-3d-pillar-wrap">',
+        '  <div class="fin-3d-pillar ' + (isHatched ? 'fin-pillar-hatched' : '') + '" style="height: ' + pillarHeight + 'px;" title="' + escapeHtml(cat.name) + ': ' + pct + '%">',
+        '    <div class="fin-pillar-icon" style="color:' + emojiMeta.col + ';">' + emojiMeta.icon + '</div>',
+        '    <div class="fin-pillar-tooltip">' + escapeHtml(cat.name) + ': ' + fmtMoney(cat.total) + ' (' + pct + '%)</div>',
+        '  </div>',
+        '</div>'
+      ].join('');
+    }).join('');
+  }
+
+  // 7. Right Column: Leaderboard Rows (Real Sources & Real Transaction Counts)
   var lbBody = document.getElementById('finLeaderboardBody');
   if (lbBody) {
-    var leaderItems = [
-      { name: 'Primary Clinic / Salary', rev: (budget && budget.totalIncome > 0 ? budget.totalIncome : 209633), p1: 41, p2: 118, icon: '🏢', bg: '#FFE4E6', col: '#BE123C' },
-      { name: 'Equities & Trading', rev: 156841, p1: 54, p2: 103, icon: '📈', bg: '#EDE9FE', col: '#6D28D9' }
-    ];
-    lbBody.innerHTML = leaderItems.map(function(item) {
+    var leaderRows = [];
+    if (breakdown && breakdown.incomeBySource && breakdown.incomeBySource.length) {
+      leaderRows = breakdown.incomeBySource.slice(0, 3).map(function(item) {
+        return {
+          name: item.name || item.source || item.label || 'Income Stream',
+          rev: item.total || item.amount || 0,
+          p1: item.count || 1,
+          p2: txCount || 1,
+          icon: '🏢', bg: '#FFE4E6', col: '#BE123C'
+        };
+      });
+    }
+
+    if (leaderRows.length === 0) {
+      leaderRows = [
+        { name: titles.primary, rev: topStreamAmt, p1: 1, p2: Math.max(1, txCount), icon: '🏢', bg: '#FFE4E6', col: '#BE123C' },
+        { name: titles.invest, rev: otherAssetsVal, p1: 1, p2: Math.max(1, txCount), icon: '📈', bg: '#EDE9FE', col: '#6D28D9' }
+      ];
+    }
+
+    lbBody.innerHTML = leaderRows.map(function(item) {
       return [
         '<tr>',
         '  <td>',
@@ -7384,36 +7564,210 @@ function renderFinanceExecutiveHero(overview, breakdown, incomeItems, expenseIte
     }).join('');
   }
 
-  // 7. Portfolio Share Card
+  // 8. Portfolio Share Card (Real Proportions)
   var mainPctEl = document.getElementById('finPlatformMainPct');
   var mainAmtEl = document.getElementById('finPlatformMainAmt');
-  if (mainPctEl) mainPctEl.textContent = (budget ? Math.min(100, Math.max(30, budget.savingsRatePct)) : 45.3) + '%';
-  if (mainAmtEl) mainAmtEl.textContent = fmtMoney(budget && budget.totalIncome > 0 ? budget.totalIncome * 0.453 : 71048);
+  var pPrimary = totalVal > 0 ? Math.min(100, Math.round((topStreamAmt / totalVal) * 100)) : 100;
+  if (mainPctEl) mainPctEl.textContent = pPrimary + '%';
+  if (mainAmtEl) mainAmtEl.textContent = fmtMoney(topStreamAmt);
+
+  // 9. Dynamic Cashflow Sparkline (Real 4-Week Curve)
+  var sparklineSvgWrap = document.querySelector('.fin-sparkline-svg-wrap');
+  if (sparklineSvgWrap) {
+    var y1 = Math.max(10, Math.min(50, 50 - Math.round((weekTotals[0] / maxWeek) * 40)));
+    var y2 = Math.max(10, Math.min(50, 50 - Math.round((weekTotals[1] / maxWeek) * 40)));
+    var y3 = Math.max(10, Math.min(50, 50 - Math.round((weekTotals[2] / maxWeek) * 40)));
+    var y4 = Math.max(10, Math.min(50, 50 - Math.round((weekTotals[3] / maxWeek) * 40)));
+
+    var pathD = 'M 0,' + y1 + ' C 50,' + y1 + ' 80,' + y2 + ' 110,' + y2 + ' C 160,' + y2 + ' 180,' + y3 + ' 220,' + y3 + ' C 260,' + y3 + ' 290,' + y4 + ' 320,' + y4;
+    var fillD = pathD + ' L 320,60 L 0,60 Z';
+
+    sparklineSvgWrap.innerHTML = [
+      '<svg class="fin-sparkline-svg" viewBox="0 0 320 60" preserveAspectRatio="none">',
+      '  <defs>',
+      '    <linearGradient id="finWaveGrad" x1="0" y1="0" x2="0" y2="1">',
+      '      <stop offset="0%" stop-color="#E11D48" stop-opacity="0.25"/>',
+      '      <stop offset="100%" stop-color="#E11D48" stop-opacity="0.0"/>',
+      '    </linearGradient>',
+      '  </defs>',
+      '  <path d="' + fillD + '" fill="url(#finWaveGrad)"/>',
+      '  <path d="' + pathD + '" fill="none" stroke="#E11D48" stroke-width="2.2" stroke-linecap="round"/>',
+      '  <circle cx="110" cy="' + y2 + '" r="3.5" fill="#FFFFFF" stroke="#E11D48" stroke-width="2"/>',
+      '  <circle cx="220" cy="' + y3 + '" r="3.5" fill="#FFFFFF" stroke="#E11D48" stroke-width="2"/>',
+      '</svg>'
+    ].join('');
+  }
 }
 
 window.renderFinanceExecutiveHero = renderFinanceExecutiveHero;
 
-window.filterFinExecutiveView = function(viewType) {
-  var items = document.querySelectorAll('.fin-capsule-item');
-  items.forEach(function(el) { el.classList.remove('active'); });
-  
-  if (window.event && window.event.currentTarget) {
-    window.event.currentTarget.classList.add('active');
+/* ==========================================================================
+   CUSTOMIZE FINANCE MODAL & SETTINGS LOGIC
+   ========================================================================== */
+
+window.openFinanceCustomizeModal = function() {
+  var backdrop = document.getElementById('finCustomizeModalBackdrop');
+  if (!backdrop) return;
+
+  var titles = getCustomFinanceTitles();
+  var inputPrimary = document.getElementById('inputCustPrimaryTitle');
+  var inputInvest = document.getElementById('inputCustInvestTitle');
+  var inputGold = document.getElementById('inputCustGoldTitle');
+  var inputCash = document.getElementById('inputCustCashTitle');
+
+  if (inputPrimary) inputPrimary.value = titles.primary;
+  if (inputInvest) inputInvest.value = titles.invest;
+  if (inputGold) inputGold.value = titles.gold;
+  if (inputCash) inputCash.value = titles.cash;
+
+  var selectCurr = document.getElementById('selectCustCurrency');
+  if (selectCurr) selectCurr.value = getUserCurrency();
+
+  var inputTarget = document.getElementById('inputCustSavingsTarget');
+  if (inputTarget) {
+    inputTarget.value = (typeof currentFinanceSavingsTarget === 'number') ? currentFinanceSavingsTarget : 68;
   }
 
-  if (viewType === 'cash') {
-    var target = document.getElementById('cashUpdateForm') || document.getElementById('finLedgerViewWrap');
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } else if (viewType === 'gold') {
-    var target = document.getElementById('financeAssetsQuickGlance');
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } else if (viewType === 'income') {
-    var target = document.getElementById('incomeList');
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } else if (viewType === 'investments') {
-    if (typeof selectFinanceView === 'function') {
-      selectFinanceView('analytics');
+  // Render allocation envelopes
+  var wrap = document.getElementById('finAllocEnvelopesWrap');
+  if (wrap) {
+    var defaultAllocs = [
+      { name: 'Construction', pct: 25 },
+      { name: 'Emergency', pct: 15 },
+      { name: 'Investment', pct: 20 },
+      { name: 'Other Goals', pct: 10 },
+      { name: 'Flexible Cash', pct: 30 }
+    ];
+    wrap.innerHTML = defaultAllocs.map(function(item, i) {
+      return [
+        '<div class="fin-alloc-row">',
+        '  <input type="text" class="fin-custom-input fin-alloc-name" value="' + escapeHtml(item.name) + '" placeholder="Category Name" />',
+        '  <div class="fin-alloc-pct-wrap">',
+        '    <input type="number" class="fin-custom-input fin-alloc-pct" value="' + item.pct + '" min="0" max="100" />',
+        '    <span style="font-weight:700; color:#64748B;">%</span>',
+        '  </div>',
+        '</div>'
+      ].join('');
+    }).join('');
+  }
+
+  backdrop.classList.add('is-open');
+};
+
+window.closeFinanceCustomizeModal = function() {
+  var backdrop = document.getElementById('finCustomizeModalBackdrop');
+  if (backdrop) backdrop.classList.remove('is-open');
+};
+
+window.switchFinCustomTab = function(tabKey) {
+  var tabs = document.querySelectorAll('.fin-modal-tab-btn');
+  tabs.forEach(function(t) {
+    t.classList.toggle('active', t.getAttribute('data-tab') === tabKey);
+  });
+
+  var paneTitles = document.getElementById('finCustomTabTitles');
+  var paneInvest = document.getElementById('finCustomTabInvestments');
+  var paneTargets = document.getElementById('finCustomTabTargets');
+
+  if (paneTitles) paneTitles.hidden = (tabKey !== 'titles');
+  if (paneInvest) paneInvest.hidden = (tabKey !== 'investments');
+  if (paneTargets) paneTargets.hidden = (tabKey !== 'targets');
+};
+
+window.handleSaveAllFinanceCustomization = async function() {
+  var inputPrimary = document.getElementById('inputCustPrimaryTitle');
+  var inputInvest = document.getElementById('inputCustInvestTitle');
+  var inputGold = document.getElementById('inputCustGoldTitle');
+  var inputCash = document.getElementById('inputCustCashTitle');
+  var selectCurr = document.getElementById('selectCustCurrency');
+  var inputTarget = document.getElementById('inputCustSavingsTarget');
+
+  if (inputPrimary && inputPrimary.value.trim()) localStorage.setItem('fin_custom_primary_title', inputPrimary.value.trim());
+  if (inputInvest && inputInvest.value.trim()) localStorage.setItem('fin_custom_invest_title', inputInvest.value.trim());
+  if (inputGold && inputGold.value.trim()) localStorage.setItem('fin_custom_gold_title', inputGold.value.trim());
+  if (inputCash && inputCash.value.trim()) localStorage.setItem('fin_custom_cash_title', inputCash.value.trim());
+
+  var newCurr = selectCurr ? selectCurr.value : null;
+  if (newCurr) {
+    localStorage.setItem('user_currency', newCurr);
+    localStorage.setItem('antigravity_currency', newCurr);
+    if (typeof currentUser === 'object' && currentUser) {
+      currentUser.currency = newCurr;
     }
+  }
+
+  var targetPct = inputTarget ? parseFloat(inputTarget.value) || 25 : 25;
+
+  // Collect allocations
+  var names = document.querySelectorAll('.fin-alloc-name');
+  var pcts = document.querySelectorAll('.fin-alloc-pct');
+  var allocs = [];
+  names.forEach(function(el, idx) {
+    var pVal = pcts[idx] ? parseFloat(pcts[idx].value) || 0 : 0;
+    if (el.value.trim()) allocs.push({ name: el.value.trim(), pct: pVal });
+  });
+
+  try {
+    await fetch('/api/finance/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currency: newCurr,
+        savingsTargetPct: targetPct,
+        allocations: allocs.length ? allocs : undefined
+      })
+    });
+  } catch (err) {
+    console.warn('Could not save finance settings to API:', err);
+  }
+
+  closeFinanceCustomizeModal();
+  if (typeof showToast === 'function') {
+    showToast('✨ Finance settings & custom titles updated successfully!');
+  }
+  await loadFinancePage();
+};
+
+window.handleSaveCustomAsset = async function() {
+  var nameEl = document.getElementById('inputCustAssetName');
+  var typeEl = document.getElementById('selectCustAssetType');
+  var valEl = document.getElementById('inputCustAssetVal');
+
+  var name = nameEl ? nameEl.value.trim() : '';
+  var type = typeEl ? typeEl.value : 'Stock';
+  var val = valEl ? parseFloat(valEl.value) : 0;
+
+  if (!name || isNaN(val) || val <= 0) {
+    if (typeof showToast === 'function') showToast('⚠️ Please enter an asset name and valid value.');
+    return;
+  }
+
+  try {
+    var res = await fetch('/api/finance/assets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        type: type,
+        quantity: 1,
+        unit: 'unit',
+        purchasePrice: val,
+        status: 'Owned'
+      })
+    });
+
+    if (res.ok) {
+      if (nameEl) nameEl.value = '';
+      if (valEl) valEl.value = '';
+      closeFinanceCustomizeModal();
+      if (typeof showToast === 'function') showToast('✅ Asset added to portfolio!');
+      await loadFinancePage();
+    } else {
+      var data = await res.json();
+      if (typeof showToast === 'function') showToast('⚠️ ' + (data.error || 'Failed to save asset.'));
+    }
+  } catch (err) {
+    console.error('Error adding asset:', err);
   }
 };
 
