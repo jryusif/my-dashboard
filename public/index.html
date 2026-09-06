@@ -3904,7 +3904,114 @@
           </div>
         </div>
 
-        <!-- 4. Target Deadline & Timeline Horizon -->
+        <!-- 4. ⚡ DYNAMIC AUTO-FUNDING ENGINE & RULES -->
+        <div class="goal-funding-engine-card" style="margin: 16px 0; padding: 16px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">⚡</span>
+              <div>
+                <strong style="font-size:14px; color:#fff;">Automatic Inflow &amp; Funding Rules</strong>
+                <p style="margin:0; font-size:11px; color:#94a3b8;">Stream % from monthly logged clinic/salary income and pre-existing wealth</p>
+              </div>
+            </div>
+            <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.06); padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.12);">
+              <input type="checkbox" id="goalFormAutoEnabled" checked onchange="toggleGoalFundingSection(); updateGoalModalPreview();" style="accent-color:#10b981; cursor:pointer;" />
+              <span style="font-size:11.5px; font-weight:700; color:#34d399;">Active Auto-Fund</span>
+            </label>
+          </div>
+
+          <div id="goalFundingEngineBody">
+            <!-- Income Allocation Percentage -->
+            <div class="form-group" style="margin-bottom:14px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <label for="goalFormAllocPct" style="margin:0; font-size:12px; font-weight:600; color:#e2e8f0;">Monthly Income Allocation Share</label>
+                <span id="goalFormAllocPctDisplay" style="font-size:13px; font-weight:800; color:#34d399; background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:6px;">60%</span>
+              </div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <input type="range" id="goalFormAllocPct" min="0" max="100" step="5" value="60" style="flex:1; accent-color:#10b981;" oninput="syncGoalAllocPct(this.value)" />
+                <div class="modal-suggestion-pills" style="margin:0;">
+                  <button type="button" class="modal-preset-pill" onclick="syncGoalAllocPct(25)">25%</button>
+                  <button type="button" class="modal-preset-pill" onclick="syncGoalAllocPct(50)">50%</button>
+                  <button type="button" class="modal-preset-pill" onclick="syncGoalAllocPct(60)">60%</button>
+                  <button type="button" class="modal-preset-pill" onclick="syncGoalAllocPct(75)">75%</button>
+                  <button type="button" class="modal-preset-pill" onclick="syncGoalAllocPct(100)">100%</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Start Month & Income Stream Filters -->
+            <div class="form-grid-2" style="margin-bottom:12px;">
+              <div class="form-group" style="margin:0;">
+                <label for="goalFormStartMonth" style="font-size:12px; font-weight:600; color:#e2e8f0;">🗓️ Starts Counting From</label>
+                <select id="goalFormStartMonth" onchange="updateGoalModalPreview()">
+                  <option value="all">🌐 All Time (Since Account Inception)</option>
+                </select>
+                <span style="font-size:10.5px; color:#94a3b8; display:block; margin-top:3px;">Incomes logged prior to this month are ignored.</span>
+              </div>
+
+              <div class="form-group" style="margin:0;">
+                <label for="goalFormSourceMode" style="font-size:12px; font-weight:600; color:#e2e8f0;">💰 Eligible Income Stream</label>
+                <select id="goalFormSourceMode" onchange="toggleGoalSourceMode(); updateGoalModalPreview();">
+                  <option value="all">🌐 Any / All Incomes (Every source)</option>
+                  <option value="specific">🎯 Specific Income Sources Only</option>
+                </select>
+                <span style="font-size:10.5px; color:#94a3b8; display:block; margin-top:3px;">Filter only clinic salary, dividends, etc.</span>
+              </div>
+            </div>
+
+            <!-- Specific Sources Selector (Shown when sourceMode == 'specific') -->
+            <div id="goalSpecificSourcesGroup" class="form-group" style="display:none; margin-bottom:12px; padding:12px; background:rgba(0,0,0,0.25); border-radius:10px; border:1px dashed rgba(56,189,248,0.3);">
+              <label style="font-size:11.5px; font-weight:700; color:#38bdf8; display:block; margin-bottom:6px;">Select or Enter Matching Clinics / Sources:</label>
+              <div id="goalDetectedSourcesChips" class="modal-suggestion-pills" style="margin-bottom:8px;"></div>
+              <input type="text" id="goalFormSpecificSources" placeholder="e.g. White Plus Clinic, Crystal Dental Center" oninput="updateGoalModalPreview()" />
+              <span style="font-size:10.5px; color:#94a3b8; display:block; margin-top:3px;">Comma-separated keywords. Only transactions containing these names will fund this goal.</span>
+            </div>
+
+            <!-- Pre-Existing Net Worth & Saved Money Section -->
+            <div style="margin-top:10px; padding:12px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                <label style="font-size:12px; font-weight:600; color:#e2e8f0; display:inline-flex; align-items:center; gap:8px; cursor:pointer;">
+                  <input type="checkbox" id="goalFormIncludeSavedCash" onchange="toggleSavedCashSeed(); updateGoalModalPreview();" style="accent-color:#10b981; cursor:pointer;" />
+                  <span>💵 Include Pre-Existing Savings / Net Worth Seed</span>
+                </label>
+                <span id="goalBaselineCashIndicator" style="font-size:11px; color:#34d399;"></span>
+              </div>
+
+              <div id="goalSavedCashSeedInputs" style="display:none; margin-top:10px;">
+                <div class="form-group" style="margin:0;">
+                  <label for="goalFormCustomStartingCapital" style="font-size:11px; color:#94a3b8;">Pre-Existing Money Saved Before Website (Seed Capital)</label>
+                  <div class="amount-input-wrap">
+                    <span class="amount-prefix">E£</span>
+                    <input type="number" id="goalFormCustomStartingCapital" min="0" step="any" placeholder="0.00" value="0" oninput="updateGoalModalPreview()" />
+                  </div>
+                  <span style="font-size:10.5px; color:#64748b; margin-top:2px; display:block;">Money you already possessed prior to starting this site is credited directly into this goal.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Auto-Calculation Engine Simulation Breakdown -->
+            <div id="goalAutoCalcLivePreview" style="margin-top:12px; padding:10px 14px; background:rgba(16,185,129,0.08); border-radius:10px; border:1px solid rgba(16,185,129,0.25); font-size:11.5px; color:#cbd5e1; display:flex; flex-direction:column; gap:5px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; color:#34d399; font-size:12.5px;">
+                <span>⚡ Real-Time Auto-Funded Value:</span>
+                <span id="goalAutoCalcSum">E£ 0</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:11px; color:#94a3b8;">
+                <span id="goalAutoCalcIncomeDesc">From eligible logged income:</span>
+                <span id="goalAutoCalcIncomeVal">E£ 0</span>
+              </div>
+              <div id="goalAutoCalcSeedRow" style="display:flex; justify-content:space-between; font-size:11px; color:#94a3b8;">
+                <span>From pre-existing savings &amp; seed:</span>
+                <span id="goalAutoCalcSeedVal">E£ 0</span>
+              </div>
+              <div id="goalAutoCalcPaceRow" style="display:flex; justify-content:space-between; font-size:10.5px; color:#38bdf8; border-top:1px dashed rgba(255,255,255,0.1); padding-top:4px; margin-top:2px;">
+                <span>Pace Horizon:</span>
+                <span id="goalAutoCalcPaceVal">Calculating…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Target Deadline & Timeline Horizon -->
         <div class="form-grid-2">
           <div class="form-group">
             <label for="goalFormDeadline">Target Deadline (Optional)</label>
@@ -3922,13 +4029,13 @@
           </div>
         </div>
 
-        <!-- 5. Funding Strategy / Notes -->
+        <!-- 6. Funding Strategy / Notes -->
         <div class="form-group">
           <label for="goalFormNotes">Funding Strategy &amp; Execution Notes (Optional)</label>
           <textarea id="goalFormNotes" rows="2" placeholder="e.g. Allocate 60% of monthly clinic revenue + 50% trading profits to this bucket..." oninput="updateGoalModalPreview()"></textarea>
         </div>
 
-        <!-- 6. Interactive Live Card Preview -->
+        <!-- 7. Interactive Live Card Preview -->
         <div class="goal-modal-preview-box" style="margin-top:14px; padding:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:14px;">
           <div class="goal-preview-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <span class="preview-badge" style="font-size:10px; font-weight:800; letter-spacing:0.08em; color:#38bdf8;">✨ LIVE CARD PREVIEW</span>
@@ -5586,6 +5693,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=33.8"></script>
+  <script src="app.js?v=33.9"></script>
 </body>
 </html>

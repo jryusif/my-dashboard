@@ -255,6 +255,7 @@ model FinancialGoal {
   targetAmount  Float    @map("target_amount")
   currentAmount Float    @default(0) @map("current_amount")
   deadline      String?
+  fundingConfig Json?    @map("funding_config")
   createdAt     DateTime @default(now()) @map("created_at")
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)

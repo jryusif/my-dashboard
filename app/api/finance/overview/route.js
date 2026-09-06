@@ -2,38 +2,13 @@ import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth.js';
 import prisma from '@/lib/prisma.js';
 import { getLiveGoldPrice, convertCurrency } from '@/lib/gold.js';
+import { calculateGoalFunding, matchAllocationForGoal } from '@/lib/goal-funding.js';
 
 async function resolveUserId(req) {
   const auth = getAuthUser(req);
   if (auth && auth.authenticated && auth.userId) return auth.userId;
   
   return null;
-}
-
-function normalizeGoalName(name) {
-  if (!name || typeof name !== 'string') return '';
-  return name
-    .replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u, '')
-    .trim()
-    .toLowerCase();
-}
-
-function matchAllocationForGoal(goalTitle, allocations) {
-  if (!allocations || !Array.isArray(allocations)) return null;
-  const normTitle = normalizeGoalName(goalTitle);
-  if (!normTitle) return null;
-
-  // Exact match
-  let match = allocations.find(a => normalizeGoalName(a.name) === normTitle);
-  if (match) return match;
-
-  // Partial match: title contains allocation name or vice versa
-  match = allocations.find(a => {
-    const normAlloc = normalizeGoalName(a.name);
-    if (!normAlloc || normAlloc.length < 3) return false;
-    return normTitle.includes(normAlloc) || normAlloc.includes(normTitle);
-  });
-  return match || null;
 }
 
 export async function GET(req) {
@@ -189,25 +164,15 @@ export async function GET(req) {
     };
 
     const formattedGoals = goals.map(g => {
-      const match = matchAllocationForGoal(g.title, userAllocations);
-      let allocPct = 0;
-      let isAutoAllocated = false;
-      let effectiveCurrent = g.currentAmount || 0;
+      const fundingResult = calculateGoalFunding(g, transactions, savedCashBaseline, userAllocations);
+      const effectiveCurrent = fundingResult.effectiveCurrent;
 
-      if (match && parseFloat(match.pct) > 0) {
-        allocPct = parseFloat(match.pct);
-        isAutoAllocated = true;
-        // Auto-accumulate percentage from all logged regular income
-        const autoAmount = Math.round(allRegularIncome * (allocPct / 100));
-        effectiveCurrent = Math.max(effectiveCurrent, autoAmount);
-
-        // Keep database record synchronized
-        if (g.currentAmount !== effectiveCurrent && userId) {
-          prisma.financialGoal.update({
-            where: { id: g.id },
-            data: { currentAmount: effectiveCurrent }
-          }).catch(e => console.warn('Could not sync goal currentAmount:', e));
-        }
+      // Keep database record synchronized
+      if (g.currentAmount !== effectiveCurrent && userId && fundingResult.isAutoAllocated) {
+        prisma.financialGoal.update({
+          where: { id: g.id },
+          data: { currentAmount: effectiveCurrent }
+        }).catch(e => console.warn('Could not sync goal currentAmount:', e));
       }
 
       const progressPct = g.targetAmount > 0
@@ -217,15 +182,24 @@ export async function GET(req) {
       return {
         id: g.id,
         goal: g.title,
-        type: isAutoAllocated ? `Auto-Funded (${allocPct}%)` : 'Financial Target',
+        type: fundingResult.isAutoAllocated ? `Auto-Funded (${fundingResult.allocPct}%)` : 'Financial Target',
         target: g.targetAmount,
         current: effectiveCurrent,
         progressPct,
         deadline: g.deadline,
         remaining: Math.max(0, g.targetAmount - effectiveCurrent),
-        isAutoAllocated,
-        allocPct,
-        monthAllocated: isAutoAllocated ? Math.round(totalIncome * (allocPct / 100)) : 0
+        isAutoAllocated: fundingResult.isAutoAllocated,
+        allocPct: fundingResult.allocPct,
+        startMonth: fundingResult.startMonth,
+        sourceMode: fundingResult.sourceMode,
+        specificSources: fundingResult.specificSources,
+        includeSavedCash: fundingResult.includeSavedCash,
+        savedCashContribution: fundingResult.savedCashContribution,
+        customStartingCapital: fundingResult.customStartingCapital,
+        incomeContribution: fundingResult.incomeContribution,
+        matchedTxCount: fundingResult.matchedTxCount,
+        fundingConfig: fundingResult.fundingConfig,
+        monthAllocated: fundingResult.isAutoAllocated ? Math.round(totalIncome * (fundingResult.allocPct / 100)) : 0
       };
     });
 

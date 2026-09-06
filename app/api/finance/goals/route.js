@@ -1,31 +1,6 @@
 import { prisma } from '@/lib/prisma.js';
 import { getAuthUser, errorResponse, successResponse } from '@/lib/auth.js';
-
-function normalizeGoalName(name) {
-  if (!name || typeof name !== 'string') return '';
-  return name
-    .replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u, '')
-    .trim()
-    .toLowerCase();
-}
-
-function matchAllocationForGoal(goalTitle, allocations) {
-  if (!allocations || !Array.isArray(allocations)) return null;
-  const normTitle = normalizeGoalName(goalTitle);
-  if (!normTitle) return null;
-
-  // Exact match
-  let match = allocations.find(a => normalizeGoalName(a.name) === normTitle);
-  if (match) return match;
-
-  // Partial match
-  match = allocations.find(a => {
-    const normAlloc = normalizeGoalName(a.name);
-    if (!normAlloc || normAlloc.length < 3) return false;
-    return normTitle.includes(normAlloc) || normAlloc.includes(normTitle);
-  });
-  return match || null;
-}
+import { calculateGoalFunding, matchAllocationForGoal } from '@/lib/goal-funding.js';
 
 export async function GET(req) {
   try {
@@ -52,39 +27,88 @@ export async function GET(req) {
         type: 'income',
         NOT: { category: 'Saved Cash Baseline' }
       },
-      select: { amount: true }
+      select: {
+        id: true,
+        amount: true,
+        date: true,
+        category: true,
+        description: true,
+        account: true,
+        type: true
+      },
+      orderBy: { date: 'desc' }
     });
-    const allRegularIncome = regularIncomeTx.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    // Detect user's baseline saved cash / starting wealth
+    const cashAsset = await prisma.financialAsset.findFirst({
+      where: { userId: auth.userId, type: 'Cash' }
+    });
+    let savedCashBaseline = cashAsset?.purchasePrice || 0;
+    if (savedCashBaseline === 0) {
+      const baselineTx = await prisma.financialTransaction.findFirst({
+        where: {
+          userId: auth.userId,
+          OR: [
+            { category: 'Saved Cash Baseline' },
+            { description: { contains: 'Saved Cash Reserve' } }
+          ]
+        }
+      });
+      if (baselineTx) savedCashBaseline = baselineTx.amount || 0;
+    }
+
+    // Collect available distinct sources for quick frontend filter chips
+    const sourceSet = new Set();
+    regularIncomeTx.forEach(t => {
+      if (t.category && t.category.trim()) sourceSet.add(t.category.trim());
+      if (t.description && t.description.trim()) sourceSet.add(t.description.trim());
+    });
+    const availableSources = Array.from(sourceSet);
+
+    // Collect available months from transactions
+    const monthSet = new Set();
+    regularIncomeTx.forEach(t => {
+      if (t.date) {
+        const dStr = typeof t.date === 'string' ? t.date : t.date.toISOString();
+        monthSet.add(dStr.slice(0, 7));
+      }
+    });
+    const availableMonths = Array.from(monthSet).sort().reverse();
 
     const enrichedGoals = goals.map(g => {
-      const match = matchAllocationForGoal(g.title, userAllocations);
-      let allocPct = 0;
-      let isAutoAllocated = false;
-      let effectiveCurrent = g.currentAmount || 0;
+      const fundingResult = calculateGoalFunding(g, regularIncomeTx, savedCashBaseline, userAllocations);
 
-      if (match && parseFloat(match.pct) > 0) {
-        allocPct = parseFloat(match.pct);
-        isAutoAllocated = true;
-        const autoAmount = Math.round(allRegularIncome * (allocPct / 100));
-        effectiveCurrent = Math.max(effectiveCurrent, autoAmount);
-
-        if (g.currentAmount !== effectiveCurrent) {
-          prisma.financialGoal.update({
-            where: { id: g.id },
-            data: { currentAmount: effectiveCurrent }
-          }).catch(() => {});
-        }
+      if (g.currentAmount !== fundingResult.effectiveCurrent && fundingResult.isAutoAllocated) {
+        prisma.financialGoal.update({
+          where: { id: g.id },
+          data: { currentAmount: fundingResult.effectiveCurrent }
+        }).catch(() => {});
       }
 
       return {
         ...g,
-        currentAmount: effectiveCurrent,
-        isAutoAllocated,
-        allocPct
+        currentAmount: fundingResult.effectiveCurrent,
+        isAutoAllocated: fundingResult.isAutoAllocated,
+        allocPct: fundingResult.allocPct,
+        startMonth: fundingResult.startMonth,
+        sourceMode: fundingResult.sourceMode,
+        specificSources: fundingResult.specificSources,
+        includeSavedCash: fundingResult.includeSavedCash,
+        savedCashContribution: fundingResult.savedCashContribution,
+        customStartingCapital: fundingResult.customStartingCapital,
+        incomeContribution: fundingResult.incomeContribution,
+        autoTotal: fundingResult.autoTotal,
+        matchedTxCount: fundingResult.matchedTxCount,
+        fundingConfig: fundingResult.fundingConfig
       };
     });
 
-    return successResponse({ goals: enrichedGoals });
+    return successResponse({
+      goals: enrichedGoals,
+      availableSources,
+      availableMonths,
+      savedCashBaseline
+    });
   } catch (err) {
     console.error('Fetch goals error:', err);
     return errorResponse('Failed to fetch financial goals.');
@@ -97,7 +121,7 @@ export async function POST(req) {
     if (!auth || !auth.authenticated) return errorResponse('Unauthorized', 401);
 
     const body = await req.json();
-    const { title, targetAmount, currentAmount, deadline } = body;
+    const { title, targetAmount, currentAmount, deadline, fundingConfig } = body;
 
     if (!title || !targetAmount) {
       return errorResponse('Title and target amount are required.', 400);
@@ -109,7 +133,8 @@ export async function POST(req) {
         title: title.trim(),
         targetAmount: parseFloat(targetAmount) || 0,
         currentAmount: parseFloat(currentAmount) || 0,
-        deadline: deadline || null
+        deadline: deadline || null,
+        fundingConfig: fundingConfig || null
       }
     });
 
@@ -126,7 +151,7 @@ export async function PATCH(req) {
     if (!auth || !auth.authenticated) return errorResponse('Unauthorized', 401);
 
     const body = await req.json();
-    const { id, title, targetAmount, currentAmount, deadline } = body;
+    const { id, title, targetAmount, currentAmount, deadline, fundingConfig } = body;
 
     if (!id) return errorResponse('Goal ID is required.', 400);
 
@@ -135,8 +160,9 @@ export async function PATCH(req) {
     if (targetAmount !== undefined) dataToUpdate.targetAmount = parseFloat(targetAmount) || 0;
     if (currentAmount !== undefined) dataToUpdate.currentAmount = parseFloat(currentAmount) || 0;
     if (deadline !== undefined) dataToUpdate.deadline = deadline;
+    if (fundingConfig !== undefined) dataToUpdate.fundingConfig = fundingConfig;
 
-    const goal = await prisma.financialGoal.updateMany({
+    await prisma.financialGoal.updateMany({
       where: { id, userId: auth.userId },
       data: dataToUpdate
     });

@@ -5985,14 +5985,39 @@ function allocTile(label, alloc) {
 function renderGoalCard(goal) {
   const pct = Math.max(0, Math.min(100, goal.progressPct || 0));
   const isAuto = Boolean(goal.isAutoAllocated);
+  const cfg = goal.fundingConfig || {};
+
+  let customRuleBadges = '';
+  if (isAuto) {
+    if (goal.sourceMode === 'specific' && Array.isArray(goal.specificSources) && goal.specificSources.length > 0) {
+      customRuleBadges += `<span class="goal-rule-badge source" style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:999px;" title="Funded only from: ${escapeHtml(goal.specificSources.join(', '))}">🎯 ${escapeHtml(goal.specificSources.join(', '))}</span>`;
+    } else {
+      customRuleBadges += `<span class="goal-rule-badge all-sources" style="background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid rgba(255,255,255,0.12);font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:999px;" title="Funded from all logged income streams">🌐 All Incomes</span>`;
+    }
+
+    if (goal.startMonth && goal.startMonth !== 'all') {
+      customRuleBadges += `<span class="goal-rule-badge start-month" style="background:rgba(168,85,247,0.12);color:#c084fc;border:1px solid rgba(168,85,247,0.3);font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:999px;" title="Auto-counting started on ${escapeHtml(goal.startMonth)}">🗓️ Since ${escapeHtml(goal.startMonth)}</span>`;
+    }
+
+    if (goal.customStartingCapital > 0) {
+      customRuleBadges += `<span class="goal-rule-badge seed" style="background:rgba(234,179,8,0.12);color:#facc15;border:1px solid rgba(234,179,8,0.3);font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:999px;" title="Pre-existing seed capital from saved money">💵 +${fmtMoney(goal.customStartingCapital)} Seed</span>`;
+    }
+  }
+
   return `
-    <div class="goal-card ${isAuto ? 'is-auto-funded' : ''}">
+    <div class="goal-card ${isAuto ? 'is-auto-funded' : ''}" style="cursor:pointer;" onclick="openEditFinancialGoalModal('${goal.id}')" title="Click to view & configure auto-funding rules">
       <div class="goal-card-header">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="goal-name">${escapeHtml(goal.goal)}</span>
-          ${isAuto ? `<span class="goal-auto-badge" title="Automatically funded with ${goal.allocPct}% of all monthly logged income">⚡ ${goal.allocPct}% Monthly Income Share</span>` : ''}
+          ${isAuto ? `<span class="goal-auto-badge" title="Auto-funds ${goal.allocPct}% of eligible monthly income">⚡ ${goal.allocPct}% Monthly Income Share</span>` : ''}
+          ${customRuleBadges}
         </div>
-        <span class="goal-type">${escapeHtml(goal.type || 'Financial Target')}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button type="button" class="btn-goal-quick-config" onclick="event.stopPropagation(); openEditFinancialGoalModal('${goal.id}')" title="Configure Auto-Funding Rules" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#34d399; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;">
+            <span>⚙️</span> Auto-Funding
+          </button>
+          <span class="goal-type">${escapeHtml(goal.type || 'Financial Target')}</span>
+        </div>
       </div>
       <div class="goal-amounts">
         <span><strong>${fmtMoney(goal.current)}</strong> of ${fmtMoney(goal.target)}</span>
@@ -6002,7 +6027,7 @@ function renderGoalCard(goal) {
       <div class="goal-meta">
         ${goal.deadline ? `<span>Deadline: ${fmtDate(goal.deadline)}</span> · ` : ''}
         <span>Remaining: <strong>${fmtMoney(goal.remaining)}</strong></span>
-        ${isAuto ? ` · <span class="goal-auto-subtext">⚡ Auto-funds ${goal.allocPct}% from logged income</span>` : ''}
+        ${isAuto ? ` · <span class="goal-auto-subtext">⚡ Auto-funds ${goal.allocPct}%${goal.sourceMode === 'specific' && goal.specificSources?.length ? ' from selected sources' : ' from logged income'}${goal.startMonth && goal.startMonth !== 'all' ? ` (from ${goal.startMonth})` : ''}</span>` : ''}
       </div>
     </div>
   `;
@@ -15441,6 +15466,30 @@ window.closeThemeSelectorModal = closeThemeSelectorModal;
 
 let currentEditingGoalId = null;
 let currentProfileGoalsCache = [];
+let currentGoalsMeta = {
+  availableSources: [],
+  availableMonths: [],
+  savedCashBaseline: 0
+};
+window.currentGoalsMeta = currentGoalsMeta;
+window.allFinanceTransactionsCache = window.allFinanceTransactionsCache || [];
+
+async function ensureFinanceTransactionsLoaded() {
+  if (window.allFinanceTransactionsCache && window.allFinanceTransactionsCache.length > 0) {
+    return window.allFinanceTransactionsCache;
+  }
+  try {
+    const res = await fetch('/api/finance/transactions?type=income');
+    if (res.ok) {
+      const data = await res.json();
+      window.allFinanceTransactionsCache = data.transactions || [];
+      return window.allFinanceTransactionsCache;
+    }
+  } catch (e) {
+    console.warn('Could not cache finance transactions:', e);
+  }
+  return [];
+}
 
 async function loadProfileFinancialGoals() {
   const container = document.getElementById('profileFinancialGoalsList');
@@ -15449,8 +15498,15 @@ async function loadProfileFinancialGoals() {
   try {
     const res = await fetch('/api/finance/goals');
     if (!res.ok) return;
-    const { goals } = await res.json();
-    currentProfileGoalsCache = goals || [];
+    const data = await res.json();
+    const goals = data.goals || [];
+    currentProfileGoalsCache = goals;
+    currentGoalsMeta = {
+      availableSources: data.availableSources || [],
+      availableMonths: data.availableMonths || [],
+      savedCashBaseline: data.savedCashBaseline || 0
+    };
+    window.currentGoalsMeta = currentGoalsMeta;
 
     if (!goals || goals.length === 0) {
       container.innerHTML = `
@@ -15471,6 +15527,21 @@ async function loadProfileFinancialGoals() {
         icon = emojiMatch[1];
         displayTitle = displayTitle.slice(emojiMatch[0].length).trim();
       }
+
+      let badges = '';
+      if (g.isAutoAllocated) {
+        badges += `<span class="goal-auto-badge" style="font-size:10px;padding:2px 7px;">⚡ ${g.allocPct}% Income</span>`;
+        if (g.sourceMode === 'specific' && g.specificSources?.length) {
+          badges += `<span class="goal-rule-badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;">🎯 ${escapeHtml(g.specificSources.join(', '))}</span>`;
+        }
+        if (g.startMonth && g.startMonth !== 'all') {
+          badges += `<span class="goal-rule-badge" style="background:rgba(168,85,247,0.12);color:#c084fc;border:1px solid rgba(168,85,247,0.3);font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;">🗓️ ${escapeHtml(g.startMonth)}</span>`;
+        }
+        if (g.customStartingCapital > 0) {
+          badges += `<span class="goal-rule-badge" style="background:rgba(234,179,8,0.12);color:#facc15;border:1px solid rgba(234,179,8,0.3);font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;">💵 +${fmtMoney(g.customStartingCapital)} Seed</span>`;
+        }
+      }
+
       return `
         <div class="profile-goal-card ${g.isAutoAllocated ? 'is-auto-funded' : ''}" id="goalCard_${g.id}">
           <div class="profile-goal-head">
@@ -15478,7 +15549,7 @@ async function loadProfileFinancialGoals() {
               <span style="font-size:20px;">${icon}</span>
               <div>
                 <h4 class="profile-goal-title">${escapeHtml(displayTitle || g.title)}</h4>
-                ${g.isAutoAllocated ? `<span class="goal-auto-badge" style="font-size:10px;padding:2px 7px;">⚡ ${g.allocPct}% Monthly Income Share</span>` : ''}
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;">${badges}</div>
               </div>
             </div>
             ${g.deadline ? `<span class="profile-goal-deadline">📅 ${fmtDate(g.deadline)}</span>` : ''}
@@ -15493,7 +15564,7 @@ async function loadProfileFinancialGoals() {
             </div>
           </div>
           <div class="profile-goal-actions">
-            <button type="button" class="btn-goal-edit" onclick="openEditFinancialGoalModal('${g.id}')">✏️ Edit</button>
+            <button type="button" class="btn-goal-edit" onclick="openEditFinancialGoalModal('${g.id}')">⚙️ Configure Funding</button>
             <button type="button" class="btn-goal-del" onclick="handleDeleteFinancialGoal('${g.id}')">🗑️ Delete</button>
           </div>
         </div>
@@ -15505,7 +15576,101 @@ async function loadProfileFinancialGoals() {
 }
 window.loadProfileFinancialGoals = loadProfileFinancialGoals;
 
-function openAddFinancialGoalModal() {
+function syncGoalAllocPct(val) {
+  const range = document.getElementById('goalFormAllocPct');
+  const display = document.getElementById('goalFormAllocPctDisplay');
+  const num = Math.max(0, Math.min(100, parseFloat(val) || 0));
+  if (range) range.value = num;
+  if (display) display.textContent = `${num}%`;
+  updateGoalModalPreview();
+}
+window.syncGoalAllocPct = syncGoalAllocPct;
+
+function toggleGoalFundingSection() {
+  const enabled = document.getElementById('goalFormAutoEnabled')?.checked;
+  const body = document.getElementById('goalFundingEngineBody');
+  if (body) {
+    body.style.opacity = enabled ? '1' : '0.4';
+    body.style.pointerEvents = enabled ? 'auto' : 'none';
+  }
+}
+window.toggleGoalFundingSection = toggleGoalFundingSection;
+
+function toggleGoalSourceMode() {
+  const mode = document.getElementById('goalFormSourceMode')?.value;
+  const grp = document.getElementById('goalSpecificSourcesGroup');
+  if (grp) grp.style.display = mode === 'specific' ? 'block' : 'none';
+}
+window.toggleGoalSourceMode = toggleGoalSourceMode;
+
+function toggleSavedCashSeed() {
+  const inc = document.getElementById('goalFormIncludeSavedCash')?.checked;
+  const inputs = document.getElementById('goalSavedCashSeedInputs');
+  if (inputs) inputs.style.display = inc ? 'block' : 'none';
+}
+window.toggleSavedCashSeed = toggleSavedCashSeed;
+
+function addSpecificSourceChip(src) {
+  const inp = document.getElementById('goalFormSpecificSources');
+  if (!inp) return;
+  const current = inp.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (!current.some(s => s.toLowerCase() === src.toLowerCase())) {
+    current.push(src);
+    inp.value = current.join(', ');
+    updateGoalModalPreview();
+  }
+}
+window.addSpecificSourceChip = addSpecificSourceChip;
+
+function renderFundingModalOptions(selectedMonth, selectedSources) {
+  // Populate Months
+  const monthSelect = document.getElementById('goalFormStartMonth');
+  if (monthSelect) {
+    let html = `<option value="all">🌐 All Time (Since Account Inception)</option>`;
+    const months = currentGoalsMeta?.availableMonths || [];
+    months.forEach(m => {
+      const optLabel = fmtMonthOption(m);
+      html += `<option value="${m}">${optLabel}</option>`;
+    });
+    monthSelect.innerHTML = html;
+    monthSelect.value = selectedMonth || 'all';
+  }
+
+  // Populate Sources Chips
+  const chipContainer = document.getElementById('goalDetectedSourcesChips');
+  if (chipContainer) {
+    const sources = currentGoalsMeta?.availableSources || [];
+    if (sources.length === 0) {
+      chipContainer.innerHTML = `<span style="font-size:11px;color:#94a3b8;">No income categories logged yet.</span>`;
+    } else {
+      chipContainer.innerHTML = sources.map(s => `
+        <button type="button" class="modal-preset-pill" style="font-size:11px;padding:3px 8px;" onclick="addSpecificSourceChip('${escapeHtml(s).replace(/'/g, "\\'")}')">
+          + ${escapeHtml(s)}
+        </button>
+      `).join('');
+    }
+  }
+
+  // Baseline Saved Cash indicator
+  const baselineIndicator = document.getElementById('goalBaselineCashIndicator');
+  if (baselineIndicator) {
+    const base = currentGoalsMeta?.savedCashBaseline || 0;
+    baselineIndicator.textContent = base > 0 ? `(Saved Reserve: ${fmtMoney(base)})` : '';
+  }
+}
+
+function fmtMonthOption(mStr) {
+  if (!mStr || mStr === 'all') return '🌐 All Time';
+  try {
+    const [y, m] = mStr.split('-');
+    const date = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+    return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  } catch {
+    return mStr;
+  }
+}
+
+async function openAddFinancialGoalModal() {
   currentEditingGoalId = null;
   const modal = document.getElementById('financialGoalModalBackdrop');
   const titleEl = document.getElementById('financialGoalModalTitle');
@@ -15534,15 +15699,55 @@ function openAddFinancialGoalModal() {
   if (deadInp) deadInp.value = toISODate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000));
   if (notesInp) notesInp.value = '';
 
+  // Setup auto-funding controls
+  renderFundingModalOptions('all');
+  const autoEn = document.getElementById('goalFormAutoEnabled');
+  if (autoEn) autoEn.checked = true;
+  syncGoalAllocPct(60);
+  const srcMode = document.getElementById('goalFormSourceMode');
+  if (srcMode) srcMode.value = 'all';
+  const specSrc = document.getElementById('goalFormSpecificSources');
+  if (specSrc) specSrc.value = '';
+  const incSaved = document.getElementById('goalFormIncludeSavedCash');
+  if (incSaved) incSaved.checked = false;
+  const custSeed = document.getElementById('goalFormCustomStartingCapital');
+  if (custSeed) custSeed.value = 0;
+
+  toggleGoalFundingSection();
+  toggleGoalSourceMode();
+  toggleSavedCashSeed();
+
+  ensureFinanceTransactionsLoaded().then(() => updateGoalModalPreview());
   updateGoalModalPreview();
   if (modal) modal.hidden = false;
 }
 window.openAddFinancialGoalModal = openAddFinancialGoalModal;
 window.promptAddFinancialGoal = openAddFinancialGoalModal;
 
-function openEditFinancialGoalModal(goalId) {
-  const goal = currentProfileGoalsCache.find(g => g.id === goalId);
-  if (!goal) return;
+async function openEditFinancialGoalModal(goalId) {
+  let goal = currentProfileGoalsCache.find(g => g.id === goalId);
+  if (!goal) {
+    try {
+      const res = await fetch('/api/finance/goals');
+      if (res.ok) {
+        const data = await res.json();
+        currentProfileGoalsCache = data.goals || [];
+        currentGoalsMeta = {
+          availableSources: data.availableSources || [],
+          availableMonths: data.availableMonths || [],
+          savedCashBaseline: data.savedCashBaseline || 0
+        };
+        window.currentGoalsMeta = currentGoalsMeta;
+        goal = currentProfileGoalsCache.find(g => g.id === goalId);
+      }
+    } catch (e) {
+      console.warn('Error fetching goal details:', e);
+    }
+  }
+  if (!goal) {
+    showToast('Could not load financial goal details.');
+    return;
+  }
 
   currentEditingGoalId = goal.id;
   const modal = document.getElementById('financialGoalModalBackdrop');
@@ -15578,6 +15783,44 @@ function openEditFinancialGoalModal(goalId) {
   if (deadInp) deadInp.value = goal.deadline || '';
   if (notesInp) notesInp.value = goal.notes || '';
 
+  // Configure Auto-Funding Fields
+  const cfg = goal.fundingConfig || {};
+  const isAuto = goal.isAutoAllocated !== false;
+  const allocPct = cfg.allocPct != null ? cfg.allocPct : (goal.allocPct || 60);
+  const startMonth = cfg.startMonth || goal.startMonth || 'all';
+  const sourceMode = cfg.sourceMode || goal.sourceMode || 'all';
+  const specificSources = Array.isArray(cfg.specificSources)
+    ? cfg.specificSources.join(', ')
+    : (Array.isArray(goal.specificSources) ? goal.specificSources.join(', ') : (cfg.specificSources || ''));
+  const includeSavedCash = cfg.includeSavedCash != null ? Boolean(cfg.includeSavedCash) : Boolean(goal.includeSavedCash);
+  const customStartingCapital = cfg.customStartingCapital != null ? cfg.customStartingCapital : (goal.customStartingCapital || 0);
+
+  renderFundingModalOptions(startMonth, specificSources);
+
+  const autoEn = document.getElementById('goalFormAutoEnabled');
+  if (autoEn) autoEn.checked = isAuto;
+  syncGoalAllocPct(allocPct);
+
+  const monthSelect = document.getElementById('goalFormStartMonth');
+  if (monthSelect) monthSelect.value = startMonth;
+
+  const srcMode = document.getElementById('goalFormSourceMode');
+  if (srcMode) srcMode.value = sourceMode;
+
+  const specSrc = document.getElementById('goalFormSpecificSources');
+  if (specSrc) specSrc.value = specificSources;
+
+  const incSaved = document.getElementById('goalFormIncludeSavedCash');
+  if (incSaved) incSaved.checked = includeSavedCash;
+
+  const custSeed = document.getElementById('goalFormCustomStartingCapital');
+  if (custSeed) custSeed.value = customStartingCapital;
+
+  toggleGoalFundingSection();
+  toggleGoalSourceMode();
+  toggleSavedCashSeed();
+
+  ensureFinanceTransactionsLoaded().then(() => updateGoalModalPreview());
   updateGoalModalPreview();
   if (modal) modal.hidden = false;
 }
@@ -15644,11 +15887,89 @@ function updateGoalModalPreview() {
   const title = document.getElementById('goalFormTitle')?.value || 'Goal Title';
   const category = document.getElementById('goalFormCategory')?.value || 'Real Estate & Clinic';
   const target = Math.max(1, parseFloat(document.getElementById('goalFormTarget')?.value) || 0);
-  const current = Math.max(0, parseFloat(document.getElementById('goalFormCurrent')?.value) || 0);
+  let current = Math.max(0, parseFloat(document.getElementById('goalFormCurrent')?.value) || 0);
   const deadline = document.getElementById('goalFormDeadline')?.value;
 
-  const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
-  const remaining = Math.max(0, target - current);
+  // Auto-Funding Form Values
+  const autoEnabled = document.getElementById('goalFormAutoEnabled')?.checked ?? true;
+  const allocPct = parseFloat(document.getElementById('goalFormAllocPct')?.value) || 0;
+  const startMonth = document.getElementById('goalFormStartMonth')?.value || 'all';
+  const sourceMode = document.getElementById('goalFormSourceMode')?.value || 'all';
+  const specificSourcesRaw = document.getElementById('goalFormSpecificSources')?.value || '';
+  const specificSources = specificSourcesRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const includeSavedCash = document.getElementById('goalFormIncludeSavedCash')?.checked ?? false;
+  const customStartingCapital = Math.max(0, parseFloat(document.getElementById('goalFormCustomStartingCapital')?.value) || 0);
+
+  // Sync range display
+  const allocDisplay = document.getElementById('goalFormAllocPctDisplay');
+  if (allocDisplay) allocDisplay.textContent = `${allocPct}%`;
+
+  let eligibleIncomeTotal = 0;
+  let incomeContribution = 0;
+  let savedCashContribution = 0;
+  let autoTotal = 0;
+
+  if (autoEnabled) {
+    const transactions = (window.allFinanceTransactionsCache || []);
+    let eligibleTx = transactions.filter(t => t.type === 'income' && t.category !== 'Saved Cash Baseline');
+
+    if (startMonth && startMonth !== 'all') {
+      eligibleTx = eligibleTx.filter(t => {
+        if (!t.date) return false;
+        const dStr = typeof t.date === 'string' ? t.date : '';
+        return dStr.slice(0, 7) >= startMonth;
+      });
+    }
+
+    if (sourceMode === 'specific' && specificSources.length > 0) {
+      eligibleTx = eligibleTx.filter(t => {
+        const cat = (t.category || '').toLowerCase();
+        const desc = (t.description || '').toLowerCase();
+        const acc = (t.account || '').toLowerCase();
+        return specificSources.some(src => cat.includes(src) || desc.includes(src) || acc.includes(src));
+      });
+    }
+
+    eligibleIncomeTotal = eligibleTx.reduce((sum, t) => sum + (t.amount || 0), 0);
+    incomeContribution = Math.round(eligibleIncomeTotal * (allocPct / 100));
+
+    const baseline = currentGoalsMeta?.savedCashBaseline || 0;
+    if (includeSavedCash && baseline > 0) {
+      savedCashContribution = Math.round(baseline * (allocPct / 100));
+    }
+
+    autoTotal = incomeContribution + savedCashContribution + customStartingCapital;
+  }
+
+  // Update real-time calculation breakdown labels
+  const sumEl = document.getElementById('goalAutoCalcSum');
+  const incValEl = document.getElementById('goalAutoCalcIncomeVal');
+  const incDescEl = document.getElementById('goalAutoCalcIncomeDesc');
+  const seedValEl = document.getElementById('goalAutoCalcSeedVal');
+  const paceValEl = document.getElementById('goalAutoCalcPaceVal');
+
+  if (sumEl) sumEl.textContent = fmtMoney(autoTotal);
+  if (incValEl) incValEl.textContent = `${fmtMoney(incomeContribution)} (${allocPct}% of eligible ${fmtMoney(eligibleIncomeTotal)})`;
+  if (incDescEl) incDescEl.textContent = `From ${sourceMode === 'specific' ? 'selected sources' : 'logged income'}${startMonth !== 'all' ? ` (since ${startMonth})` : ''}:`;
+  if (seedValEl) seedValEl.textContent = `${fmtMoney(savedCashContribution + customStartingCapital)} (Seed: ${fmtMoney(customStartingCapital)})`;
+
+  const effectiveCurrent = autoEnabled ? Math.max(current, autoTotal) : current;
+  const remaining = Math.max(0, target - effectiveCurrent);
+
+  if (paceValEl) {
+    if (effectiveCurrent >= target) {
+      paceValEl.textContent = '🎉 Goal 100% Fully Capitalized!';
+      paceValEl.style.color = '#34d399';
+    } else if (incomeContribution > 0) {
+      paceValEl.textContent = `Needs ${fmtMoney(remaining)} remaining to achieve target`;
+      paceValEl.style.color = '#38bdf8';
+    } else {
+      paceValEl.textContent = 'Needs income transactions to project horizon';
+      paceValEl.style.color = '#94a3b8';
+    }
+  }
+
+  const pct = target > 0 ? Math.min(100, Math.round((effectiveCurrent / target) * 100)) : 0;
 
   const prevIcon = document.getElementById('goalPreviewIcon');
   const prevTitle = document.getElementById('goalPreviewTitle');
@@ -15664,7 +15985,7 @@ function updateGoalModalPreview() {
   if (prevCategory) prevCategory.textContent = category;
   if (prevDeadline) prevDeadline.textContent = deadline ? `📅 ${fmtDate(deadline)}` : '📅 No deadline';
   if (prevFill) prevFill.style.width = `${pct}%`;
-  if (prevValues) prevValues.textContent = `${fmtMoney(current)} of ${fmtMoney(target)}`;
+  if (prevValues) prevValues.textContent = `${fmtMoney(effectiveCurrent)} of ${fmtMoney(target)}`;
   if (prevRemaining) prevRemaining.textContent = `Remaining: ${fmtMoney(remaining)}`;
   if (prevPctBadge) {
     prevPctBadge.textContent = `${pct}% FUNDED`;
@@ -15693,6 +16014,26 @@ async function handleSaveFinancialGoal(e) {
     return;
   }
 
+  // Extract Auto-Funding Rules
+  const autoEnabled = document.getElementById('goalFormAutoEnabled')?.checked ?? true;
+  const allocPct = parseFloat(document.getElementById('goalFormAllocPct')?.value) || 0;
+  const startMonth = document.getElementById('goalFormStartMonth')?.value || 'all';
+  const sourceMode = document.getElementById('goalFormSourceMode')?.value || 'all';
+  const specificSourcesRaw = document.getElementById('goalFormSpecificSources')?.value || '';
+  const specificSources = specificSourcesRaw.split(',').map(s => s.trim()).filter(Boolean);
+  const includeSavedCash = document.getElementById('goalFormIncludeSavedCash')?.checked ?? false;
+  const customStartingCapital = parseFloat(document.getElementById('goalFormCustomStartingCapital')?.value) || 0;
+
+  const fundingConfig = {
+    enabled: autoEnabled,
+    allocPct: autoEnabled ? allocPct : 0,
+    startMonth,
+    sourceMode,
+    specificSources,
+    includeSavedCash,
+    customStartingCapital
+  };
+
   const cleanTitle = title.replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u, '').trim();
   const fullTitle = icon ? `${icon} ${cleanTitle}` : cleanTitle;
 
@@ -15700,7 +16041,8 @@ async function handleSaveFinancialGoal(e) {
     title: fullTitle,
     targetAmount,
     currentAmount,
-    deadline: deadline || null
+    deadline: deadline || null,
+    fundingConfig
   };
   if (id) payload.id = id;
 
