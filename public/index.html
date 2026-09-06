@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=33.6" />
+<link rel="stylesheet" href="style.css?v=33.7" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -1002,11 +1002,26 @@
           <!-- Monthly Schedule Timeline & Execution Audit -->
           <div class="glass-card fin-recurring-schedule-card">
             <div class="schedule-card-header">
-              <div>
-                <h3>📅 Active Month Schedule &amp; Execution Status (<span id="scheduleActiveMonthLabel">Current Month</span>)</h3>
-                <p class="card-sub">Visual calendar progression of when funds move in and out this month</p>
+              <div class="schedule-card-title-wrap">
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                  <h3 style="margin:0;">📅 Active Month Schedule &amp; Execution Status</h3>
+                  <div class="fin-schedule-month-nav">
+                    <button type="button" class="fin-nav-btn-mini" onclick="handleShiftRecurringMonth(-1)" title="Previous Month" aria-label="Previous Month">&#8592;</button>
+                    <span id="scheduleActiveMonthLabel" class="schedule-month-text">Current Month</span>
+                    <button type="button" class="fin-nav-btn-mini" onclick="handleShiftRecurringMonth(1)" title="Next Month" aria-label="Next Month">&#8594;</button>
+                    <button type="button" class="fin-nav-today-mini" onclick="handleResetRecurringMonthToToday()" title="Reset to current month">Today</button>
+                  </div>
+                </div>
+                <p class="card-sub">Visual calendar progression tracking which active rules are executed and which are pending each month</p>
               </div>
-              <span class="badge-accent" id="scheduleExecutionSummaryBadge">0 / 0 Processed</span>
+              <div class="schedule-card-header-right">
+                <div class="fin-schedule-filter-tabs" id="finScheduleFilterTabs">
+                  <button type="button" class="fin-schedule-filter-pill active" data-filter="all" onclick="handleSetScheduleTimelineFilter('all')">All Active (<span id="countSchedAll">0</span>)</button>
+                  <button type="button" class="fin-schedule-filter-pill" data-filter="processed" onclick="handleSetScheduleTimelineFilter('processed')">✅ Processed (<span id="countSchedProcessed">0</span>)</button>
+                  <button type="button" class="fin-schedule-filter-pill" data-filter="pending" onclick="handleSetScheduleTimelineFilter('pending')">⏳ Pending (<span id="countSchedPending">0</span>)</button>
+                </div>
+                <span class="badge-accent" id="scheduleExecutionSummaryBadge">0 of 0 Processed</span>
+              </div>
             </div>
             <div class="fin-schedule-timeline-grid" id="finScheduleTimelineGrid">
               <!-- Rendered dynamically by app.js -->
@@ -5571,6 +5586,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=33.6"></script>
+  <script src="app.js?v=33.7"></script>
 </body>
 </html>

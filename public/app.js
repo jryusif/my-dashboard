@@ -6619,7 +6619,10 @@ function saveRecurringRules(rules) {
 function getRecurringExecutions() {
   try {
     const raw = localStorage.getItem(RECURRING_FINANCE_STORAGE_KEYS.EXECUTIONS);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }
   } catch (e) {
     console.warn('Error reading recurring executions:', e);
   }
@@ -6628,10 +6631,62 @@ function getRecurringExecutions() {
 
 function saveRecurringExecutions(executions) {
   try {
-    localStorage.setItem(RECURRING_FINANCE_STORAGE_KEYS.EXECUTIONS, JSON.stringify(executions));
+    localStorage.setItem(RECURRING_FINANCE_STORAGE_KEYS.EXECUTIONS, JSON.stringify(executions || []));
   } catch (e) {
     console.error('Failed to save recurring executions:', e);
   }
+}
+
+// Automatically prune executions that belong to rules that no longer exist
+function cleanupOrphanExecutions() {
+  try {
+    const rules = getRecurringRules();
+    const ruleIds = new Set(rules.map(r => r.id));
+    const executions = getRecurringExecutions();
+    const valid = executions.filter(e => ruleIds.has(e.ruleId));
+    if (valid.length !== executions.length) {
+      saveRecurringExecutions(valid);
+      return valid;
+    }
+    return executions;
+  } catch (e) {
+    return [];
+  }
+}
+
+// Compute accurate monthly status: which active rules got processed, and which are pending
+function getMonthlyRecurringStatus(monthTitle = null) {
+  const targetTitle = monthTitle || currentFinanceMonth || monthTitleForDate(new Date());
+  const monthKey = getMonthPrefixFromMonthTitle(targetTitle);
+  const rules = getRecurringRules();
+  const validExecutions = cleanupOrphanExecutions();
+
+  const activeRules = rules.filter(r => r.active);
+  const pausedRules = rules.filter(r => !r.active);
+
+  // Active rule executions for this specific month
+  const activeRuleIds = new Set(activeRules.map(r => r.id));
+  const activeMonthExecs = validExecutions.filter(e => activeRuleIds.has(e.ruleId) && e.monthKey === monthKey);
+  const processedRuleIdSet = new Set(activeMonthExecs.map(e => e.ruleId));
+
+  const processedRules = activeRules.filter(r => processedRuleIdSet.has(r.id));
+  const pendingRules = activeRules.filter(r => !processedRuleIdSet.has(r.id));
+
+  const processedSum = activeMonthExecs.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+  const pendingSum = pendingRules.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+
+  return {
+    monthTitle: targetTitle,
+    monthKey,
+    allRules: rules,
+    activeRules,
+    pausedRules,
+    processedRules,
+    pendingRules,
+    activeMonthExecs,
+    processedSum,
+    pendingSum
+  };
 }
 
 function getMonthPrefixFromMonthTitle(monthTitle) {
@@ -6813,13 +6868,43 @@ function renderRecurringQuickLedgerCard() {
 }
 window.renderRecurringQuickLedgerCard = renderRecurringQuickLedgerCard;
 
+// Dedicated Recurring View Month Navigation Handlers
+function handleShiftRecurringMonth(delta) {
+  currentFinanceMonth = shiftMonth(currentFinanceMonth || monthTitleForDate(new Date()), delta);
+  if (typeof renderMonthNav === 'function') renderMonthNav();
+  loadFinancePage();
+  loadRecurringFinanceHub();
+}
+window.handleShiftRecurringMonth = handleShiftRecurringMonth;
+
+function handleResetRecurringMonthToToday() {
+  currentFinanceMonth = monthTitleForDate(new Date());
+  if (typeof renderMonthNav === 'function') renderMonthNav();
+  loadFinancePage();
+  loadRecurringFinanceHub();
+}
+window.handleResetRecurringMonthToToday = handleResetRecurringMonthToToday;
+
+let recurringTimelineFilter = 'all'; // 'all' | 'processed' | 'pending'
+function handleSetScheduleTimelineFilter(filter) {
+  recurringTimelineFilter = filter;
+  document.querySelectorAll('.fin-schedule-filter-pill').forEach(pill => {
+    pill.classList.toggle('active', pill.dataset.filter === filter);
+  });
+  renderRecurringTimeline();
+}
+window.handleSetScheduleTimelineFilter = handleSetScheduleTimelineFilter;
+
 // Main Load Function for Dedicated Recurring View Hub
 async function loadRecurringFinanceHub() {
   const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
   const labelEl = document.getElementById('scheduleActiveMonthLabel');
   if (labelEl) labelEl.textContent = monthTitle;
 
-  // Run auto-recurring check
+  // Clean up any orphan execution entries whose rules were deleted
+  cleanupOrphanExecutions();
+
+  // Run auto-recurring check for current month
   try {
     await runAutoRecurringFinance(monthTitle);
   } catch (e) {
@@ -6837,18 +6922,35 @@ function renderRecurringKpis() {
   const kpiGrid = document.getElementById('finRecurringKpiGrid');
   if (!kpiGrid) return;
 
-  const rules = getRecurringRules();
-  const executions = getRecurringExecutions();
-  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
-  const monthKey = getMonthPrefixFromMonthTitle(monthTitle);
+  const {
+    monthTitle,
+    activeRules,
+    processedRules,
+    pendingRules,
+    processedSum
+  } = getMonthlyRecurringStatus();
 
-  const activeRules = rules.filter(r => r.active);
   const totalIncome = activeRules.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0);
   const totalExpense = activeRules.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
   const netFlow = totalIncome - totalExpense;
 
-  const monthExecs = executions.filter(e => e.monthKey === monthKey);
-  const processedSum = monthExecs.reduce((s, e) => s + e.amount, 0);
+  // Update badge in schedule card
+  const badgeEl = document.getElementById('scheduleExecutionSummaryBadge');
+  if (badgeEl) {
+    if (activeRules.length === 0) {
+      badgeEl.textContent = '0 of 0 Processed';
+      badgeEl.className = 'badge-accent is-empty';
+    } else if (processedRules.length === activeRules.length) {
+      badgeEl.textContent = `✅ All ${activeRules.length} Processed`;
+      badgeEl.className = 'badge-accent is-complete';
+    } else {
+      badgeEl.textContent = `${processedRules.length} of ${activeRules.length} Processed`;
+      badgeEl.className = 'badge-accent';
+    }
+  }
+
+  const labelEl = document.getElementById('scheduleActiveMonthLabel');
+  if (labelEl) labelEl.textContent = monthTitle;
 
   kpiGrid.innerHTML = `
     <div class="fin-rec-kpi-card income">
@@ -6885,16 +6987,14 @@ function renderRecurringKpis() {
         <span class="fin-rec-kpi-label">${escapeHtml(monthTitle)} Status</span>
         <span class="fin-rec-kpi-icon">⚡</span>
       </div>
-      <div class="fin-rec-kpi-value" style="color: #a78bfa;">${monthExecs.length} / ${activeRules.length}</div>
-      <div class="fin-rec-kpi-meta">${fmtMoney(processedSum)} executed this month</div>
+      <div class="fin-rec-kpi-value" style="color: ${activeRules.length > 0 && processedRules.length === activeRules.length ? '#34d399' : '#a78bfa'};">
+        ${processedRules.length} / ${activeRules.length}
+      </div>
+      <div class="fin-rec-kpi-meta">
+        ${activeRules.length === 0 ? 'No active rules scheduled for this month' : `${fmtMoney(processedSum)} executed · ${pendingRules.length} pending`}
+      </div>
     </div>
   `;
-
-  // Update badge in schedule card
-  const badgeEl = document.getElementById('scheduleExecutionSummaryBadge');
-  if (badgeEl) {
-    badgeEl.textContent = `${monthExecs.length} of ${activeRules.length} Processed`;
-  }
 }
 
 // Render Recurring Rules List / Cards
@@ -6903,9 +7003,7 @@ function renderRecurringRulesList() {
   if (!container) return;
 
   const rules = getRecurringRules();
-  const executions = getRecurringExecutions();
-  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
-  const monthKey = getMonthPrefixFromMonthTitle(monthTitle);
+  const { monthTitle, monthKey, activeMonthExecs } = getMonthlyRecurringStatus();
 
   // Update counts in filter pills
   const countAll = document.getElementById('countRecAll');
@@ -6956,32 +7054,36 @@ function renderRecurringRulesList() {
 
   container.innerHTML = filtered.map(rule => {
     const isIncome = rule.type === 'income';
-    const execution = executions.find(e => e.ruleId === rule.id && e.monthKey === monthKey);
+    const execution = activeMonthExecs.find(e => e.ruleId === rule.id);
 
     let statusPillHtml = '';
     let quickActionBtn = '';
 
     if (!rule.active) {
-      statusPillHtml = `<span class="fin-rec-status-pill paused">⏸️ Paused</span>`;
+      statusPillHtml = `<span class="fin-rec-status-pill paused">⏸️ Paused (Inactive)</span>`;
     } else if (execution) {
       const dateFormatted = execution.date ? execution.date.split('-').slice(1).join('/') : 'Processed';
-      statusPillHtml = `<span class="fin-rec-status-pill applied" title="Auto-logged into Ledger">✅ Applied (${dateFormatted})</span>`;
-      quickActionBtn = `<button type="button" class="btn-rec-action undo" onclick="handleUndoRecurringExecution('${rule.id}', '${monthKey}')" title="Revert applied transaction">Undo</button>`;
+      statusPillHtml = `<span class="fin-rec-status-pill applied" title="Processed and logged into ledger for ${escapeHtml(monthTitle)}">✅ Processed (${dateFormatted})</span>`;
+      quickActionBtn = `<button type="button" class="btn-rec-action undo" onclick="handleUndoRecurringExecution('${rule.id}', '${monthKey}')" title="Revert transaction from ${escapeHtml(monthTitle)}">Undo for ${escapeHtml(monthTitle)}</button>`;
     } else {
       const dayNum = parseInt(rule.dayOfMonth, 10);
       let timingStr = `Day ${dayNum} of month`;
       if (monthKey === currentRealMonthKey) {
         if (dayNum > currentDay) {
           const daysLeft = dayNum - currentDay;
-          timingStr = `Due in ${daysLeft} day${daysLeft === 1 ? '' : 's'} (Sep ${dayNum})`;
+          timingStr = `Due in ${daysLeft} day${daysLeft === 1 ? '' : 's'} (Day ${dayNum})`;
         } else if (dayNum === currentDay) {
-          timingStr = `Due today! (Sep ${dayNum})`;
+          timingStr = `Due today! (Day ${dayNum})`;
         } else {
-          timingStr = `Due date passed (Day ${dayNum})`;
+          timingStr = `Past due (Day ${dayNum})`;
         }
+      } else if (monthKey < currentRealMonthKey) {
+        timingStr = `Not logged for ${monthTitle}`;
+      } else {
+        timingStr = `Scheduled for Day ${dayNum}`;
       }
-      statusPillHtml = `<span class="fin-rec-status-pill scheduled">⏳ Scheduled • ${timingStr}</span>`;
-      quickActionBtn = `<button type="button" class="btn-rec-action apply-early" onclick="handleApplyRecurringRuleEarly('${rule.id}', '${monthKey}')" title="Apply now ahead of schedule">Apply Early</button>`;
+      statusPillHtml = `<span class="fin-rec-status-pill scheduled">⏳ Pending (${timingStr})</span>`;
+      quickActionBtn = `<button type="button" class="btn-rec-action apply-early" onclick="handleApplyRecurringRuleEarly('${rule.id}', '${monthKey}')" title="Execute now for ${escapeHtml(monthTitle)}">⚡ Process for ${escapeHtml(monthTitle)}</button>`;
     }
 
     return `
@@ -7037,46 +7139,88 @@ function renderRecurringTimeline() {
   const grid = document.getElementById('finScheduleTimelineGrid');
   if (!grid) return;
 
-  const rules = getRecurringRules().filter(r => r.active);
-  const executions = getRecurringExecutions();
-  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
-  const monthKey = getMonthPrefixFromMonthTitle(monthTitle);
+  const {
+    monthTitle,
+    monthKey,
+    activeRules,
+    processedRules,
+    pendingRules,
+    activeMonthExecs
+  } = getMonthlyRecurringStatus();
 
-  if (!rules.length) {
-    grid.innerHTML = `<p style="grid-column: 1/-1; font-size:13px; color:var(--ink-soft); text-align:center; padding: 20px;">No active rules scheduled for this month.</p>`;
+  // Update schedule filter pill counts
+  const countAllEl = document.getElementById('countSchedAll');
+  const countProcEl = document.getElementById('countSchedProcessed');
+  const countPendEl = document.getElementById('countSchedPending');
+  if (countAllEl) countAllEl.textContent = activeRules.length;
+  if (countProcEl) countProcEl.textContent = processedRules.length;
+  if (countPendEl) countPendEl.textContent = pendingRules.length;
+
+  if (!activeRules.length) {
+    grid.innerHTML = `
+      <div class="fin-timeline-empty-card" style="grid-column: 1 / -1; text-align: center; padding: 32px 18px; background: rgba(255,255,255,0.015); border: 1px dashed rgba(255,255,255,0.08); border-radius: 14px;">
+        <span style="font-size: 32px; display: block; margin-bottom: 8px;">🗓️</span>
+        <h4 style="font-size: 15px; font-weight: 700; color: var(--ink); margin: 0 0 6px 0;">No active rules scheduled for ${escapeHtml(monthTitle)}</h4>
+        <p style="font-size: 12.5px; color: var(--ink-soft); max-width: 480px; margin: 0 auto 16px auto; line-height: 1.5;">
+          When you add active recurring income or expense rules, they will appear here with real-time execution tracking (Processed vs. Pending) for each month.
+        </p>
+        <button type="button" class="btn-rec-primary" onclick="openRecurringFinanceModal()" style="font-size: 13px; padding: 8px 16px;">
+          ➕ Add Fixed Rule
+        </button>
+      </div>
+    `;
     return;
   }
 
-  // Sort rules by day
-  rules.sort((a, b) => parseInt(a.dayOfMonth, 10) - parseInt(b.dayOfMonth, 10));
+  // Filter based on selected timeline tab
+  let displayRules = activeRules.slice();
+  if (recurringTimelineFilter === 'processed') {
+    displayRules = processedRules.slice();
+  } else if (recurringTimelineFilter === 'pending') {
+    displayRules = pendingRules.slice();
+  }
+
+  // Sort rules by day of month (1 -> 31)
+  displayRules.sort((a, b) => parseInt(a.dayOfMonth, 10) - parseInt(b.dayOfMonth, 10));
+
+  if (!displayRules.length) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 24px; color: var(--ink-soft); font-size: 13px; background: rgba(255,255,255,0.015); border-radius: 10px;">
+        No ${recurringTimelineFilter === 'processed' ? 'processed' : 'pending'} rules for ${escapeHtml(monthTitle)}.
+      </div>
+    `;
+    return;
+  }
 
   const now = new Date();
   const currentDay = now.getDate();
   const isCurrentRealMonth = monthKey === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  grid.innerHTML = rules.map(rule => {
+  grid.innerHTML = displayRules.map(rule => {
     const isIncome = rule.type === 'income';
-    const execution = executions.find(e => e.ruleId === rule.id && e.monthKey === monthKey);
+    const execution = activeMonthExecs.find(e => e.ruleId === rule.id);
     const dayNum = parseInt(rule.dayOfMonth, 10);
     const isDueToday = isCurrentRealMonth && dayNum === currentDay && !execution;
 
     let timingText = '';
     if (execution) {
-      timingText = '✅ Applied to ledger';
+      timingText = 'Applied to ledger';
     } else if (isCurrentRealMonth) {
       if (dayNum > currentDay) {
-        timingText = `⏳ In ${dayNum - currentDay} day${dayNum - currentDay === 1 ? '' : 's'}`;
+        timingText = `In ${dayNum - currentDay} day${dayNum - currentDay === 1 ? '' : 's'}`;
       } else if (dayNum === currentDay) {
-        timingText = `⚡ Due today!`;
+        timingText = `Due today!`;
       } else {
-        timingText = `⚠️ Passed (Day ${dayNum})`;
+        timingText = `Passed (Day ${dayNum})`;
       }
+    } else if (monthKey < `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`) {
+      timingText = `Past month`;
     } else {
-      timingText = `Scheduled for Day ${dayNum}`;
+      timingText = `Scheduled (Day ${dayNum})`;
     }
 
     return `
-      <div class="fin-timeline-card ${execution ? 'applied' : ''} ${isDueToday ? 'due-today' : ''}">
+      <div class="fin-timeline-card ${execution ? 'applied' : 'pending'} ${isDueToday ? 'due-today' : ''}">
         <div class="fin-timeline-card-top">
           <span class="fin-timeline-day">Day ${rule.dayOfMonth}</span>
           <span style="font-size:11px; font-weight:700; color: ${isIncome ? '#34d399' : '#fb7185'}">
@@ -7084,24 +7228,38 @@ function renderRecurringTimeline() {
           </span>
         </div>
         <div class="fin-timeline-item-title">${escapeHtml(rule.name)}</div>
+        
+        <div class="fin-timeline-status-row">
+          ${execution 
+            ? `<span class="fin-timeline-status-badge processed">✅ Processed for ${escapeHtml(monthTitle)}</span>` 
+            : `<span class="fin-timeline-status-badge pending">⏳ Not Processed (${timingText})</span>`}
+        </div>
+
         <div class="fin-timeline-amount-row">
           <span class="fin-timeline-amount ${isIncome ? 'income' : 'expense'}">
             ${isIncome ? '+' : '-'}${fmtMoney(rule.amount)}
           </span>
-          <span class="fin-timeline-timing">${timingText}</span>
+          <span class="fin-timeline-timing">${execution ? (execution.date ? execution.date.split('-').slice(1).join('/') : 'Applied') : timingText}</span>
+        </div>
+
+        <div class="fin-timeline-actions-row">
+          ${execution 
+            ? `<button type="button" class="btn-timeline-action undo" onclick="handleUndoRecurringExecution('${rule.id}', '${monthKey}')">↩️ Revert from ${escapeHtml(monthTitle)}</button>` 
+            : `<button type="button" class="btn-timeline-action process" onclick="handleApplyRecurringRuleEarly('${rule.id}', '${monthKey}')">⚡ Process for ${escapeHtml(monthTitle)}</button>`}
         </div>
       </div>
     `;
   }).join('');
 }
 
-// Early Apply Handler
+// Early / Manual Apply Handler for specific month
 async function handleApplyRecurringRuleEarly(ruleId, monthKey) {
   const rules = getRecurringRules();
   const rule = rules.find(r => r.id === ruleId);
   if (!rule) return;
 
-  const confirmApply = confirm(`Apply "${rule.name}" (${rule.type === 'income' ? '+' : '-'}${fmtMoney(rule.amount)}) early to the ledger for ${escapeHtml(currentFinanceMonth)}?`);
+  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
+  const confirmApply = confirm(`Process and apply "${rule.name}" (${rule.type === 'income' ? '+' : '-'}${fmtMoney(rule.amount)}) to the ledger for ${escapeHtml(monthTitle)}?`);
   if (!confirmApply) return;
 
   let executions = getRecurringExecutions();
@@ -7118,7 +7276,7 @@ async function handleApplyRecurringRuleEarly(ruleId, monthKey) {
         amount: parseFloat(rule.amount) || 0,
         date: scheduledDate,
         description: `[Fixed] ${rule.name}`,
-        account: rule.account || 'Early Applied'
+        account: rule.account || 'Fixed Recurring'
       })
     });
     if (res.ok) {
@@ -7126,7 +7284,7 @@ async function handleApplyRecurringRuleEarly(ruleId, monthKey) {
       transactionId = data.id;
     }
   } catch (err) {
-    console.warn('Could not post early recurring tx to server, recording locally:', err);
+    console.warn('Could not post recurring tx to server, recording locally:', err);
   }
 
   executions.push({
@@ -7139,24 +7297,25 @@ async function handleApplyRecurringRuleEarly(ruleId, monthKey) {
     amount: rule.amount,
     transactionId,
     appliedAt: new Date().toISOString(),
-    earlyApplied: true
+    manualApplied: true
   });
 
   saveRecurringExecutions(executions);
-  showToast(`✅ "${rule.name}" successfully applied early to the ledger.`);
+  showToast(`✅ "${rule.name}" successfully processed for ${escapeHtml(monthTitle)}.`);
   renderRecurringQuickLedgerCard();
   loadRecurringFinanceHub();
 }
 window.handleApplyRecurringRuleEarly = handleApplyRecurringRuleEarly;
 
-// Undo Execution Handler
+// Undo Execution Handler for specific month
 async function handleUndoRecurringExecution(ruleId, monthKey) {
   let executions = getRecurringExecutions();
   const execIndex = executions.findIndex(e => e.ruleId === ruleId && e.monthKey === monthKey);
   if (execIndex === -1) return;
 
   const execution = executions[execIndex];
-  const confirmUndo = confirm(`Undo and remove "${execution.ruleName}" from this month's financial transactions?`);
+  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
+  const confirmUndo = confirm(`Undo and remove "${execution.ruleName}" from ${monthTitle}?`);
   if (!confirmUndo) return;
 
   if (execution.transactionId) {
@@ -7171,7 +7330,7 @@ async function handleUndoRecurringExecution(ruleId, monthKey) {
 
   executions.splice(execIndex, 1);
   saveRecurringExecutions(executions);
-  showToast(`Reverted "${execution.ruleName}" for this month.`);
+  showToast(`Reverted "${execution.ruleName}" for ${monthTitle}.`);
   renderRecurringQuickLedgerCard();
   loadRecurringFinanceHub();
 }
@@ -7191,17 +7350,23 @@ function handleToggleRecurringRuleActive(ruleId) {
 }
 window.handleToggleRecurringRuleActive = handleToggleRecurringRuleActive;
 
-// Delete Rule
+// Delete Rule (and its executions)
 function handleDeleteRecurringRule(ruleId) {
   const rules = getRecurringRules();
   const rule = rules.find(r => r.id === ruleId);
   if (!rule) return;
 
-  const confirmDelete = confirm(`Are you sure you want to delete the recurring rule "${rule.name}"? Past recorded executions in your ledger will not be altered.`);
+  const confirmDelete = confirm(`Are you sure you want to delete the recurring rule "${rule.name}"?`);
   if (!confirmDelete) return;
 
   const updated = rules.filter(r => r.id !== ruleId);
   saveRecurringRules(updated);
+
+  // Clean up all execution records associated with this deleted rule
+  let executions = getRecurringExecutions();
+  executions = executions.filter(e => e.ruleId !== ruleId);
+  saveRecurringExecutions(executions);
+
   showToast(`Deleted rule "${rule.name}".`);
   renderRecurringQuickLedgerCard();
   loadRecurringFinanceHub();
