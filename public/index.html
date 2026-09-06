@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/locals.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
-<link rel="stylesheet" href="style.css?v=33.2" />
+<link rel="stylesheet" href="style.css?v=33.3" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   (function() {
@@ -924,6 +924,9 @@
           <button type="button" class="cat-view-tab active" id="btnFinViewLedger" data-view="ledger">
             <span>📋</span> Monthly Budget &amp; Ledger
           </button>
+          <button type="button" class="cat-view-tab" id="btnFinViewRecurring" data-view="recurring">
+            <span>🔄</span> Fixed &amp; Recurring Cash Flow
+          </button>
           <button type="button" class="cat-view-tab" id="btnFinViewAnalytics" data-view="analytics">
             <span>📊</span> Financial Analytics &amp; Charts
           </button>
@@ -942,6 +945,11 @@
             </div>
           </div>
 
+          <!-- Fixed Cash Flow Quick-Status Card for Selected Month -->
+          <div class="fin-recurring-quick-card" id="finLedgerRecurringQuickCard">
+            <!-- Injected dynamically by app.js -->
+          </div>
+
           <!-- Month navigator injected here by app.js -->
           <div id="financeMonthNav" class="month-nav"></div>
           <div id="financeContent" class="finance-content" aria-live="polite">
@@ -949,7 +957,64 @@
           </div>
         </div>
 
-        <!-- View 2: Financial Analytics & Multi-Horizon Charts Hub -->
+        <!-- View 2: Fixed & Recurring Cash Flow Hub -->
+        <div id="finRecurringViewWrap" hidden>
+          <div class="fin-recurring-header-bar">
+            <div>
+              <h2 class="fin-recurring-section-title">🔄 Fixed &amp; Recurring Cash Flow</h2>
+              <p class="fin-recurring-section-sub">Automate repeated income (salaries, retainers) and fixed outflows (rent, installments, bills) by day of the month.</p>
+            </div>
+            <div class="fin-recurring-actions-row">
+              <button type="button" class="action-btn-primary" id="btnOpenNewRecurringRuleModal">
+                <span>➕</span> Add Fixed Income / Expense
+              </button>
+              <button type="button" class="btn-ghost-sm" id="btnRunRecurringAutoCheck" title="Check today's date against scheduled rules and auto-apply">
+                <span>⚡</span> Auto-Apply Due Now
+              </button>
+            </div>
+          </div>
+
+          <!-- Top Executive KPIs for Fixed Cash Flow -->
+          <div class="fin-recurring-kpi-grid" id="finRecurringKpiGrid">
+            <!-- Injected dynamically -->
+          </div>
+
+          <!-- Recurring Rules Management Card -->
+          <div class="glass-card fin-recurring-main-card">
+            <div class="fin-recurring-card-header">
+              <div class="fin-recurring-tabs-filter" id="finRecurringFilterPills">
+                <button type="button" class="fin-filter-pill active" data-filter="all">All Rules (<span id="countRecAll">0</span>)</button>
+                <button type="button" class="fin-filter-pill" data-filter="income">Fixed Income (<span id="countRecIncome">0</span>)</button>
+                <button type="button" class="fin-filter-pill" data-filter="expense">Fixed Expenses (<span id="countRecExpense">0</span>)</button>
+                <button type="button" class="fin-filter-pill" data-filter="active">Active (<span id="countRecActive">0</span>)</button>
+              </div>
+              <div class="fin-recurring-search-wrap">
+                <input type="text" id="inputSearchRecurring" class="fin-search-input" placeholder="Search rules (e.g. rent, salary, installment)..." />
+              </div>
+            </div>
+
+            <!-- List / Table of Recurring Rules -->
+            <div class="fin-recurring-rules-container" id="finRecurringRulesContainer">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+          </div>
+
+          <!-- Monthly Schedule Timeline & Execution Audit -->
+          <div class="glass-card fin-recurring-schedule-card">
+            <div class="schedule-card-header">
+              <div>
+                <h3>📅 Active Month Schedule &amp; Execution Status (<span id="scheduleActiveMonthLabel">Current Month</span>)</h3>
+                <p class="card-sub">Visual calendar progression of when funds move in and out this month</p>
+              </div>
+              <span class="badge-accent" id="scheduleExecutionSummaryBadge">0 / 0 Processed</span>
+            </div>
+            <div class="fin-schedule-timeline-grid" id="finScheduleTimelineGrid">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- View 3: Financial Analytics & Multi-Horizon Charts Hub -->
         <div id="finAnalyticsViewWrap" hidden>
           <!-- Time Horizon Switcher Tabs -->
           <div class="analytics-horizon-tabs" id="finHorizonTabs" style="margin-top: 10px;">
@@ -5362,12 +5427,137 @@
     </div>
   </div>
 
+  <!-- Modal: Add / Edit Recurring Rule -->
+  <div class="modal-backdrop" id="recurringFinanceModalBackdrop" hidden>
+    <div class="modal-dialog glass-panel" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3 id="recurringModalTitle">➕ Add Fixed Recurring Item</h3>
+        <button type="button" class="modal-close-btn" id="closeRecurringFinanceModal" aria-label="Close">&times;</button>
+      </div>
+      <form id="recurringFinanceForm" class="modal-form">
+        <input type="hidden" id="recurringRuleId" value="" />
+
+        <!-- Type Selector Pills -->
+        <div class="field-group">
+          <label class="field-label">Transaction Flow Type *</label>
+          <div class="pill-toggle-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px;">
+            <button type="button" class="pill-toggle-btn active" id="btnRecTypeIncome" data-type="income">
+              <span>↗️</span> Fixed Income (Money In)
+            </button>
+            <button type="button" class="pill-toggle-btn" id="btnRecTypeExpense" data-type="expense">
+              <span>↘️</span> Fixed Expense (Money Out)
+            </button>
+          </div>
+          <input type="hidden" id="recurringTypeInput" value="income" />
+        </div>
+
+        <div class="field-group">
+          <label for="recurringNameInput" class="field-label">Rule Title / Description *</label>
+          <input type="text" id="recurringNameInput" class="form-input" placeholder="e.g., Monthly Hospital Salary, Apartment Rent, Car Installment" required />
+        </div>
+
+        <div class="form-row-2">
+          <div class="field-group">
+            <label for="recurringAmountInput" class="field-label">Amount ($) *</label>
+            <input type="number" id="recurringAmountInput" class="form-input" placeholder="0.00" step="0.01" min="0.01" required />
+          </div>
+          <div class="field-group">
+            <label for="recurringDayInput" class="field-label">Day of Each Month *</label>
+            <select id="recurringDayInput" class="form-select" required>
+              <option value="1">Day 1 (1st of month)</option>
+              <option value="2">Day 2</option>
+              <option value="3">Day 3</option>
+              <option value="4">Day 4</option>
+              <option value="5">Day 5 (5th of month)</option>
+              <option value="6">Day 6</option>
+              <option value="7">Day 7</option>
+              <option value="8">Day 8</option>
+              <option value="9">Day 9</option>
+              <option value="10">Day 10 (10th of month)</option>
+              <option value="11">Day 11</option>
+              <option value="12">Day 12</option>
+              <option value="13">Day 13</option>
+              <option value="14">Day 14</option>
+              <option value="15">Day 15 (Mid-month)</option>
+              <option value="16">Day 16</option>
+              <option value="17">Day 17</option>
+              <option value="18">Day 18</option>
+              <option value="19">Day 19</option>
+              <option value="20">Day 20</option>
+              <option value="21">Day 21</option>
+              <option value="22">Day 22</option>
+              <option value="23">Day 23</option>
+              <option value="24">Day 24</option>
+              <option value="25">Day 25 (25th of month)</option>
+              <option value="26">Day 26</option>
+              <option value="27">Day 27</option>
+              <option value="28">Day 28</option>
+              <option value="29">Day 29</option>
+              <option value="30">Day 30</option>
+              <option value="31">Day 31 (End of month)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="field-group">
+            <label for="recurringCategoryInput" class="field-label">Category *</label>
+            <select id="recurringCategoryInput" class="form-select" required>
+              <option value="Salary">Salary &amp; Wages</option>
+              <option value="Consulting / Freelance">Consulting &amp; Retainer</option>
+              <option value="Clinical Practice">Clinical Practice</option>
+              <option value="Housing & Rent">Housing &amp; Rent</option>
+              <option value="Installments & Loans">Installments &amp; Loans</option>
+              <option value="Utilities & Bills">Utilities &amp; Bills</option>
+              <option value="Subscriptions">Subscriptions &amp; Software</option>
+              <option value="Transportation">Transportation &amp; Car</option>
+              <option value="Healthcare & Insurance">Healthcare &amp; Insurance</option>
+              <option value="Investments & Savings">Investments &amp; Savings</option>
+              <option value="Other">Other Fixed</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="recurringAccountInput" class="field-label">Account / Method</label>
+            <select id="recurringAccountInput" class="form-select">
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Checking Account">Checking Account</option>
+              <option value="Cash Wallet">Cash Wallet</option>
+              <option value="Credit Card">Credit Card Auto-Pay</option>
+              <option value="Digital Wallet">Digital Wallet</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="recurringNotesInput" class="field-label">Notes / Details (Optional)</label>
+          <input type="text" id="recurringNotesInput" class="form-input" placeholder="e.g., Installment 12 of 36, Landlord account, etc." />
+        </div>
+
+        <div class="field-group" style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+          <div>
+            <div style="font-weight: 600; font-size: 13.5px; color: var(--ink);">Rule Status</div>
+            <div style="font-size: 12px; color: var(--ink-soft);">Active rules will automatically post each month on the designated day.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="recurringActiveToggle" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 18px;">
+          <button type="button" class="btn-secondary" id="btnCancelRecurringFinanceModal">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSaveRecurringRule">Save Rule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
 
   <!-- Chart.js Engine -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=33.2"></script>
+  <script src="app.js?v=33.3"></script>
 </body>
 </html>

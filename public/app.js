@@ -5872,6 +5872,20 @@ function shiftMonth(monthTitle, delta) {
 }
 
 async function loadFinancePage() {
+  // Check and process any due auto-recurring items for this month first
+  try {
+    if (typeof runAutoRecurringFinance === 'function') {
+      await runAutoRecurringFinance(currentFinanceMonth);
+    }
+  } catch (e) {
+    console.warn('Auto recurring check error:', e);
+  }
+
+  // Render recurring quick card for this month
+  if (typeof renderRecurringQuickLedgerCard === 'function') {
+    renderRecurringQuickLedgerCard();
+  }
+
   financeContent.innerHTML = `
     <div class="skeleton-block" style="height:88px;"></div>
     <div class="skeleton-block" style="height:180px;"></div>
@@ -5900,6 +5914,10 @@ async function loadFinancePage() {
     renderMonthNav();
 
     renderFinancePage(overview, incomeItems, expenseItems, breakdown);
+
+    if (typeof renderRecurringQuickLedgerCard === 'function') {
+      renderRecurringQuickLedgerCard();
+    }
   } catch {
     financeContent.innerHTML = '<div class="finance-error">Could not load finances — please sign in or try again.</div>';
   }
@@ -6506,6 +6524,870 @@ async function handleAddExpense(e) {
     showToast('Could not add that expense — please try again.');
   }
 }
+
+// =============================================================================
+// 🔄 FIXED & RECURRING CASH FLOW ENGINE (SALARY, RENT, INSTALLMENTS)
+// =============================================================================
+
+const RECURRING_FINANCE_STORAGE_KEYS = {
+  RULES: 'antigravity_recurring_finance_rules',
+  EXECUTIONS: 'antigravity_recurring_finance_executions'
+};
+
+let recurringFinanceActiveFilter = 'all';
+let recurringFinanceSearchQuery = '';
+
+// Seed Starter Rules if none exist
+function getRecurringRules() {
+  try {
+    const raw = localStorage.getItem(RECURRING_FINANCE_STORAGE_KEYS.RULES);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Error reading recurring rules:', e);
+  }
+
+  const starter = [
+    {
+      id: 'rec_salary_1',
+      name: 'Fixed Monthly Salary',
+      type: 'income',
+      amount: 3500,
+      dayOfMonth: 1,
+      category: 'Salary',
+      account: 'Bank Transfer',
+      notes: 'Primary clinical & hospital guaranteed salary',
+      active: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'rec_rent_1',
+      name: 'Apartment Rent',
+      type: 'expense',
+      amount: 1200,
+      dayOfMonth: 10,
+      category: 'Housing & Rent',
+      account: 'Bank Transfer',
+      notes: 'Monthly residence lease payment',
+      active: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'rec_car_1',
+      name: 'Car Loan Installment',
+      type: 'expense',
+      amount: 450,
+      dayOfMonth: 25,
+      category: 'Installments & Loans',
+      account: 'Checking Account',
+      notes: 'Vehicle financing auto-debit',
+      active: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'rec_sub_1',
+      name: 'Medical & Dental Imaging Software',
+      type: 'expense',
+      amount: 85,
+      dayOfMonth: 5,
+      category: 'Subscriptions',
+      account: 'Credit Card',
+      notes: 'Practice management & 3D cloud storage',
+      active: true,
+      createdAt: new Date().toISOString()
+    }
+  ];
+  saveRecurringRules(starter);
+  return starter;
+}
+
+function saveRecurringRules(rules) {
+  try {
+    localStorage.setItem(RECURRING_FINANCE_STORAGE_KEYS.RULES, JSON.stringify(rules));
+  } catch (e) {
+    console.error('Failed to save recurring rules:', e);
+  }
+}
+
+function getRecurringExecutions() {
+  try {
+    const raw = localStorage.getItem(RECURRING_FINANCE_STORAGE_KEYS.EXECUTIONS);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Error reading recurring executions:', e);
+  }
+  return [];
+}
+
+function saveRecurringExecutions(executions) {
+  try {
+    localStorage.setItem(RECURRING_FINANCE_STORAGE_KEYS.EXECUTIONS, JSON.stringify(executions));
+  } catch (e) {
+    console.error('Failed to save recurring executions:', e);
+  }
+}
+
+function getMonthPrefixFromMonthTitle(monthTitle) {
+  if (!monthTitle || typeof monthTitle !== 'string') {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+  const parts = monthTitle.trim().split(' ');
+  if (parts.length === 2) {
+    const mNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const idx = mNames.findIndex(m => m.toLowerCase() === parts[0].toLowerCase());
+    if (idx !== -1) {
+      return `${parts[1]}-${String(idx + 1).padStart(2, '0')}`;
+    }
+  }
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Automatically check and process due recurring transactions for the targeted or current month
+async function runAutoRecurringFinance(targetMonthTitle = null) {
+  const monthTitle = targetMonthTitle || currentFinanceMonth || monthTitleForDate(new Date());
+  const monthKey = getMonthPrefixFromMonthTitle(monthTitle);
+  const rules = getRecurringRules();
+  let executions = getRecurringExecutions();
+
+  const now = new Date();
+  const currentRealMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentDay = now.getDate();
+
+  // If viewing a future month, scheduled items in the future have not happened yet
+  const isFutureMonth = monthKey > currentRealMonthKey;
+  const isCurrentRealMonth = monthKey === currentRealMonthKey;
+
+  let appliedCount = 0;
+  const appliedNames = [];
+
+  for (const rule of rules) {
+    if (!rule.active) continue;
+
+    // Check if this rule was already logged for this month
+    const existing = executions.find(e => e.ruleId === rule.id && e.monthKey === monthKey);
+    if (existing) continue;
+
+    // Determine if due:
+    // 1. In past months: was due on rule.dayOfMonth
+    // 2. In current real month: due if currentDay >= rule.dayOfMonth
+    // 3. In future month: not due yet
+    let isDue = false;
+    if (!isFutureMonth) {
+      if (!isCurrentRealMonth) {
+        isDue = true;
+      } else {
+        isDue = currentDay >= parseInt(rule.dayOfMonth, 10);
+      }
+    }
+
+    if (isDue) {
+      const scheduledDate = `${monthKey}-${String(rule.dayOfMonth).padStart(2, '0')}`;
+      let transactionId = null;
+
+      try {
+        const res = await fetch('/api/finance/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: rule.type === 'expense' ? 'expense' : 'income',
+            category: rule.category || (rule.type === 'income' ? 'Salary' : 'General'),
+            amount: parseFloat(rule.amount) || 0,
+            date: scheduledDate,
+            description: `[Fixed] ${rule.name}`,
+            account: rule.account || 'Auto-Recurring'
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          transactionId = data.id;
+        }
+      } catch (err) {
+        console.warn('Could not post recurring tx to server, recording locally:', err);
+      }
+
+      executions.push({
+        id: 'exec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        ruleId: rule.id,
+        ruleName: rule.name,
+        monthKey,
+        date: scheduledDate,
+        type: rule.type,
+        amount: rule.amount,
+        transactionId,
+        appliedAt: new Date().toISOString(),
+        autoApplied: true
+      });
+
+      appliedCount++;
+      appliedNames.push(rule.name);
+    }
+  }
+
+  if (appliedCount > 0) {
+    saveRecurringExecutions(executions);
+    showToast(`🔄 Auto-applied ${appliedCount} fixed transaction${appliedCount > 1 ? 's' : ''} (${appliedNames.join(', ')}) for ${escapeHtml(monthTitle)}.`);
+    renderRecurringQuickLedgerCard();
+    if (financeViewMode === 'recurring') {
+      loadRecurringFinanceHub();
+    }
+  }
+
+  return appliedCount;
+}
+window.runAutoRecurringFinance = runAutoRecurringFinance;
+
+// Render Quick-Status Card in the Monthly Ledger View
+function renderRecurringQuickLedgerCard() {
+  const cardEl = document.getElementById('finLedgerRecurringQuickCard');
+  if (!cardEl) return;
+
+  const rules = getRecurringRules();
+  const executions = getRecurringExecutions();
+  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
+  const monthKey = getMonthPrefixFromMonthTitle(monthTitle);
+
+  const activeRules = rules.filter(r => r.active);
+  const totalFixedIncome = activeRules.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0);
+  const totalFixedExpense = activeRules.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
+  const netFixedFlow = totalFixedIncome - totalFixedExpense;
+
+  // Track execution for this month
+  const monthExecutions = executions.filter(e => e.monthKey === monthKey);
+  const appliedRuleIds = new Set(monthExecutions.map(e => e.ruleId));
+
+  const chipsHtml = rules.map(rule => {
+    if (!rule.active) {
+      return `<span class="fin-recurring-chip-item paused">⏸️ ${escapeHtml(rule.name)} (Paused)</span>`;
+    }
+    const isApplied = appliedRuleIds.has(rule.id);
+    if (isApplied) {
+      return `<span class="fin-recurring-chip-item applied" title="Processed for ${escapeHtml(monthTitle)}">✅ ${escapeHtml(rule.name)} (${rule.type === 'income' ? '+' : '-'}${fmtMoney(rule.amount)})</span>`;
+    }
+    return `<span class="fin-recurring-chip-item scheduled" title="Scheduled on Day ${rule.dayOfMonth}">⏳ Day ${rule.dayOfMonth}: ${escapeHtml(rule.name)} (${rule.type === 'income' ? '+' : '-'}${fmtMoney(rule.amount)})</span>`;
+  }).join('');
+
+  cardEl.innerHTML = `
+    <div class="fin-recurring-quick-header">
+      <div class="fin-recurring-quick-title-wrap">
+        <span class="fin-recurring-quick-icon">🔄</span>
+        <div>
+          <h3 class="fin-recurring-quick-title">Fixed &amp; Recurring Cash Flow (${escapeHtml(monthTitle)})</h3>
+          <p class="fin-recurring-quick-sub">${monthExecutions.length} of ${activeRules.length} active rules processed for this month</p>
+        </div>
+      </div>
+      <div class="fin-recurring-quick-actions">
+        <button type="button" class="btn-ghost-sm" onclick="switchFinanceView('recurring')" style="font-weight:700; color: #38bdf8;">
+          Manage Fixed Rules &rarr;
+        </button>
+      </div>
+    </div>
+    <div class="fin-recurring-quick-stats">
+      <div class="fin-recurring-stat-mini">
+        <span class="fin-recurring-stat-mini-label">Fixed Inflow</span>
+        <span class="fin-recurring-stat-mini-val income">+${fmtMoney(totalFixedIncome)}</span>
+      </div>
+      <div class="fin-recurring-stat-mini">
+        <span class="fin-recurring-stat-mini-label">Fixed Outflow</span>
+        <span class="fin-recurring-stat-mini-val expense">-${fmtMoney(totalFixedExpense)}</span>
+      </div>
+      <div class="fin-recurring-stat-mini">
+        <span class="fin-recurring-stat-mini-label">Net Fixed Flow</span>
+        <span class="fin-recurring-stat-mini-val net" style="color: ${netFixedFlow >= 0 ? '#38bdf8' : '#fb7185'}">
+          ${netFixedFlow >= 0 ? '+' : ''}${fmtMoney(netFixedFlow)}
+        </span>
+      </div>
+    </div>
+    <div class="fin-recurring-quick-chips">
+      ${chipsHtml || '<span style="font-size:12px;color:var(--ink-soft);">No recurring rules set up yet.</span>'}
+    </div>
+  `;
+}
+window.renderRecurringQuickLedgerCard = renderRecurringQuickLedgerCard;
+
+// Main Load Function for Dedicated Recurring View Hub
+async function loadRecurringFinanceHub() {
+  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
+  const labelEl = document.getElementById('scheduleActiveMonthLabel');
+  if (labelEl) labelEl.textContent = monthTitle;
+
+  // Run auto-recurring check
+  try {
+    await runAutoRecurringFinance(monthTitle);
+  } catch (e) {
+    console.warn('Error running recurring auto check:', e);
+  }
+
+  renderRecurringKpis();
+  renderRecurringRulesList();
+  renderRecurringTimeline();
+}
+window.loadRecurringFinanceHub = loadRecurringFinanceHub;
+
+// Top KPI scorecards
+function renderRecurringKpis() {
+  const kpiGrid = document.getElementById('finRecurringKpiGrid');
+  if (!kpiGrid) return;
+
+  const rules = getRecurringRules();
+  const executions = getRecurringExecutions();
+  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
+  const monthKey = getMonthPrefixFromMonthTitle(monthTitle);
+
+  const activeRules = rules.filter(r => r.active);
+  const totalIncome = activeRules.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0);
+  const totalExpense = activeRules.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
+  const netFlow = totalIncome - totalExpense;
+
+  const monthExecs = executions.filter(e => e.monthKey === monthKey);
+  const processedSum = monthExecs.reduce((s, e) => s + e.amount, 0);
+
+  kpiGrid.innerHTML = `
+    <div class="fin-rec-kpi-card income">
+      <div class="fin-rec-kpi-header">
+        <span class="fin-rec-kpi-label">Fixed Monthly Inflow</span>
+        <span class="fin-rec-kpi-icon">💵</span>
+      </div>
+      <div class="fin-rec-kpi-value income">+${fmtMoney(totalIncome)}</div>
+      <div class="fin-rec-kpi-meta">${activeRules.filter(r => r.type === 'income').length} active income stream${activeRules.filter(r => r.type === 'income').length === 1 ? '' : 's'}</div>
+    </div>
+
+    <div class="fin-rec-kpi-card expense">
+      <div class="fin-rec-kpi-header">
+        <span class="fin-rec-kpi-label">Fixed Monthly Outflow</span>
+        <span class="fin-rec-kpi-icon">💳</span>
+      </div>
+      <div class="fin-rec-kpi-value expense">-${fmtMoney(totalExpense)}</div>
+      <div class="fin-rec-kpi-meta">${activeRules.filter(r => r.type === 'expense').length} committed expense stream${activeRules.filter(r => r.type === 'expense').length === 1 ? '' : 's'}</div>
+    </div>
+
+    <div class="fin-rec-kpi-card net">
+      <div class="fin-rec-kpi-header">
+        <span class="fin-rec-kpi-label">Net Fixed Surplus</span>
+        <span class="fin-rec-kpi-icon">⚖️</span>
+      </div>
+      <div class="fin-rec-kpi-value net ${netFlow >= 0 ? 'positive' : 'negative'}">
+        ${netFlow >= 0 ? '+' : ''}${fmtMoney(netFlow)}
+      </div>
+      <div class="fin-rec-kpi-meta">Guaranteed free cash flow after fixed obligations</div>
+    </div>
+
+    <div class="fin-rec-kpi-card status">
+      <div class="fin-rec-kpi-header">
+        <span class="fin-rec-kpi-label">${escapeHtml(monthTitle)} Status</span>
+        <span class="fin-rec-kpi-icon">⚡</span>
+      </div>
+      <div class="fin-rec-kpi-value" style="color: #a78bfa;">${monthExecs.length} / ${activeRules.length}</div>
+      <div class="fin-rec-kpi-meta">${fmtMoney(processedSum)} executed this month</div>
+    </div>
+  `;
+
+  // Update badge in schedule card
+  const badgeEl = document.getElementById('scheduleExecutionSummaryBadge');
+  if (badgeEl) {
+    badgeEl.textContent = `${monthExecs.length} of ${activeRules.length} Processed`;
+  }
+}
+
+// Render Recurring Rules List / Cards
+function renderRecurringRulesList() {
+  const container = document.getElementById('finRecurringRulesContainer');
+  if (!container) return;
+
+  const rules = getRecurringRules();
+  const executions = getRecurringExecutions();
+  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
+  const monthKey = getMonthPrefixFromMonthTitle(monthTitle);
+
+  // Update counts in filter pills
+  const countAll = document.getElementById('countRecAll');
+  const countIncome = document.getElementById('countRecIncome');
+  const countExpense = document.getElementById('countRecExpense');
+  const countActive = document.getElementById('countRecActive');
+  if (countAll) countAll.textContent = rules.length;
+  if (countIncome) countIncome.textContent = rules.filter(r => r.type === 'income').length;
+  if (countExpense) countExpense.textContent = rules.filter(r => r.type === 'expense').length;
+  if (countActive) countActive.textContent = rules.filter(r => r.active).length;
+
+  const query = recurringFinanceSearchQuery.toLowerCase().trim();
+  const filtered = rules.filter(rule => {
+    if (recurringFinanceActiveFilter === 'income' && rule.type !== 'income') return false;
+    if (recurringFinanceActiveFilter === 'expense' && rule.type !== 'expense') return false;
+    if (recurringFinanceActiveFilter === 'active' && !rule.active) return false;
+    if (query) {
+      const matchName = (rule.name || '').toLowerCase().includes(query);
+      const matchCat = (rule.category || '').toLowerCase().includes(query);
+      const matchNotes = (rule.notes || '').toLowerCase().includes(query);
+      if (!matchName && !matchCat && !matchNotes) return false;
+    }
+    return true;
+  });
+
+  // Sort by day of month (1 -> 31)
+  filtered.sort((a, b) => parseInt(a.dayOfMonth, 10) - parseInt(b.dayOfMonth, 10));
+
+  if (!filtered.length) {
+    container.innerHTML = `
+      <div class="fin-rec-empty-state">
+        <div class="fin-rec-empty-icon">🔄</div>
+        <div class="fin-rec-empty-title">No Recurring Rules Found</div>
+        <div class="fin-rec-empty-sub">
+          ${query ? 'No rules match your search query.' : 'Log your fixed monthly salary, apartment rent, car installments, or recurring subscriptions to automate your cash flow.'}
+        </div>
+        <button type="button" class="btn-primary" onclick="openRecurringFinanceModal()">
+          ➕ Add Fixed Item
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  const now = new Date();
+  const currentRealMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentDay = now.getDate();
+
+  container.innerHTML = filtered.map(rule => {
+    const isIncome = rule.type === 'income';
+    const execution = executions.find(e => e.ruleId === rule.id && e.monthKey === monthKey);
+
+    let statusPillHtml = '';
+    let quickActionBtn = '';
+
+    if (!rule.active) {
+      statusPillHtml = `<span class="fin-rec-status-pill paused">⏸️ Paused</span>`;
+    } else if (execution) {
+      const dateFormatted = execution.date ? execution.date.split('-').slice(1).join('/') : 'Processed';
+      statusPillHtml = `<span class="fin-rec-status-pill applied" title="Auto-logged into Ledger">✅ Applied (${dateFormatted})</span>`;
+      quickActionBtn = `<button type="button" class="btn-rec-action undo" onclick="handleUndoRecurringExecution('${rule.id}', '${monthKey}')" title="Revert applied transaction">Undo</button>`;
+    } else {
+      const dayNum = parseInt(rule.dayOfMonth, 10);
+      let timingStr = `Day ${dayNum} of month`;
+      if (monthKey === currentRealMonthKey) {
+        if (dayNum > currentDay) {
+          const daysLeft = dayNum - currentDay;
+          timingStr = `Due in ${daysLeft} day${daysLeft === 1 ? '' : 's'} (Sep ${dayNum})`;
+        } else if (dayNum === currentDay) {
+          timingStr = `Due today! (Sep ${dayNum})`;
+        } else {
+          timingStr = `Due date passed (Day ${dayNum})`;
+        }
+      }
+      statusPillHtml = `<span class="fin-rec-status-pill scheduled">⏳ Scheduled • ${timingStr}</span>`;
+      quickActionBtn = `<button type="button" class="btn-rec-action apply-early" onclick="handleApplyRecurringRuleEarly('${rule.id}', '${monthKey}')" title="Apply now ahead of schedule">Apply Early</button>`;
+    }
+
+    return `
+      <div class="fin-rec-rule-item ${rule.active ? '' : 'paused'}">
+        <div class="fin-rec-left-col">
+          <div class="fin-rec-type-badge ${isIncome ? 'income' : 'expense'}">
+            ${isIncome ? '↗️' : '↘️'}
+          </div>
+          <div class="fin-rec-title-wrap">
+            <div class="fin-rec-title">
+              <span>${escapeHtml(rule.name)}</span>
+              <span class="fin-rec-day-badge">📅 Day ${rule.dayOfMonth}</span>
+            </div>
+            <div class="fin-rec-meta-row">
+              <span>${escapeHtml(rule.category || 'General')}</span>
+              <span class="fin-rec-meta-dot">•</span>
+              <span>${escapeHtml(rule.account || 'Direct')}</span>
+              ${rule.notes ? `<span class="fin-rec-meta-dot">•</span><span style="color:var(--ink-soft);">${escapeHtml(rule.notes)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <div class="fin-rec-center-col">
+          ${statusPillHtml}
+        </div>
+
+        <div class="fin-rec-amount-col">
+          <div class="fin-rec-amount-val ${isIncome ? 'income' : 'expense'}">
+            ${isIncome ? '+' : '-'}${fmtMoney(rule.amount)}
+          </div>
+          <div class="fin-rec-amount-freq">monthly</div>
+        </div>
+
+        <div class="fin-rec-actions-col">
+          ${quickActionBtn}
+          <button type="button" class="btn-rec-action" onclick="handleToggleRecurringRuleActive('${rule.id}')" title="${rule.active ? 'Pause rule' : 'Activate rule'}">
+            ${rule.active ? 'Pause' : 'Activate'}
+          </button>
+          <button type="button" class="btn-rec-action" onclick="openRecurringFinanceModal('${rule.id}')" title="Edit rule details">
+            ✏️
+          </button>
+          <button type="button" class="btn-rec-action delete" onclick="handleDeleteRecurringRule('${rule.id}')" title="Delete rule">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Render Monthly Schedule Timeline Grid
+function renderRecurringTimeline() {
+  const grid = document.getElementById('finScheduleTimelineGrid');
+  if (!grid) return;
+
+  const rules = getRecurringRules().filter(r => r.active);
+  const executions = getRecurringExecutions();
+  const monthTitle = currentFinanceMonth || monthTitleForDate(new Date());
+  const monthKey = getMonthPrefixFromMonthTitle(monthTitle);
+
+  if (!rules.length) {
+    grid.innerHTML = `<p style="grid-column: 1/-1; font-size:13px; color:var(--ink-soft); text-align:center; padding: 20px;">No active rules scheduled for this month.</p>`;
+    return;
+  }
+
+  // Sort rules by day
+  rules.sort((a, b) => parseInt(a.dayOfMonth, 10) - parseInt(b.dayOfMonth, 10));
+
+  const now = new Date();
+  const currentDay = now.getDate();
+  const isCurrentRealMonth = monthKey === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  grid.innerHTML = rules.map(rule => {
+    const isIncome = rule.type === 'income';
+    const execution = executions.find(e => e.ruleId === rule.id && e.monthKey === monthKey);
+    const dayNum = parseInt(rule.dayOfMonth, 10);
+    const isDueToday = isCurrentRealMonth && dayNum === currentDay && !execution;
+
+    let timingText = '';
+    if (execution) {
+      timingText = '✅ Applied to ledger';
+    } else if (isCurrentRealMonth) {
+      if (dayNum > currentDay) {
+        timingText = `⏳ In ${dayNum - currentDay} day${dayNum - currentDay === 1 ? '' : 's'}`;
+      } else if (dayNum === currentDay) {
+        timingText = `⚡ Due today!`;
+      } else {
+        timingText = `⚠️ Passed (Day ${dayNum})`;
+      }
+    } else {
+      timingText = `Scheduled for Day ${dayNum}`;
+    }
+
+    return `
+      <div class="fin-timeline-card ${execution ? 'applied' : ''} ${isDueToday ? 'due-today' : ''}">
+        <div class="fin-timeline-card-top">
+          <span class="fin-timeline-day">Day ${rule.dayOfMonth}</span>
+          <span style="font-size:11px; font-weight:700; color: ${isIncome ? '#34d399' : '#fb7185'}">
+            ${isIncome ? 'INCOME ↗' : 'EXPENSE ↘'}
+          </span>
+        </div>
+        <div class="fin-timeline-item-title">${escapeHtml(rule.name)}</div>
+        <div class="fin-timeline-amount-row">
+          <span class="fin-timeline-amount ${isIncome ? 'income' : 'expense'}">
+            ${isIncome ? '+' : '-'}${fmtMoney(rule.amount)}
+          </span>
+          <span class="fin-timeline-timing">${timingText}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Early Apply Handler
+async function handleApplyRecurringRuleEarly(ruleId, monthKey) {
+  const rules = getRecurringRules();
+  const rule = rules.find(r => r.id === ruleId);
+  if (!rule) return;
+
+  const confirmApply = confirm(`Apply "${rule.name}" (${rule.type === 'income' ? '+' : '-'}${fmtMoney(rule.amount)}) early to the ledger for ${escapeHtml(currentFinanceMonth)}?`);
+  if (!confirmApply) return;
+
+  let executions = getRecurringExecutions();
+  const scheduledDate = `${monthKey}-${String(rule.dayOfMonth).padStart(2, '0')}`;
+  let transactionId = null;
+
+  try {
+    const res = await fetch('/api/finance/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: rule.type === 'expense' ? 'expense' : 'income',
+        category: rule.category || (rule.type === 'income' ? 'Salary' : 'General'),
+        amount: parseFloat(rule.amount) || 0,
+        date: scheduledDate,
+        description: `[Fixed] ${rule.name}`,
+        account: rule.account || 'Early Applied'
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      transactionId = data.id;
+    }
+  } catch (err) {
+    console.warn('Could not post early recurring tx to server, recording locally:', err);
+  }
+
+  executions.push({
+    id: 'exec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    ruleId: rule.id,
+    ruleName: rule.name,
+    monthKey,
+    date: scheduledDate,
+    type: rule.type,
+    amount: rule.amount,
+    transactionId,
+    appliedAt: new Date().toISOString(),
+    earlyApplied: true
+  });
+
+  saveRecurringExecutions(executions);
+  showToast(`✅ "${rule.name}" successfully applied early to the ledger.`);
+  renderRecurringQuickLedgerCard();
+  loadRecurringFinanceHub();
+}
+window.handleApplyRecurringRuleEarly = handleApplyRecurringRuleEarly;
+
+// Undo Execution Handler
+async function handleUndoRecurringExecution(ruleId, monthKey) {
+  let executions = getRecurringExecutions();
+  const execIndex = executions.findIndex(e => e.ruleId === ruleId && e.monthKey === monthKey);
+  if (execIndex === -1) return;
+
+  const execution = executions[execIndex];
+  const confirmUndo = confirm(`Undo and remove "${execution.ruleName}" from this month's financial transactions?`);
+  if (!confirmUndo) return;
+
+  if (execution.transactionId) {
+    try {
+      await fetch(`/api/finance/transactions?id=${encodeURIComponent(execution.transactionId)}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn('Failed to delete transaction from server:', err);
+    }
+  }
+
+  executions.splice(execIndex, 1);
+  saveRecurringExecutions(executions);
+  showToast(`Reverted "${execution.ruleName}" for this month.`);
+  renderRecurringQuickLedgerCard();
+  loadRecurringFinanceHub();
+}
+window.handleUndoRecurringExecution = handleUndoRecurringExecution;
+
+// Toggle Active Rule
+function handleToggleRecurringRuleActive(ruleId) {
+  const rules = getRecurringRules();
+  const rule = rules.find(r => r.id === ruleId);
+  if (!rule) return;
+
+  rule.active = !rule.active;
+  saveRecurringRules(rules);
+  showToast(`"${rule.name}" is now ${rule.active ? 'active' : 'paused'}.`);
+  renderRecurringQuickLedgerCard();
+  loadRecurringFinanceHub();
+}
+window.handleToggleRecurringRuleActive = handleToggleRecurringRuleActive;
+
+// Delete Rule
+function handleDeleteRecurringRule(ruleId) {
+  const rules = getRecurringRules();
+  const rule = rules.find(r => r.id === ruleId);
+  if (!rule) return;
+
+  const confirmDelete = confirm(`Are you sure you want to delete the recurring rule "${rule.name}"? Past recorded executions in your ledger will not be altered.`);
+  if (!confirmDelete) return;
+
+  const updated = rules.filter(r => r.id !== ruleId);
+  saveRecurringRules(updated);
+  showToast(`Deleted rule "${rule.name}".`);
+  renderRecurringQuickLedgerCard();
+  loadRecurringFinanceHub();
+}
+window.handleDeleteRecurringRule = handleDeleteRecurringRule;
+
+// Modal Open / Edit / Save Handlers
+function openRecurringFinanceModal(ruleId = null) {
+  const backdrop = document.getElementById('recurringFinanceModalBackdrop');
+  if (!backdrop) return;
+
+  const titleEl = document.getElementById('recurringModalTitle');
+  const idInput = document.getElementById('recurringRuleId');
+  const nameInput = document.getElementById('recurringNameInput');
+  const typeInput = document.getElementById('recurringTypeInput');
+  const amountInput = document.getElementById('recurringAmountInput');
+  const dayInput = document.getElementById('recurringDayInput');
+  const catInput = document.getElementById('recurringCategoryInput');
+  const accInput = document.getElementById('recurringAccountInput');
+  const notesInput = document.getElementById('recurringNotesInput');
+  const activeToggle = document.getElementById('recurringActiveToggle');
+
+  const btnIncome = document.getElementById('btnRecTypeIncome');
+  const btnExpense = document.getElementById('btnRecTypeExpense');
+
+  if (ruleId) {
+    const rules = getRecurringRules();
+    const rule = rules.find(r => r.id === ruleId);
+    if (!rule) return;
+
+    if (titleEl) titleEl.textContent = '✏️ Edit Fixed Recurring Item';
+    if (idInput) idInput.value = rule.id;
+    if (nameInput) nameInput.value = rule.name || '';
+    if (typeInput) typeInput.value = rule.type || 'income';
+    if (amountInput) amountInput.value = rule.amount || '';
+    if (dayInput) dayInput.value = rule.dayOfMonth || '1';
+    if (catInput) catInput.value = rule.category || 'Salary';
+    if (accInput) accInput.value = rule.account || 'Bank Transfer';
+    if (notesInput) notesInput.value = rule.notes || '';
+    if (activeToggle) activeToggle.checked = Boolean(rule.active);
+
+    if (btnIncome) btnIncome.classList.toggle('active', rule.type === 'income');
+    if (btnExpense) btnExpense.classList.toggle('active', rule.type === 'expense');
+  } else {
+    if (titleEl) titleEl.textContent = '➕ Add Fixed Recurring Item';
+    if (idInput) idInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (typeInput) typeInput.value = 'income';
+    if (amountInput) amountInput.value = '';
+    if (dayInput) dayInput.value = '1';
+    if (catInput) catInput.value = 'Salary';
+    if (accInput) accInput.value = 'Bank Transfer';
+    if (notesInput) notesInput.value = '';
+    if (activeToggle) activeToggle.checked = true;
+
+    if (btnIncome) btnIncome.classList.add('active');
+    if (btnExpense) btnExpense.classList.remove('active');
+  }
+
+  backdrop.hidden = false;
+}
+window.openRecurringFinanceModal = openRecurringFinanceModal;
+
+function closeRecurringFinanceModal() {
+  const backdrop = document.getElementById('recurringFinanceModalBackdrop');
+  if (backdrop) backdrop.hidden = true;
+}
+window.closeRecurringFinanceModal = closeRecurringFinanceModal;
+
+// Wire up recurring modal and search filters
+document.addEventListener('DOMContentLoaded', () => {
+  const closeBtn = document.getElementById('closeRecurringFinanceModal');
+  const cancelBtn = document.getElementById('btnCancelRecurringFinanceModal');
+  const form = document.getElementById('recurringFinanceForm');
+  const btnOpenModal = document.getElementById('btnOpenNewRecurringRuleModal');
+  const btnAutoCheck = document.getElementById('btnRunRecurringAutoCheck');
+
+  const btnIncome = document.getElementById('btnRecTypeIncome');
+  const btnExpense = document.getElementById('btnRecTypeExpense');
+  const typeInput = document.getElementById('recurringTypeInput');
+
+  if (closeBtn) closeBtn.addEventListener('click', closeRecurringFinanceModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeRecurringFinanceModal);
+  if (btnOpenModal) btnOpenModal.addEventListener('click', () => openRecurringFinanceModal());
+
+  if (btnAutoCheck) {
+    btnAutoCheck.addEventListener('click', async () => {
+      btnAutoCheck.disabled = true;
+      btnAutoCheck.textContent = 'Checking…';
+      const applied = await runAutoRecurringFinance();
+      btnAutoCheck.disabled = false;
+      btnAutoCheck.innerHTML = '<span>⚡</span> Auto-Apply Due Now';
+      if (applied === 0) {
+        showToast('All active recurring rules are up to date for this month.');
+      }
+    });
+  }
+
+  if (btnIncome && btnExpense && typeInput) {
+    btnIncome.addEventListener('click', () => {
+      btnIncome.classList.add('active');
+      btnExpense.classList.remove('active');
+      typeInput.value = 'income';
+    });
+    btnExpense.addEventListener('click', () => {
+      btnExpense.classList.add('active');
+      btnIncome.classList.remove('active');
+      typeInput.value = 'expense';
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('recurringRuleId').value.trim();
+      const name = document.getElementById('recurringNameInput').value.trim();
+      const type = document.getElementById('recurringTypeInput').value || 'income';
+      const amount = parseFloat(document.getElementById('recurringAmountInput').value) || 0;
+      const dayOfMonth = parseInt(document.getElementById('recurringDayInput').value, 10) || 1;
+      const category = document.getElementById('recurringCategoryInput').value || 'General';
+      const account = document.getElementById('recurringAccountInput').value || 'Bank Transfer';
+      const notes = document.getElementById('recurringNotesInput').value.trim();
+      const active = document.getElementById('recurringActiveToggle').checked;
+
+      if (!name || isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid rule title and positive amount.');
+        return;
+      }
+
+      let rules = getRecurringRules();
+      if (id) {
+        const idx = rules.findIndex(r => r.id === id);
+        if (idx !== -1) {
+          rules[idx] = {
+            ...rules[idx],
+            name,
+            type,
+            amount,
+            dayOfMonth,
+            category,
+            account,
+            notes,
+            active,
+            updatedAt: new Date().toISOString()
+          };
+        }
+      } else {
+        const newRule = {
+          id: 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name,
+          type,
+          amount,
+          dayOfMonth,
+          category,
+          account,
+          notes,
+          active,
+          createdAt: new Date().toISOString()
+        };
+        rules.push(newRule);
+      }
+
+      saveRecurringRules(rules);
+      closeRecurringFinanceModal();
+      showToast(`Recurring rule "${name}" saved.`);
+
+      // Check if newly saved active rule is due today for current month
+      await runAutoRecurringFinance();
+      renderRecurringQuickLedgerCard();
+      loadRecurringFinanceHub();
+    });
+  }
+
+  // Filter Pills & Search
+  const filterWrap = document.getElementById('finRecurringFilterPills');
+  if (filterWrap) {
+    filterWrap.addEventListener('click', (e) => {
+      const btn = e.target.closest('.fin-filter-pill');
+      if (!btn) return;
+      filterWrap.querySelectorAll('.fin-filter-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      recurringFinanceActiveFilter = btn.dataset.filter || 'all';
+      renderRecurringRulesList();
+    });
+  }
+
+  const searchInput = document.getElementById('inputSearchRecurring');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      recurringFinanceSearchQuery = e.target.value;
+      renderRecurringRulesList();
+    });
+  }
+});
 
 // =============================================================================
 // UNIFIED GOLD & ASSETS PORTFOLIO
@@ -10326,8 +11208,10 @@ function destroyAllFinCharts() {
 }
 
 const btnFinViewLedger     = document.getElementById('btnFinViewLedger');
+const btnFinViewRecurring  = document.getElementById('btnFinViewRecurring');
 const btnFinViewAnalytics  = document.getElementById('btnFinViewAnalytics');
 const finLedgerViewWrap    = document.getElementById('finLedgerViewWrap');
+const finRecurringViewWrap = document.getElementById('finRecurringViewWrap');
 const finAnalyticsViewWrap = document.getElementById('finAnalyticsViewWrap');
 const finHorizonTabs       = document.getElementById('finHorizonTabs');
 const finKpiGrid           = document.getElementById('finKpiGrid');
@@ -10339,13 +11223,17 @@ const finStreamsMatrixGrid = document.getElementById('finStreamsMatrixGrid');
 function switchFinanceView(viewMode) {
   financeViewMode = viewMode;
   if (btnFinViewLedger) btnFinViewLedger.classList.toggle('active', viewMode === 'ledger');
+  if (btnFinViewRecurring) btnFinViewRecurring.classList.toggle('active', viewMode === 'recurring');
   if (btnFinViewAnalytics) btnFinViewAnalytics.classList.toggle('active', viewMode === 'analytics');
 
   if (finLedgerViewWrap) finLedgerViewWrap.hidden = (viewMode !== 'ledger');
+  if (finRecurringViewWrap) finRecurringViewWrap.hidden = (viewMode !== 'recurring');
   if (finAnalyticsViewWrap) finAnalyticsViewWrap.hidden = (viewMode !== 'analytics');
 
   if (viewMode === 'analytics') {
     loadFinanceAnalytics();
+  } else if (viewMode === 'recurring') {
+    loadRecurringFinanceHub();
   } else {
     loadFinancePage();
   }
@@ -10353,6 +11241,9 @@ function switchFinanceView(viewMode) {
 
 if (btnFinViewLedger) {
   btnFinViewLedger.addEventListener('click', () => switchFinanceView('ledger'));
+}
+if (btnFinViewRecurring) {
+  btnFinViewRecurring.addEventListener('click', () => switchFinanceView('recurring'));
 }
 if (btnFinViewAnalytics) {
   btnFinViewAnalytics.addEventListener('click', () => switchFinanceView('analytics'));
