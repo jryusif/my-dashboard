@@ -22429,12 +22429,24 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   flex: 1;
   min-height: 0;
   box-sizing: border-box;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
 }
 
 .kristin-card-coral:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(248, 113, 113, 0.24);
+  box-shadow: 0 12px 28px rgba(248, 113, 113, 0.3);
+  filter: brightness(1.02);
+}
+
+.kristin-card-coral:active {
+  transform: scale(0.985);
+}
+
+.kristin-card-coral:focus-visible {
+  outline: 2px solid #E11D48;
+  outline-offset: 2px;
 }
 
 .kristin-task-head {
@@ -22469,6 +22481,7 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .kristin-hero-pct {
@@ -22483,6 +22496,7 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   font-size: 11.5px;
   font-weight: 600;
   color: rgba(15, 23, 42, 0.7);
+  white-space: nowrap;
 }
 
 /* Card 3b: Additional Tasks (Sky Cyan Mesh) */
@@ -22499,19 +22513,65 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   flex: 1;
   min-height: 0;
   box-sizing: border-box;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
 }
 
 .kristin-card-cyan:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(56, 189, 248, 0.24);
+  box-shadow: 0 12px 28px rgba(56, 189, 248, 0.3);
+  filter: brightness(1.02);
+}
+
+.kristin-card-cyan:active {
+  transform: scale(0.985);
+}
+
+.kristin-card-cyan:focus-visible {
+  outline: 2px solid #0284C7;
+  outline-offset: 2px;
 }
 
 .kristin-card-cyan .kristin-hero-pct {
   color: #0C4A6E;
 }
 .kristin-card-cyan .kristin-hero-sub {
-  color: rgba(12, 74, 110, 0.75);
+  color: rgba(12, 74, 110, 0.8);
+}
+
+/* Mini Progress Tracks & Fills */
+.kristin-card-mini-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(15, 23, 42, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.kristin-card-mini-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kristin-card-mini-bar.coral {
+  background: linear-gradient(90deg, #F43F5E 0%, #BE123C 100%);
+}
+
+.kristin-card-mini-bar.cyan {
+  background: linear-gradient(90deg, #0284C7 0%, #0369A1 100%);
+}
+
+@keyframes card-pulse-highlight {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5); transform: scale(1); }
+  50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0.22); transform: scale(1.012); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); transform: scale(1); }
+}
+
+.card-highlight-pulse {
+  animation: card-pulse-highlight 0.85s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 /* Row 2: Mid Row Grid (Focusing + Today's High Priority Tasks) */

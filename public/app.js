@@ -630,6 +630,9 @@ async function loadTasks() {
   if (typeof renderKristinHighPriorityTasks === 'function') {
     renderKristinHighPriorityTasks();
   }
+  if (typeof updateKristinTaskVelocityCards === 'function') {
+    updateKristinTaskVelocityCards(allTasks);
+  }
 }
 
 function renderDateLabel(isoDate) {
@@ -1002,6 +1005,7 @@ async function toggleTask(id, completed, row, onToggled) {
   if (typeof updateWeeklyProgress === 'function') updateWeeklyProgress();
   if (typeof updateWeekTabBadges === 'function') updateWeekTabBadges();
   if (typeof updateCalendarDockBadge === 'function') updateCalendarDockBadge();
+  if (typeof updateKristinTaskVelocityCards === 'function') updateKristinTaskVelocityCards();
 
   // 4. Background persist to database (without locking or tearing down the board DOM)
   try {
@@ -1074,6 +1078,9 @@ async function syncBoards() {
   }
   if (typeof renderKristinHighPriorityTasks === 'function') {
     renderKristinHighPriorityTasks();
+  }
+  if (typeof updateKristinTaskVelocityCards === 'function') {
+    updateKristinTaskVelocityCards();
   }
   // Step 3: Reload open category page (reads from DB directly)
   if (currentCategoryPage) {
@@ -23050,29 +23057,11 @@ async function updateKristinExecutiveDashboard() {
   if (statSpacesEl) statSpacesEl.textContent = String(customSpaces.length + 6);
   if (trackersCountEl) trackersCountEl.textContent = `${customSpaces.length + 3} active connections`;
 
-  // Fetch or calculate real prioritized vs additional task completion
+  // Calculate and update real-time Prioritized vs Additional task velocity
   try {
-    const res = await fetch('/api/tasks');
-    if (res.ok) {
-      const data = await res.json();
-      const tasks = data.tasks || [];
-      const totalDone = tasks.filter(t => t.completed).length;
-      if (statDoneEl) statDoneEl.textContent = String(totalDone || 56);
-
-      const highPrio = tasks.filter(t => (t.priority || '').toLowerCase() === 'high' || (t.priority || '').toLowerCase() === 'urgent');
-      const standard = tasks.filter(t => (t.priority || '').toLowerCase() !== 'high' && (t.priority || '').toLowerCase() !== 'urgent');
-
-      const highDone = highPrio.filter(t => t.completed).length;
-      const stdDone = standard.filter(t => t.completed).length;
-
-      const highPct = highPrio.length > 0 ? Math.round((highDone / highPrio.length) * 100) : 83;
-      const stdPct = standard.length > 0 ? Math.round((stdDone / standard.length) * 100) : 56;
-
-      if (prioPctEl) prioPctEl.textContent = `${highPct}%`;
-      if (addPctEl) addPctEl.textContent = `${stdPct}%`;
-    }
+    await updateKristinTaskVelocityCards();
   } catch (err) {
-    console.debug('Kristin stats fetch:', err);
+    console.debug('Kristin stats velocity error:', err);
   }
 
   // Hook up search input to live filter cards and tasks
@@ -23274,8 +23263,11 @@ async function toggleKristinPriorityTask(id, completed, inputEl) {
     await toggleTask(id, completed, dummyRow);
   }
 
-  // Re-render priority card metrics
+  // Re-render priority card metrics & task velocity cards
   renderKristinHighPriorityTasks();
+  if (typeof updateKristinTaskVelocityCards === 'function') {
+    updateKristinTaskVelocityCards();
+  }
 }
 window.toggleKristinPriorityTask = toggleKristinPriorityTask;
 
@@ -23332,6 +23324,126 @@ window.scrollToPlannerSection = function() {
   const el = document.getElementById('weeklySection') || document.getElementById('dashboardGrid');
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
+// =============================================================================
+// ⚡ KRISTIN TASK VELOCITY STACK CONTROLLER (Coral & Cyan Cards)
+// =============================================================================
+
+async function updateKristinTaskVelocityCards(providedTasks = null) {
+  const prioPctEl = document.getElementById('kristinPrioritizedPct');
+  const prioSubEl = document.getElementById('kristinPrioritizedSub');
+  const prioBarEl = document.getElementById('kristinPrioritizedBar');
+  const addPctEl = document.getElementById('kristinAdditionalPct');
+  const addSubEl = document.getElementById('kristinAdditionalSub');
+  const addBarEl = document.getElementById('kristinAdditionalBar');
+  const statDoneEl = document.getElementById('kristinStatDone');
+
+  let tasks = null;
+  if (Array.isArray(providedTasks) && providedTasks.length > 0) {
+    tasks = providedTasks;
+  } else if (window.StorageService && typeof window.StorageService.tasks.getAll === 'function') {
+    const sTasks = window.StorageService.tasks.getAll(false);
+    if (Array.isArray(sTasks) && sTasks.length > 0) {
+      tasks = sTasks;
+    }
+  }
+
+  if (!tasks && Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0) {
+    tasks = window.calTasksCache;
+  }
+
+  if (!tasks && Array.isArray(currentTodayTasks) && currentTodayTasks.length > 0) {
+    tasks = currentTodayTasks;
+  }
+
+  // If in-memory tasks are still not populated, fetch directly from API
+  if (!tasks) {
+    try {
+      const res = await fetch('/api/tasks');
+      if (res.ok) {
+        const data = await res.json();
+        tasks = data.tasks || [];
+      }
+    } catch (err) {
+      console.debug('Error fetching tasks for velocity cards:', err);
+    }
+  }
+
+  tasks = tasks || [];
+
+  // Filter valid active tasks (excluding deleted tasks and routine habits)
+  const activeTasks = tasks.filter(t => !t.deleted_at && t.category !== 'Routine');
+
+  // Prioritized Tasks: priority is 'high' or 'urgent'
+  const highPrio = activeTasks.filter(t => {
+    const p = (t.priority || '').toLowerCase();
+    return p === 'high' || p === 'urgent';
+  });
+  const highDone = highPrio.filter(t => Boolean(t.completed)).length;
+  const highTotal = highPrio.length;
+  const highPct = highTotal > 0 ? Math.round((highDone / highTotal) * 100) : 0;
+
+  // Additional Tasks: priority is standard / medium / low
+  const standard = activeTasks.filter(t => {
+    const p = (t.priority || '').toLowerCase();
+    return p !== 'high' && p !== 'urgent';
+  });
+  const stdDone = standard.filter(t => Boolean(t.completed)).length;
+  const stdTotal = standard.length;
+  const stdPct = stdTotal > 0 ? Math.round((stdDone / stdTotal) * 100) : 0;
+
+  const totalDone = activeTasks.filter(t => Boolean(t.completed)).length;
+
+  // 1. Update Coral (Prioritized tasks) card
+  if (prioPctEl) {
+    prioPctEl.textContent = `${highPct}%`;
+  }
+  if (prioSubEl) {
+    prioSubEl.textContent = highTotal > 0 ? `Avg. Completed (${highDone}/${highTotal})` : '0 prioritized tasks';
+  }
+  if (prioBarEl) {
+    prioBarEl.style.width = `${highPct}%`;
+  }
+
+  // 2. Update Cyan (Additional tasks) card
+  if (addPctEl) {
+    addPctEl.textContent = `${stdPct}%`;
+  }
+  if (addSubEl) {
+    addSubEl.textContent = stdTotal > 0 ? `Avg. Completed (${stdDone}/${stdTotal})` : '0 additional tasks';
+  }
+  if (addBarEl) {
+    addBarEl.style.width = `${stdPct}%`;
+  }
+
+  // 3. Update profile header done counter with real tasks completed
+  if (statDoneEl) {
+    statDoneEl.textContent = String(totalDone);
+  }
+}
+window.updateKristinTaskVelocityCards = updateKristinTaskVelocityCards;
+
+window.focusKristinPriorityTasks = function() {
+  const card = document.getElementById('kristinPriorityCard');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.remove('card-highlight-pulse');
+    void card.offsetWidth;
+    card.classList.add('card-highlight-pulse');
+    setTimeout(() => card.classList.remove('card-highlight-pulse'), 1200);
+  }
+};
+
+window.focusKristinAdditionalTasks = function() {
+  const section = document.getElementById('weeklySection') || document.getElementById('dashboardGrid');
+  if (section) {
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    section.classList.remove('card-highlight-pulse');
+    void section.offsetWidth;
+    section.classList.add('card-highlight-pulse');
+    setTimeout(() => section.classList.remove('card-highlight-pulse'), 1200);
   }
 };
 
