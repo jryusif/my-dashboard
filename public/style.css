@@ -23313,454 +23313,355 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 }
 
 /* -------------------------------------------------------------
-   Focusing / Productivity Analytics Card
+   My Activity Card (Sleek Dark Pillars Chart)
    ------------------------------------------------------------- */
-.kristin-focusing-card {
-  background: #FFFFFF;
+.my-activity-card {
+  background: #000000;
   border-radius: 28px;
-  border: 1px solid #E2E8F0;
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.03);
-  padding: 28px 32px 24px;
+  border: 1px solid #1E2024;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 26px 28px 22px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
   position: relative;
+  user-select: none;
+  color: #FFFFFF;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-.kristin-focusing-header {
+.my-activity-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 12px;
+  align-items: center;
 }
 
-.kristin-focusing-header h2 {
+.my-activity-title {
   font-size: 22px;
-  font-weight: 800;
-  color: #0F172A;
+  font-weight: 700;
+  color: #FFFFFF;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
-.kristin-focusing-header p {
-  font-size: 12.5px;
-  color: #64748B;
-  margin: 2px 0 0 0;
-  font-weight: 500;
+.my-activity-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.kristin-range-dropdown-wrap {
+.my-activity-dropdown-wrap {
   position: relative;
-  display: inline-block;
 }
 
-.kristin-range-dropdown {
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
+.my-activity-pill-btn {
+  background: #1C1E23;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
   padding: 6px 14px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #334155;
+  font-size: 13.5px;
+  font-weight: 500;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  user-select: none;
   transition: all 0.15s ease;
 }
 
-.kristin-range-dropdown:hover {
-  background: #EDF2F7;
-  border-color: #CBD5E1;
-  color: #0F172A;
+.my-activity-pill-btn:hover {
+  background: #252830;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
-.kristin-range-menu {
+.my-activity-chevron {
+  stroke: #9CA3AF;
+  transition: transform 0.2s ease;
+}
+
+.my-activity-icon-btn {
+  background: transparent;
+  border: none;
+  color: #9CA3AF;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.my-activity-icon-btn:hover {
+  background: #1C1E23;
+  color: #FFFFFF;
+}
+
+.my-activity-menu {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
-  z-index: 40;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  left: 0;
+  z-index: 50;
+  background: #14161A;
+  border: 1px solid #282B33;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
   padding: 6px;
-  min-width: 195px;
+  min-width: 140px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  animation: kristinMenuFadeIn 0.15s ease;
+  animation: myActivityMenuIn 0.15s ease;
 }
 
-.kristin-range-menu[hidden] {
+.my-activity-menu.my-activity-menu-right {
+  left: auto;
+  right: 0;
+  min-width: 180px;
+}
+
+.my-activity-menu[hidden] {
   display: none !important;
 }
 
-@keyframes kristinMenuFadeIn {
+@keyframes myActivityMenuIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.kristin-range-option {
+.my-activity-menu-item {
   background: none;
   border: none;
   text-align: left;
-  padding: 7px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #475569;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #CBD5E1;
   cursor: pointer;
   transition: all 0.12s ease;
   width: 100%;
   box-sizing: border-box;
-}
-
-.kristin-range-option:hover {
-  background: #F1F5F9;
-  color: #0F172A;
-}
-
-.kristin-range-option.active {
-  background: #EFF6FF;
-  color: #2563EB;
-  font-weight: 700;
-}
-
-.kristin-focusing-main-row {
-  display: grid;
-  grid-template-columns: 48px 1fr 100px;
-  align-items: center;
-  gap: 20px;
-}
-
-@media (max-width: 700px) {
-  .kristin-focusing-main-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.kristin-month-selector {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.kristin-month-labels-list {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.kristin-chevron-btn {
-  background: none;
-  border: none;
-  font-size: 11px;
-  color: #94A3B8;
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 4px;
-  transition: color 0.15s ease, background 0.15s ease;
-}
-
-.kristin-chevron-btn:hover {
-  color: #0F172A;
-  background: #F1F5F9;
-}
-
-.kristin-month-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #64748B;
-  padding: 3px 6px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-}
-
-.kristin-month-label:hover {
-  color: #0F172A;
-  background: #F1F5F9;
-}
-
-.kristin-month-label.is-active {
-  background: #2563EB;
-  color: #FFFFFF;
-  padding: 4px 10px;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-}
-
-.kristin-wave-stage {
-  position: relative;
-  width: 100%;
-  height: 150px;
-  display: flex;
-  align-items: center;
-  cursor: crosshair;
-}
-
-.kristin-wave-svg {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-#kristinPurplePath,
-#kristinCoralPath,
-#kristinPurpleArea,
-#kristinCoralArea {
-  transition: d 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
-}
-
-#kristinPurplePath.is-hidden,
-#kristinPurpleArea.is-hidden,
-#kristinCoralPath.is-hidden,
-#kristinCoralArea.is-hidden {
-  opacity: 0 !important;
-  pointer-events: none;
-}
-
-#kristinPurplePath.is-dimmed,
-#kristinPurpleArea.is-dimmed,
-#kristinCoralPath.is-dimmed,
-#kristinCoralArea.is-dimmed {
-  opacity: 0.12 !important;
-}
-
-#kristinWaveGuideLine,
-#kristinCoralPoint,
-#kristinPurplePoint {
-  transition: cx 0.15s ease, cy 0.15s ease, x1 0.15s ease, x2 0.15s ease;
-}
-
-.kristin-wave-tooltip {
-  position: absolute;
-  top: 12px;
-  left: 36%;
-  transform: translateX(-50%);
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 6px 14px;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
-  border: 1px solid #E2E8F0;
-  text-align: center;
-  pointer-events: none;
-  transition: left 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 10;
-  white-space: nowrap;
-}
-
-.kristin-wave-tooltip-title {
-  font-size: 12px;
-  font-weight: 800;
-  color: #0F172A;
-}
-
-.kristin-wave-tooltip-sub {
-  font-size: 10px;
-  font-weight: 600;
-  color: #64748B;
-}
-
-.kristin-wave-tooltip-metrics {
-  font-size: 9.5px;
-  font-weight: 700;
-  margin-top: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-}
-
-.kristin-wave-tooltip-metrics .coral-txt {
-  color: #E11D48;
-}
-
-.kristin-wave-tooltip-metrics .purple-txt {
-  color: #6366F1;
-}
-
-.kristin-focus-stat-col {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-  user-select: none;
-}
-
-.kristin-focus-stat-col:hover {
-  transform: translateY(-2px);
-}
-
-.kristin-focus-big-pct {
-  font-size: 38px;
-  font-weight: 800;
-  color: #0F172A;
-  line-height: 1;
-}
-
-.kristin-focus-stat-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #64748B;
-  margin-top: 4px;
-}
-
-.kristin-focus-trend-badge {
-  font-size: 10px;
-  font-weight: 700;
-  color: #10B981;
-  background: rgba(16, 185, 129, 0.1);
-  padding: 2px 7px;
-  border-radius: 999px;
-  margin-top: 4px;
-  display: inline-block;
-}
-
-.kristin-focus-trend-badge.down {
-  color: #EF4444;
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.kristin-focusing-legend {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid #F1F5F9;
-  padding-top: 12px;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.kristin-focusing-legend-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.kristin-legend-btn {
-  background: none;
-  border: none;
-  display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748B;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
-  transition: all 0.15s ease;
-  font-family: inherit;
 }
 
-.kristin-legend-btn:hover {
-  background: #F1F5F9;
-  color: #0F172A;
-}
-
-.kristin-legend-btn.is-disabled {
-  opacity: 0.35;
-  text-decoration: line-through;
-}
-
-.kristin-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-}
-
-.kristin-legend-dot.coral {
-  background: #F87171;
-}
-
-.kristin-legend-dot.purple {
-  background: #818CF8;
-}
-
-.kristin-legend-deep-link {
-  background: none;
-  border: none;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #2563EB;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-  font-family: inherit;
-}
-
-.kristin-legend-deep-link:hover {
-  transform: translateX(3px);
-  background: #EFF6FF;
-}
-
-/* Dark mode overrides for Focusing Card */
-[data-theme="dark"] .kristin-focusing-card {
-  background: #1E293B;
-  border-color: #334155;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-}
-
-[data-theme="dark"] .kristin-focusing-header h2,
-[data-theme="dark"] .kristin-focus-big-pct,
-[data-theme="dark"] .kristin-wave-tooltip-title {
-  color: #F8FAFC;
-}
-
-[data-theme="dark"] .kristin-focusing-header p,
-[data-theme="dark"] .kristin-focus-stat-label,
-[data-theme="dark"] .kristin-wave-tooltip-sub {
-  color: #94A3B8;
-}
-
-[data-theme="dark"] .kristin-range-dropdown,
-[data-theme="dark"] .kristin-range-menu {
-  background: #0F172A;
-  border-color: #334155;
-  color: #F8FAFC;
-}
-
-[data-theme="dark"] .kristin-range-option {
-  color: #CBD5E1;
-}
-
-[data-theme="dark"] .kristin-range-option:hover {
-  background: #1E293B;
+.my-activity-menu-item:hover {
+  background: #20232A;
   color: #FFFFFF;
 }
 
-[data-theme="dark"] .kristin-range-option.active {
-  background: rgba(37, 99, 235, 0.2);
-  color: #60A5FA;
+.my-activity-menu-item.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+  font-weight: 700;
 }
 
-[data-theme="dark"] .kristin-wave-tooltip {
-  background: #0F172A;
-  border-color: #334155;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+/* Metrics Row: Big Percentage and Green Trend */
+.my-activity-metrics-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 14px;
+  margin-bottom: 6px;
 }
 
-[data-theme="dark"] .kristin-focusing-legend {
-  border-color: #334155;
+.my-activity-big-stat {
+  font-size: 52px;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1;
+  letter-spacing: -0.03em;
 }
 
-[data-theme="dark"] .kristin-legend-btn {
+.my-activity-trend-badge {
+  font-size: 15px;
+  font-weight: 600;
+  color: #22C55E;
+  margin-top: 6px;
+  margin-right: 48px;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.my-activity-trend-badge.down {
+  color: #EF4444;
+}
+
+/* Stage & Floating Guide Layer */
+.my-activity-stage {
+  position: relative;
+  height: 250px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.my-activity-guideline-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 10;
+  transition: top 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.my-activity-guideline-layer.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.my-activity-task-pill {
+  background: #1E2127;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #E2E8F0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  margin-right: 8px;
+  transition: all 0.2s ease;
+}
+
+.my-activity-guide-line {
+  flex: 1;
+  height: 1.5px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.my-activity-guide-knob {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.95);
+  transform: translate(-50%, -50%);
+  top: 50%;
+  transition: left 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Pillars Track */
+.my-activity-pillars-track {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.my-activity-pillar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s ease;
+}
+
+/* Outer Capsule with Diagonal Hatch Stripes */
+.my-activity-capsule {
+  width: 100%;
+  max-width: 52px;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    -45deg,
+    #131519,
+    #131519 4px,
+    #1D2027 4px,
+    #1D2027 7px
+  );
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Inner Solid Fill */
+.my-activity-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 16px;
+  background: #23262E;
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s ease;
+}
+
+/* Active/Selected Day Fill - Sleek metallic silver/grey as in screenshot */
+.my-activity-pillar-item.is-active .my-activity-fill {
+  background: #737882;
+}
+
+/* Percentage Label inside Capsule */
+.my-activity-bar-pct {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
   color: #94A3B8;
+  z-index: 2;
+  pointer-events: none;
+  transition: color 0.2s ease;
 }
 
-[data-theme="dark"] .kristin-legend-btn:hover {
-  background: #0F172A;
-  color: #F8FAFC;
+.my-activity-bar-pct.is-danger {
+  color: #EF4444;
+}
+
+.my-activity-pillar-item.is-active .my-activity-bar-pct {
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+/* Day / Column Label under Capsule */
+.my-activity-label {
+  margin-top: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #525966;
+  transition: color 0.2s ease;
+}
+
+.my-activity-pillar-item.is-active .my-activity-label {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .my-activity-card {
+    padding: 20px 16px 18px;
+    border-radius: 22px;
+  }
+  .my-activity-pillars-track {
+    gap: 8px;
+  }
+  .my-activity-capsule {
+    border-radius: 14px;
+  }
+  .my-activity-bar-pct {
+    font-size: 11px;
+    bottom: 8px;
+  }
+  .my-activity-label {
+    font-size: 12px;
+    margin-top: 6px;
+  }
+  .my-activity-big-stat {
+    font-size: 42px;
+  }
 }
 
 /* -------------------------------------------------------------

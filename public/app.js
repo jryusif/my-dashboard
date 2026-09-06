@@ -23559,81 +23559,191 @@ async function handleKristinProfileRefresh() {
 window.handleKristinProfileRefresh = handleKristinProfileRefresh;
 
 // =============================================================================
-// 📈 KRISTIN FOCUSING / PRODUCTIVITY ANALYTICS ENGINE
+// 📊 MY ACTIVITY PILLARS & WORKFLOW ENGINE
 // =============================================================================
 
-let kristinFocusRange = 'month'; // 'month' | 'week' | 'quarter' | 'year'
-let kristinFocusRangeLabel = 'Last month';
-let kristinFocusSelectedMonthIdx = new Date().getMonth(); // 0-11
-let kristinFocusMonthOffset = 0;
-let kristinShowCoralCurve = true;
-let kristinShowPurpleCurve = true;
-let kristinFocusActivePointIdx = 1;
-let kristinFocusCurrentData = null;
-let kristinFocusCurrentPoints = null;
+let myActivityCurrentRange = 'weekly'; // 'weekly' | 'monthly' | 'daily'
+let myActivityActiveIndex = 5; // Default: Saturday (index 5: 0=Mon ... 5=Sat, 6=Sun) matching screenshot
+let myActivityShowGuideLine = true;
+let myActivityTargetGoal = 10; // Default daily tasks goal
+let myActivityCurrentData = [];
 
-const KRISTIN_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const KRISTIN_MONTH_FULL_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// Base archetypes matching the user's screenshot exactly!
+const MY_ACTIVITY_WEEKLY_BASE = [
+  { label: 'Mon', fullLabel: 'Monday', pct: 37, tasksDone: 4, tasksTotal: 11, capacityPct: 56, trend: '+4%' },
+  { label: 'Tue', fullLabel: 'Tuesday', pct: 33, tasksDone: 3, tasksTotal: 9, capacityPct: 46, trend: '-4%' },
+  { label: 'Wed', fullLabel: 'Wednesday', pct: 44, tasksDone: 5, tasksTotal: 11, capacityPct: 62, trend: '+11%' },
+  { label: 'Thu', fullLabel: 'Thursday', pct: 22, tasksDone: 2, tasksTotal: 12, capacityPct: 78, trend: '-22%', isDanger: true },
+  { label: 'Fri', fullLabel: 'Friday', pct: 32, tasksDone: 3, tasksTotal: 10, capacityPct: 48, trend: '+10%' },
+  { label: 'Sat', fullLabel: 'Saturday', pct: 83, tasksDone: 9, tasksTotal: 11, capacityPct: 88, trend: '+14%', isDefaultActive: true },
+  { label: 'Sun', fullLabel: 'Sunday', pct: 67, tasksDone: 6, tasksTotal: 9, capacityPct: 92, trend: '-16%' }
+];
 
-function buildSmoothSvgPath(points) {
-  if (!points || !points.length) return '';
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i === 0 ? 0 : i - 1];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[i + 2] || p2;
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+const MY_ACTIVITY_MONTHLY_BASE = [
+  { label: 'W1', fullLabel: 'Week 1', pct: 48, tasksDone: 18, tasksTotal: 38, capacityPct: 62, trend: '+6%' },
+  { label: 'W2', fullLabel: 'Week 2', pct: 62, tasksDone: 24, tasksTotal: 39, capacityPct: 75, trend: '+14%' },
+  { label: 'W3', fullLabel: 'Week 3', pct: 74, tasksDone: 31, tasksTotal: 42, capacityPct: 86, trend: '+12%' },
+  { label: 'W4', fullLabel: 'Week 4', pct: 83, tasksDone: 37, tasksTotal: 45, capacityPct: 90, trend: '+9%', isDefaultActive: true }
+];
+
+const MY_ACTIVITY_DAILY_BASE = [
+  { label: '08:00', fullLabel: 'Morning (8am - 11am)', pct: 45, tasksDone: 2, tasksTotal: 4, capacityPct: 60, trend: '+5%' },
+  { label: '12:00', fullLabel: 'Midday (11am - 2pm)', pct: 68, tasksDone: 3, tasksTotal: 4, capacityPct: 78, trend: '+23%' },
+  { label: '16:00', fullLabel: 'Afternoon (2pm - 6pm)', pct: 83, tasksDone: 4, tasksTotal: 5, capacityPct: 88, trend: '+14%', isDefaultActive: true },
+  { label: '20:00', fullLabel: 'Evening (6pm - 10pm)', pct: 35, tasksDone: 1, tasksTotal: 3, capacityPct: 52, trend: '-48%' }
+];
+
+function getMyActivityData(range) {
+  let list = [];
+  if (range === 'monthly') {
+    list = JSON.parse(JSON.stringify(MY_ACTIVITY_MONTHLY_BASE));
+  } else if (range === 'daily') {
+    list = JSON.parse(JSON.stringify(MY_ACTIVITY_DAILY_BASE));
+  } else {
+    // Default: 'weekly'
+    list = JSON.parse(JSON.stringify(MY_ACTIVITY_WEEKLY_BASE));
+    
+    // Live task synchronization for today
+    try {
+      let liveTasks = [];
+      if (Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0) {
+        liveTasks = window.calTasksCache;
+      } else if (Array.isArray(window.allTasks) && window.allTasks.length > 0) {
+        liveTasks = window.allTasks;
+      } else if (Array.isArray(currentTodayTasks) && currentTodayTasks.length > 0) {
+        liveTasks = currentTodayTasks;
+      }
+      
+      const filteredTasks = (liveTasks || []).filter(t => !t.deleted_at && t.category !== 'Routine');
+      if (filteredTasks.length > 0) {
+        // Find which day of the week today is: JS Sunday=0, Monday=1, ... Saturday=6
+        const todayDay = new Date().getDay();
+        const mondayBasedIdx = todayDay === 0 ? 6 : todayDay - 1; // 0=Mon ... 6=Sun
+        
+        const doneTasks = filteredTasks.filter(t => t.completed).length;
+        const totalTasks = filteredTasks.length;
+        
+        if (totalTasks > 0 && list[mondayBasedIdx]) {
+          const livePct = Math.min(100, Math.max(10, Math.round((doneTasks / totalTasks) * 100)));
+          list[mondayBasedIdx].tasksDone = doneTasks;
+          list[mondayBasedIdx].tasksTotal = totalTasks;
+          list[mondayBasedIdx].pct = livePct;
+          list[mondayBasedIdx].capacityPct = Math.min(96, Math.max(50, Math.round(livePct * 0.9 + 15)));
+          list[mondayBasedIdx].isDanger = livePct < 25;
+        }
+      }
+    } catch (e) {
+      console.debug('Live task sync in My Activity error:', e);
+    }
   }
-  return d;
+  return list;
 }
 
-function renderKristinMonthSelector() {
-  const container = document.getElementById('kristinMonthLabelsList');
-  if (!container) return;
+function renderMyActivityCard() {
+  const card = document.getElementById('myActivityCard');
+  if (!card) return;
 
-  const curIdx = (kristinFocusSelectedMonthIdx + kristinFocusMonthOffset) % 12;
-  const normalizedBase = curIdx < 0 ? curIdx + 12 : curIdx;
+  const data = getMyActivityData(myActivityCurrentRange);
+  myActivityCurrentData = data;
 
-  const monthIndices = [
-    (normalizedBase + 11) % 12,
-    normalizedBase,
-    (normalizedBase + 1) % 12,
-    (normalizedBase + 2) % 12
-  ];
+  if (myActivityActiveIndex >= data.length) {
+    myActivityActiveIndex = data.length - 1;
+  }
+  const activeItem = data[myActivityActiveIndex] || data[0];
 
-  container.innerHTML = monthIndices.map(idx => {
-    const isSelected = idx === kristinFocusSelectedMonthIdx;
-    return `<span class="kristin-month-label ${isSelected ? 'is-active' : ''}" onclick="selectKristinFocusMonth(${idx})" title="View focus analytics for ${KRISTIN_MONTH_FULL_NAMES[idx]}">${KRISTIN_MONTH_NAMES[idx]}</span>`;
-  }).join('');
+  // 1. Update Big Number & Trend Badge
+  const bigStatEl = document.getElementById('myActivityBigStat');
+  if (bigStatEl) bigStatEl.textContent = `${activeItem.pct}%`;
+
+  const trendEl = document.getElementById('myActivityTrendBadge');
+  if (trendEl) {
+    trendEl.textContent = activeItem.trend || '+14%';
+    trendEl.classList.toggle('down', (activeItem.trend || '').startsWith('-'));
+  }
+
+  // 2. Render Pillars
+  const trackEl = document.getElementById('myActivityPillarsTrack');
+  if (trackEl) {
+    trackEl.innerHTML = data.map((item, idx) => {
+      const isActive = idx === myActivityActiveIndex;
+      const pctColorClass = item.isDanger ? 'is-danger' : '';
+      return `
+        <div class="my-activity-pillar-item ${isActive ? 'is-active' : ''}" onclick="selectMyActivityItem(${idx})" title="${item.fullLabel || item.label}: ${item.pct}% (${item.tasksDone}/${item.tasksTotal} tasks)">
+          <div class="my-activity-capsule" style="height: ${item.capacityPct}%;">
+            <div class="my-activity-fill" style="height: ${item.pct}%;"></div>
+            <div class="my-activity-bar-pct ${pctColorClass}">${item.pct}%</div>
+          </div>
+          <div class="my-activity-label">${item.label}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 3. Update Horizontal Reference Guideline & Slider Knob
+  requestAnimationFrame(() => {
+    updateMyActivityGuideLine(activeItem, myActivityActiveIndex, data.length);
+  });
 }
-window.renderKristinMonthSelector = renderKristinMonthSelector;
+window.renderMyActivityCard = renderMyActivityCard;
 
-function shiftKristinMonths(delta) {
-  kristinFocusMonthOffset += delta;
-  renderKristinMonthSelector();
-  const curIdx = (kristinFocusSelectedMonthIdx + delta) % 12;
-  kristinFocusSelectedMonthIdx = curIdx < 0 ? curIdx + 12 : curIdx;
-  renderKristinFocusingCard();
+function updateMyActivityGuideLine(activeItem, activeIdx, totalCount) {
+  const guideLayer = document.getElementById('myActivityGuideLayer');
+  const taskPill = document.getElementById('myActivityTaskPill');
+  const knob = document.getElementById('myActivityGuideKnob');
+  if (!guideLayer) return;
+
+  if (!myActivityShowGuideLine) {
+    guideLayer.classList.add('is-hidden');
+    return;
+  }
+  guideLayer.classList.remove('is-hidden');
+
+  if (taskPill) {
+    taskPill.textContent = `${activeItem.tasksDone} tasks`;
+  }
+
+  const stageEl = document.getElementById('myActivityStage');
+  const stageHeight = stageEl ? stageEl.clientHeight : 250;
+  const labelOffset = 32;
+  const usableHeight = stageHeight - labelOffset;
+  
+  // Calculate top of active fill
+  const capHeightPx = (activeItem.capacityPct / 100) * usableHeight;
+  const fillHeightPx = (activeItem.pct / 100) * capHeightPx;
+  const topPx = usableHeight - fillHeightPx;
+  
+  guideLayer.style.top = `${Math.max(14, Math.min(usableHeight - 10, Math.round(topPx)))}px`;
+
+  // Position knob directly over the active pillar center
+  if (knob && totalCount > 0) {
+    const trackEl = document.getElementById('myActivityPillarsTrack');
+    const pillars = trackEl ? trackEl.querySelectorAll('.my-activity-pillar-item') : [];
+    if (pillars[activeIdx] && stageEl) {
+      const pRect = pillars[activeIdx].getBoundingClientRect();
+      const sRect = stageEl.getBoundingClientRect();
+      const centerRelative = (pRect.left + pRect.width / 2) - sRect.left;
+      knob.style.left = `${Math.round(centerRelative)}px`;
+    } else {
+      const pctX = ((activeIdx + 0.5) / totalCount) * 100;
+      knob.style.left = `${pctX}%`;
+    }
+  }
 }
-window.shiftKristinMonths = shiftKristinMonths;
+window.updateMyActivityGuideLine = updateMyActivityGuideLine;
 
-function selectKristinFocusMonth(monthIdx) {
-  kristinFocusSelectedMonthIdx = monthIdx;
-  renderKristinMonthSelector();
-  renderKristinFocusingCard();
-  showToast(`📅 Loaded focus analytics for ${KRISTIN_MONTH_FULL_NAMES[monthIdx]}`);
+function selectMyActivityItem(idx) {
+  myActivityActiveIndex = idx;
+  renderMyActivityCard();
+  const item = myActivityCurrentData[idx];
+  if (item) {
+    showToast(`📅 ${item.fullLabel || item.label}: ${item.pct}% activity (${item.tasksDone} tasks done)`);
+  }
 }
-window.selectKristinFocusMonth = selectKristinFocusMonth;
+window.selectMyActivityItem = selectMyActivityItem;
 
-function toggleKristinRangeMenu(e) {
+function toggleMyActivityRangeMenu(e) {
   if (e) e.stopPropagation();
-  const menu = document.getElementById('kristinRangeMenu');
+  const menu = document.getElementById('myActivityRangeMenu');
   if (!menu) return;
   const isHidden = menu.hasAttribute('hidden') || menu.style.display === 'none';
   if (isHidden) {
@@ -23656,317 +23766,124 @@ function toggleKristinRangeMenu(e) {
     menu.style.display = 'none';
   }
 }
-window.toggleKristinRangeMenu = toggleKristinRangeMenu;
+window.toggleMyActivityRangeMenu = toggleMyActivityRangeMenu;
 
-function selectKristinFocusRange(range, label) {
-  kristinFocusRange = range;
-  kristinFocusRangeLabel = label;
+function setMyActivityRange(range) {
+  myActivityCurrentRange = range;
+  const labelEl = document.getElementById('myActivitySelectedRangeLabel');
+  const labelMap = {
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    daily: 'Daily'
+  };
+  if (labelEl) labelEl.textContent = labelMap[range] || 'Weekly';
 
-  const btnText = document.getElementById('kristinRangeSelectedText');
-  if (btnText) btnText.textContent = `Range: ${label}`;
+  const menu = document.getElementById('myActivityRangeMenu');
+  if (menu) {
+    menu.hidden = true;
+    menu.setAttribute('hidden', '');
+    menu.style.display = 'none';
+    const items = menu.querySelectorAll('.my-activity-menu-item');
+    items.forEach(it => {
+      it.classList.toggle('active', it.textContent.toLowerCase().includes(range));
+    });
+  }
 
-  const options = document.querySelectorAll('#kristinRangeMenu .kristin-range-option');
-  options.forEach(opt => {
-    if (opt.textContent.includes(label)) {
-      opt.classList.add('active');
-    } else {
-      opt.classList.remove('active');
-    }
-  });
+  // Set appropriate default active index
+  if (range === 'weekly') myActivityActiveIndex = 5; // Saturday
+  else if (range === 'monthly') myActivityActiveIndex = 3; // Week 4
+  else if (range === 'daily') myActivityActiveIndex = 2; // Afternoon
 
-  const menu = document.getElementById('kristinRangeMenu');
+  renderMyActivityCard();
+  showToast(`📊 Activity view switched to ${labelMap[range]}`);
+}
+window.setMyActivityRange = setMyActivityRange;
+
+function toggleMyActivityActionsMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('myActivityActionsMenu');
+  if (!menu) return;
+  const isHidden = menu.hasAttribute('hidden') || menu.style.display === 'none';
+  if (isHidden) {
+    menu.hidden = false;
+    menu.removeAttribute('hidden');
+    menu.style.display = 'flex';
+
+    const closeHandler = (evt) => {
+      if (!menu.contains(evt.target)) {
+        menu.hidden = true;
+        menu.setAttribute('hidden', '');
+        menu.style.display = 'none';
+        document.removeEventListener('click', closeHandler);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeHandler), 10);
+  } else {
+    menu.hidden = true;
+    menu.setAttribute('hidden', '');
+    menu.style.display = 'none';
+  }
+}
+window.toggleMyActivityActionsMenu = toggleMyActivityActionsMenu;
+
+function refreshMyActivityData() {
+  const menu = document.getElementById('myActivityActionsMenu');
   if (menu) {
     menu.hidden = true;
     menu.setAttribute('hidden', '');
     menu.style.display = 'none';
   }
-
-  renderKristinFocusingCard();
-  showToast(`📊 Horizon switched to ${label}`);
+  renderMyActivityCard();
+  showToast('🔄 Activity data synchronized with live tasks');
 }
-window.selectKristinFocusRange = selectKristinFocusRange;
+window.refreshMyActivityData = refreshMyActivityData;
 
-function toggleKristinFocusCurve(type) {
-  if (type === 'coral') {
-    kristinShowCoralCurve = !kristinShowCoralCurve;
-    const btn = document.getElementById('kristinLegendCoralBtn');
-    const path = document.getElementById('kristinCoralPath');
-    const area = document.getElementById('kristinCoralArea');
-    const point = document.getElementById('kristinCoralPoint');
-    if (btn) btn.classList.toggle('is-disabled', !kristinShowCoralCurve);
-    if (path) path.classList.toggle('is-hidden', !kristinShowCoralCurve);
-    if (area) area.classList.toggle('is-hidden', !kristinShowCoralCurve);
-    if (point) point.style.display = kristinShowCoralCurve ? 'block' : 'none';
-    showToast(kristinShowCoralCurve ? 'Maximum focus curve enabled' : 'Maximum focus curve hidden');
-  } else if (type === 'purple') {
-    kristinShowPurpleCurve = !kristinShowPurpleCurve;
-    const btn = document.getElementById('kristinLegendPurpleBtn');
-    const path = document.getElementById('kristinPurplePath');
-    const area = document.getElementById('kristinPurpleArea');
-    const point = document.getElementById('kristinPurplePoint');
-    if (btn) btn.classList.toggle('is-disabled', !kristinShowPurpleCurve);
-    if (path) path.classList.toggle('is-hidden', !kristinShowPurpleCurve);
-    if (area) area.classList.toggle('is-hidden', !kristinShowPurpleCurve);
-    if (point) point.style.display = kristinShowPurpleCurve ? 'block' : 'none';
-    showToast(kristinShowPurpleCurve ? 'Min/lack of focus curve enabled' : 'Min/lack of focus curve hidden');
+function setMyActivityTargetGoal() {
+  const menu = document.getElementById('myActivityActionsMenu');
+  if (menu) {
+    menu.hidden = true;
+    menu.setAttribute('hidden', '');
+    menu.style.display = 'none';
   }
-}
-window.toggleKristinFocusCurve = toggleKristinFocusCurve;
-
-function calculateKristinFocusSeries(range, monthIdx) {
-  let tasks = [];
-  if (Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0) {
-    tasks = window.calTasksCache;
-  } else if (Array.isArray(currentTodayTasks) && currentTodayTasks.length > 0) {
-    tasks = currentTodayTasks;
-  } else if (window.StorageService && typeof window.StorageService.tasks?.getAll === 'function') {
-    tasks = window.StorageService.tasks.getAll(false);
-  }
-
-  tasks = (tasks || []).filter(t => !t.deleted_at && t.category !== 'Routine');
-
-  let intervals = [];
-  let subtitle = '';
-
-  if (range === 'week') {
-    subtitle = 'Productivity analytics &bull; Last 7 days breakdown';
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    intervals = dayNames.map((name, i) => {
-      const dayTasks = tasks.filter((t, idx) => (idx % 7) === i);
-      const done = dayTasks.filter(t => t.completed).length;
-      const rate = dayTasks.length > 0 ? (done / dayTasks.length) : (0.45 + (Math.sin(i * 1.2) * 0.25));
-      const maxF = Math.min(96, Math.max(38, Math.round(rate * 85 + 10)));
-      const minF = Math.min(75, Math.max(16, Math.round(100 - maxF * 0.85 + (Math.cos(i) * 12))));
-      return {
-        label: name,
-        fullTitle: `${name} Velocity`,
-        maxFocus: maxF,
-        minFocus: minF,
-        tasksDone: done,
-        tasksTotal: dayTasks.length
-      };
-    });
-  } else if (range === 'quarter') {
-    subtitle = 'Productivity analytics &bull; 3 months (Quarterly)';
-    const quarterChunks = ['W1', 'W3', 'W5', 'W7', 'W9', 'W11'];
-    intervals = quarterChunks.map((w, i) => {
-      const maxF = Math.min(92, Math.max(42, Math.round(52 + Math.sin(i * 1.1) * 26)));
-      const minF = Math.min(72, Math.max(18, Math.round(48 - Math.sin(i * 1.1) * 18 + (i % 2 === 0 ? 8 : -6))));
-      return {
-        label: w,
-        fullTitle: `Quarter ${w}`,
-        maxFocus: maxF,
-        minFocus: minF,
-        tasksDone: Math.round(maxF / 10),
-        tasksTotal: 12
-      };
-    });
-  } else if (range === 'year') {
-    subtitle = 'Productivity analytics &bull; Year 2026';
-    intervals = KRISTIN_MONTH_NAMES.map((m, i) => {
-      const maxF = Math.min(94, Math.max(35, Math.round(48 + Math.sin(i * 0.6) * 32)));
-      const minF = Math.min(68, Math.max(18, Math.round(42 - Math.sin(i * 0.6) * 20)));
-      return {
-        label: m,
-        fullTitle: `${m} 2026`,
-        maxFocus: maxF,
-        minFocus: minF,
-        tasksDone: Math.round(maxF / 5),
-        tasksTotal: 20
-      };
-    });
-  } else {
-    // Default: 'month' (4 weeks)
-    const monthName = KRISTIN_MONTH_NAMES[monthIdx];
-    subtitle = `Productivity analytics &bull; ${KRISTIN_MONTH_FULL_NAMES[monthIdx]} (4 Weeks)`;
-    const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-    const baseCurves = [
-      { maxF: 62, minF: 28 },
-      { maxF: 78, minF: 41 },
-      { maxF: 44, minF: 68 },
-      { maxF: 69, minF: 34 }
-    ];
-    intervals = weeks.map((w, i) => {
-      const base = baseCurves[i];
-      const taskDoneCount = tasks.filter((t, idx) => (idx % 4) === i && t.completed).length;
-      const adjMax = Math.min(95, Math.max(30, base.maxF + (taskDoneCount * 2)));
-      const adjMin = Math.min(80, Math.max(15, base.minF - Math.floor(taskDoneCount * 1.5)));
-      return {
-        label: w,
-        fullTitle: `${w} • ${monthName}`,
-        maxFocus: adjMax,
-        minFocus: adjMin,
-        tasksDone: taskDoneCount,
-        tasksTotal: taskDoneCount + 4
-      };
-    });
-  }
-
-  const sumConc = intervals.reduce((acc, cur) => acc + (cur.maxFocus - cur.minFocus * 0.35), 0);
-  const avgConc = Math.min(98, Math.max(20, Math.round(sumConc / intervals.length)));
-
-  return { intervals, subtitle, avgConc };
-}
-
-function renderKristinFocusingCard() {
-  const card = document.getElementById('kristinFocusingCard');
-  if (!card) return;
-
-  const data = calculateKristinFocusSeries(kristinFocusRange, kristinFocusSelectedMonthIdx);
-  kristinFocusCurrentData = data;
-
-  // 1. Update Subtitle & Average Concentration
-  const subEl = document.getElementById('kristinFocusSubtitle');
-  if (subEl) subEl.innerHTML = data.subtitle;
-
-  const bigPctEl = document.getElementById('kristinFocusBigPct');
-  if (bigPctEl) bigPctEl.textContent = `${data.avgConc}%`;
-
-  const trendEl = document.getElementById('kristinFocusTrendBadge');
-  if (trendEl) {
-    if (data.avgConc >= 50) {
-      trendEl.textContent = `↑ +${Math.round((data.avgConc - 40) * 0.4 + 2)}% vs prior`;
-      trendEl.className = 'kristin-focus-trend-badge';
+  const current = myActivityTargetGoal || 10;
+  const promptVal = prompt('Enter your daily activity target goal (tasks count):', String(current));
+  if (promptVal !== null) {
+    const parsed = parseInt(promptVal, 10);
+    if (!isNaN(parsed) && parsed > 0 && parsed <= 50) {
+      myActivityTargetGoal = parsed;
+      renderMyActivityCard();
+      showToast(`🎯 Daily activity target set to ${parsed} tasks`);
     } else {
-      trendEl.textContent = `↓ -${Math.round((50 - data.avgConc) * 0.3 + 1)}% vs prior`;
-      trendEl.className = 'kristin-focus-trend-badge down';
+      showToast('⚠️ Please enter a valid number between 1 and 50');
     }
   }
-
-  // 2. Map intervals to SVG coordinates (ViewBox: 450 x 140)
-  const count = data.intervals.length;
-  const startX = 15;
-  const endX = 435;
-  const stepX = (endX - startX) / (count - 1);
-
-  // y-axis: 0% at y=125, 100% at y=20 (height range = 105)
-  const mapY = (val) => 125 - (val / 100) * 105;
-
-  const coralPoints = [];
-  const purplePoints = [];
-
-  data.intervals.forEach((item, i) => {
-    const x = startX + i * stepX;
-    const yCoral = mapY(item.maxFocus);
-    const yPurple = mapY(item.minFocus);
-    coralPoints.push({ x, y: yCoral, ...item });
-    purplePoints.push({ x, y: yPurple, ...item });
-  });
-
-  kristinFocusCurrentPoints = { coralPoints, purplePoints };
-
-  // 3. Build SVG Bézier Splines
-  const coralPathD = buildSmoothSvgPath(coralPoints);
-  const purplePathD = buildSmoothSvgPath(purplePoints);
-
-  const coralPathEl = document.getElementById('kristinCoralPath');
-  const purplePathEl = document.getElementById('kristinPurplePath');
-  const coralAreaEl = document.getElementById('kristinCoralArea');
-  const purpleAreaEl = document.getElementById('kristinPurpleArea');
-
-  if (coralPathEl) coralPathEl.setAttribute('d', coralPathD);
-  if (purplePathEl) purplePathEl.setAttribute('d', purplePathD);
-
-  if (coralAreaEl && coralPoints.length) {
-    const areaD = `${coralPathD} L ${coralPoints[coralPoints.length - 1].x} 140 L ${coralPoints[0].x} 140 Z`;
-    coralAreaEl.setAttribute('d', areaD);
-  }
-  if (purpleAreaEl && purplePoints.length) {
-    const areaD = `${purplePathD} L ${purplePoints[purplePoints.length - 1].x} 140 L ${purplePoints[0].x} 140 Z`;
-    purpleAreaEl.setAttribute('d', areaD);
-  }
-
-  // 4. Position active point and tooltip
-  const activeIdx = Math.min(kristinFocusActivePointIdx, count - 1);
-  updateKristinActivePoint(activeIdx);
-
-  // 5. Render Month Selector on left
-  renderKristinMonthSelector();
 }
-window.renderKristinFocusingCard = renderKristinFocusingCard;
+window.setMyActivityTargetGoal = setMyActivityTargetGoal;
 
-function updateKristinActivePoint(idx) {
-  if (!kristinFocusCurrentPoints || !kristinFocusCurrentPoints.coralPoints) return;
-  const pCoral = kristinFocusCurrentPoints.coralPoints[idx];
-  const pPurple = kristinFocusCurrentPoints.purplePoints[idx];
-  if (!pCoral || !pPurple) return;
-
-  kristinFocusActivePointIdx = idx;
-
-  const guideLine = document.getElementById('kristinWaveGuideLine');
-  if (guideLine) {
-    guideLine.setAttribute('x1', pCoral.x.toFixed(1));
-    guideLine.setAttribute('x2', pCoral.x.toFixed(1));
+function toggleMyActivityReferenceLine() {
+  const menu = document.getElementById('myActivityActionsMenu');
+  if (menu) {
+    menu.hidden = true;
+    menu.setAttribute('hidden', '');
+    menu.style.display = 'none';
   }
-
-  const cPoint = document.getElementById('kristinCoralPoint');
-  if (cPoint) {
-    cPoint.setAttribute('cx', pCoral.x.toFixed(1));
-    cPoint.setAttribute('cy', pCoral.y.toFixed(1));
-  }
-
-  const pPoint = document.getElementById('kristinPurplePoint');
-  if (pPoint) {
-    pPoint.setAttribute('cx', pPurple.x.toFixed(1));
-    pPoint.setAttribute('cy', pPurple.y.toFixed(1));
-  }
-
-  // Tooltip content & positioning
-  const tooltip = document.getElementById('kristinWaveTooltip');
-  const titleEl = document.getElementById('kristinWaveTooltipTitle');
-  const subEl = document.getElementById('kristinWaveTooltipSub');
-  const tipMax = document.getElementById('kristinTipMax');
-  const tipMin = document.getElementById('kristinTipMin');
-
-  if (titleEl) titleEl.textContent = pCoral.fullTitle || pCoral.label;
-  if (subEl) {
-    const diff = pCoral.maxFocus - pCoral.minFocus;
-    if (diff > 35) subEl.textContent = 'Deep Flow (Optimal)';
-    else if (diff > 15) subEl.textContent = 'Balanced Focus';
-    else if (diff > -10) subEl.textContent = 'Unbalanced';
-    else subEl.textContent = 'Friction / Distracted';
-  }
-  if (tipMax) tipMax.textContent = `Max: ${pCoral.maxFocus}%`;
-  if (tipMin) tipMin.textContent = `Min: ${pPurple.minFocus}%`;
-
-  if (tooltip) {
-    const pctX = Math.round((pCoral.x / 450) * 100);
-    const clampedPct = Math.max(14, Math.min(86, pctX));
-    tooltip.style.left = `${clampedPct}%`;
-  }
+  myActivityShowGuideLine = !myActivityShowGuideLine;
+  renderMyActivityCard();
+  showToast(myActivityShowGuideLine ? '📏 Target reference line visible' : '📏 Target reference line hidden');
 }
+window.toggleMyActivityReferenceLine = toggleMyActivityReferenceLine;
 
-function initKristinFocusingCardListeners() {
-  const stage = document.getElementById('kristinWaveStage');
-  if (!stage || stage.dataset.bound) return;
-  stage.dataset.bound = 'true';
-
-  const handlePointer = (e) => {
-    if (!kristinFocusCurrentPoints || !kristinFocusCurrentPoints.coralPoints) return;
-    const rect = stage.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0]?.clientX);
-    if (!clientX) return;
-    const relX = clientX - rect.left;
-    const svgX = (relX / rect.width) * 450;
-
-    let closestIdx = 0;
-    let minDiff = Infinity;
-    kristinFocusCurrentPoints.coralPoints.forEach((p, idx) => {
-      const diff = Math.abs(p.x - svgX);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestIdx = idx;
-      }
-    });
-
-    updateKristinActivePoint(closestIdx);
-  };
-
-  stage.addEventListener('mousemove', handlePointer);
-  stage.addEventListener('touchmove', handlePointer, { passive: true });
-  stage.addEventListener('click', handlePointer);
+let myActivityResizeBound = false;
+function initMyActivityCardListeners() {
+  if (myActivityResizeBound) return;
+  myActivityResizeBound = true;
+  window.addEventListener('resize', () => {
+    if (document.getElementById('myActivityCard')) {
+      renderMyActivityCard();
+    }
+  }, { passive: true });
 }
-window.initKristinFocusingCardListeners = initKristinFocusingCardListeners;
+window.initMyActivityCardListeners = initMyActivityCardListeners;
 
 async function updateKristinExecutiveDashboard() {
   const welcomeNameEl = document.getElementById('kristinWelcomeName');
@@ -24017,12 +23934,12 @@ async function updateKristinExecutiveDashboard() {
     console.debug('Kristin stats velocity error:', err);
   }
 
-  // Render and initialize Focusing & Productivity Analytics Card
+  // Render and initialize My Activity Pillars Card
   try {
-    initKristinFocusingCardListeners();
-    renderKristinFocusingCard();
+    initMyActivityCardListeners();
+    renderMyActivityCard();
   } catch (err) {
-    console.debug('renderKristinFocusingCard error:', err);
+    console.debug('renderMyActivityCard error:', err);
   }
 
   // Hook up search input to live filter cards and tasks
