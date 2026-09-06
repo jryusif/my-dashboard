@@ -3942,16 +3942,32 @@
             <!-- Start Month & Income Stream Filters -->
             <div class="form-grid-2" style="margin-bottom:12px;">
               <div class="form-group" style="margin:0;">
-                <label for="goalFormStartMonth" style="font-size:12px; font-weight:600; color:#e2e8f0;">🗓️ Starts Counting From</label>
-                <select id="goalFormStartMonth" onchange="updateGoalModalPreview()">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <label for="goalFormStartMonth" style="font-size:12px; font-weight:600; color:#e2e8f0; margin:0;">🗓️ Starts Counting From</label>
+                  <span id="goalFormStartMonthBadge" style="font-size:11px; font-weight:700; color:#38bdf8;">All Time</span>
+                </div>
+                <div class="modal-suggestion-pills" style="margin: 0 0 6px 0;">
+                  <button type="button" class="modal-preset-pill" onclick="setGoalStartMonthPreset('all')">🌐 All Time</button>
+                  <button type="button" class="modal-preset-pill" onclick="setGoalStartMonthPreset('current')">🗓️ This Month</button>
+                  <button type="button" class="modal-preset-pill" onclick="setGoalStartMonthPreset('last')">⏮️ Last Month</button>
+                  <button type="button" class="modal-preset-pill" onclick="setGoalStartMonthPreset('custom')">📅 Custom</button>
+                </div>
+                <select id="goalFormStartMonth" onchange="handleGoalStartMonthChange()" style="width:100%;">
                   <option value="all">🌐 All Time (Since Account Inception)</option>
                 </select>
+                <div id="goalFormCustomMonthWrap" style="display:none; margin-top:6px;">
+                  <input type="month" id="goalFormCustomMonthInput" onchange="handleGoalCustomMonthInput(this.value)" style="width:100%;" />
+                </div>
                 <span style="font-size:10.5px; color:#94a3b8; display:block; margin-top:3px;">Incomes logged prior to this month are ignored.</span>
               </div>
 
               <div class="form-group" style="margin:0;">
-                <label for="goalFormSourceMode" style="font-size:12px; font-weight:600; color:#e2e8f0;">💰 Eligible Income Stream</label>
-                <select id="goalFormSourceMode" onchange="toggleGoalSourceMode(); updateGoalModalPreview();">
+                <label for="goalFormSourceMode" style="font-size:12px; font-weight:600; color:#e2e8f0; margin-bottom:4px; display:block;">💰 Eligible Income Stream</label>
+                <div class="modal-suggestion-pills" style="margin: 0 0 6px 0;">
+                  <button type="button" class="modal-preset-pill" onclick="setGoalSourceModePreset('all')">🌐 Any / All</button>
+                  <button type="button" class="modal-preset-pill" onclick="setGoalSourceModePreset('specific')">🎯 Specific Sources</button>
+                </div>
+                <select id="goalFormSourceMode" onchange="toggleGoalSourceMode(); updateGoalModalPreview();" style="width:100%;">
                   <option value="all">🌐 Any / All Incomes (Every source)</option>
                   <option value="specific">🎯 Specific Income Sources Only</option>
                 </select>
@@ -5693,6 +5709,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Sovereign Local-First Storage Repository Layer -->
   <script src="storageService.js?v=32.4"></script>
-  <script src="app.js?v=33.9"></script>
+  <script src="app.js?v=34.0"></script>
 </body>
 </html>

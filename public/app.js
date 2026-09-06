@@ -15622,33 +15622,177 @@ function addSpecificSourceChip(src) {
 }
 window.addSpecificSourceChip = addSpecificSourceChip;
 
+function generateMonthOptions(selectedMonth) {
+  const options = [];
+  options.push({ value: 'all', label: '🌐 All Time (Since Account Inception)' });
+
+  const now = new Date();
+  const currentY = now.getFullYear();
+  const currentM = now.getMonth();
+
+  const monthMap = new Map();
+
+  // Range from +6 months (future) down to -24 months (past)
+  for (let offset = 6; offset >= -24; offset--) {
+    const d = new Date(currentY, currentM + offset, 1);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const key = `${yyyy}-${mm}`;
+    const name = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    let label = `🗓️ ${name}`;
+    if (offset === 0) label += ' ⭐ (Current Month)';
+    if (offset === -1) label += ' (Last Month)';
+    monthMap.set(key, label);
+  }
+
+  // Include any extra months from DB
+  const dbMonths = currentGoalsMeta?.availableMonths || [];
+  dbMonths.forEach(m => {
+    if (m && !monthMap.has(m)) {
+      monthMap.set(m, `🗓️ ${fmtMonthOption(m)}`);
+    }
+  });
+
+  // Include custom selected if not in map
+  if (selectedMonth && selectedMonth !== 'all' && selectedMonth !== 'custom' && !monthMap.has(selectedMonth)) {
+    monthMap.set(selectedMonth, `🗓️ ${fmtMonthOption(selectedMonth)}`);
+  }
+
+  for (const [val, label] of monthMap.entries()) {
+    options.push({ value: val, label });
+  }
+
+  options.push({ value: 'custom', label: '📅 Pick Other Custom Month...' });
+  return options;
+}
+
+function getEffectiveGoalStartMonth() {
+  const selVal = document.getElementById('goalFormStartMonth')?.value || 'all';
+  if (selVal === 'custom') {
+    return document.getElementById('goalFormCustomMonthInput')?.value || 'all';
+  }
+  return selVal;
+}
+
+function handleGoalStartMonthChange() {
+  const sel = document.getElementById('goalFormStartMonth');
+  const customWrap = document.getElementById('goalFormCustomMonthWrap');
+  const customInput = document.getElementById('goalFormCustomMonthInput');
+  const badge = document.getElementById('goalFormStartMonthBadge');
+  if (!sel) return;
+
+  if (sel.value === 'custom') {
+    if (customWrap) customWrap.style.display = 'block';
+    if (customInput && !customInput.value) {
+      const now = new Date();
+      customInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+    if (badge && customInput) badge.textContent = fmtMonthOption(customInput.value);
+  } else {
+    if (customWrap) customWrap.style.display = 'none';
+    if (badge) badge.textContent = fmtMonthOption(sel.value);
+  }
+  updateGoalModalPreview();
+}
+window.handleGoalStartMonthChange = handleGoalStartMonthChange;
+
+function handleGoalCustomMonthInput(val) {
+  const badge = document.getElementById('goalFormStartMonthBadge');
+  if (badge) badge.textContent = fmtMonthOption(val);
+  updateGoalModalPreview();
+}
+window.handleGoalCustomMonthInput = handleGoalCustomMonthInput;
+
+function setGoalStartMonthPreset(preset) {
+  const sel = document.getElementById('goalFormStartMonth');
+  const customWrap = document.getElementById('goalFormCustomMonthWrap');
+  const customInput = document.getElementById('goalFormCustomMonthInput');
+  const badge = document.getElementById('goalFormStartMonthBadge');
+  if (!sel) return;
+
+  const now = new Date();
+  if (preset === 'all') {
+    sel.value = 'all';
+    if (customWrap) customWrap.style.display = 'none';
+    if (badge) badge.textContent = 'All Time';
+  } else if (preset === 'current') {
+    const curKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    sel.value = curKey;
+    if (customWrap) customWrap.style.display = 'none';
+    if (badge) badge.textContent = fmtMonthOption(curKey);
+  } else if (preset === 'last') {
+    const lastD = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastKey = `${lastD.getFullYear()}-${String(lastD.getMonth() + 1).padStart(2, '0')}`;
+    sel.value = lastKey;
+    if (customWrap) customWrap.style.display = 'none';
+    if (badge) badge.textContent = fmtMonthOption(lastKey);
+  } else if (preset === 'custom') {
+    sel.value = 'custom';
+    if (customWrap) customWrap.style.display = 'block';
+    if (customInput) {
+      if (!customInput.value) {
+        customInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      }
+      if (badge) badge.textContent = fmtMonthOption(customInput.value);
+      customInput.focus();
+    }
+  }
+  updateGoalModalPreview();
+}
+window.setGoalStartMonthPreset = setGoalStartMonthPreset;
+
+function setGoalSourceModePreset(mode) {
+  const sel = document.getElementById('goalFormSourceMode');
+  if (sel) {
+    sel.value = mode;
+    toggleGoalSourceMode();
+    updateGoalModalPreview();
+  }
+}
+window.setGoalSourceModePreset = setGoalSourceModePreset;
+
 function renderFundingModalOptions(selectedMonth, selectedSources) {
   // Populate Months
   const monthSelect = document.getElementById('goalFormStartMonth');
+  const customWrap = document.getElementById('goalFormCustomMonthWrap');
+  const customInput = document.getElementById('goalFormCustomMonthInput');
+  const badge = document.getElementById('goalFormStartMonthBadge');
+
   if (monthSelect) {
-    let html = `<option value="all">🌐 All Time (Since Account Inception)</option>`;
-    const months = currentGoalsMeta?.availableMonths || [];
-    months.forEach(m => {
-      const optLabel = fmtMonthOption(m);
-      html += `<option value="${m}">${optLabel}</option>`;
-    });
-    monthSelect.innerHTML = html;
-    monthSelect.value = selectedMonth || 'all';
+    const opts = generateMonthOptions(selectedMonth);
+    monthSelect.innerHTML = opts.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+
+    const hasOpt = opts.some(o => o.value === selectedMonth);
+    if (selectedMonth && selectedMonth !== 'all' && !hasOpt) {
+      monthSelect.value = 'custom';
+      if (customWrap) customWrap.style.display = 'block';
+      if (customInput) customInput.value = selectedMonth;
+      if (badge) badge.textContent = fmtMonthOption(selectedMonth);
+    } else {
+      monthSelect.value = selectedMonth || 'all';
+      if (customWrap) customWrap.style.display = monthSelect.value === 'custom' ? 'block' : 'none';
+      if (badge) badge.textContent = fmtMonthOption(monthSelect.value);
+    }
   }
 
-  // Populate Sources Chips
+  // Populate Sources Chips with presets + detected
   const chipContainer = document.getElementById('goalDetectedSourcesChips');
   if (chipContainer) {
-    const sources = currentGoalsMeta?.availableSources || [];
-    if (sources.length === 0) {
-      chipContainer.innerHTML = `<span style="font-size:11px;color:#94a3b8;">No income categories logged yet.</span>`;
-    } else {
-      chipContainer.innerHTML = sources.map(s => `
-        <button type="button" class="modal-preset-pill" style="font-size:11px;padding:3px 8px;" onclick="addSpecificSourceChip('${escapeHtml(s).replace(/'/g, "\\'")}')">
-          + ${escapeHtml(s)}
-        </button>
-      `).join('');
-    }
+    const presets = [
+      'White Plus Clinic',
+      'Crystal Dental Center',
+      'Dental Clinic Salary',
+      'Private Consultations',
+      'Investments & Trading'
+    ];
+    const dbSources = currentGoalsMeta?.availableSources || [];
+    const allSources = Array.from(new Set([...dbSources, ...presets]));
+
+    chipContainer.innerHTML = allSources.map(s => `
+      <button type="button" class="modal-preset-pill" style="font-size:11px;padding:3px 8px;" onclick="addSpecificSourceChip('${escapeHtml(s).replace(/'/g, "\\'")}')">
+        + ${escapeHtml(s)}
+      </button>
+    `).join('');
   }
 
   // Baseline Saved Cash indicator
@@ -15801,9 +15945,6 @@ async function openEditFinancialGoalModal(goalId) {
   if (autoEn) autoEn.checked = isAuto;
   syncGoalAllocPct(allocPct);
 
-  const monthSelect = document.getElementById('goalFormStartMonth');
-  if (monthSelect) monthSelect.value = startMonth;
-
   const srcMode = document.getElementById('goalFormSourceMode');
   if (srcMode) srcMode.value = sourceMode;
 
@@ -15893,7 +16034,7 @@ function updateGoalModalPreview() {
   // Auto-Funding Form Values
   const autoEnabled = document.getElementById('goalFormAutoEnabled')?.checked ?? true;
   const allocPct = parseFloat(document.getElementById('goalFormAllocPct')?.value) || 0;
-  const startMonth = document.getElementById('goalFormStartMonth')?.value || 'all';
+  const startMonth = getEffectiveGoalStartMonth();
   const sourceMode = document.getElementById('goalFormSourceMode')?.value || 'all';
   const specificSourcesRaw = document.getElementById('goalFormSpecificSources')?.value || '';
   const specificSources = specificSourcesRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
@@ -15950,7 +16091,7 @@ function updateGoalModalPreview() {
 
   if (sumEl) sumEl.textContent = fmtMoney(autoTotal);
   if (incValEl) incValEl.textContent = `${fmtMoney(incomeContribution)} (${allocPct}% of eligible ${fmtMoney(eligibleIncomeTotal)})`;
-  if (incDescEl) incDescEl.textContent = `From ${sourceMode === 'specific' ? 'selected sources' : 'logged income'}${startMonth !== 'all' ? ` (since ${startMonth})` : ''}:`;
+  if (incDescEl) incDescEl.textContent = `From ${sourceMode === 'specific' ? 'selected sources' : 'logged income'}${startMonth !== 'all' ? ` (since ${fmtMonthOption(startMonth)})` : ''}:`;
   if (seedValEl) seedValEl.textContent = `${fmtMoney(savedCashContribution + customStartingCapital)} (Seed: ${fmtMoney(customStartingCapital)})`;
 
   const effectiveCurrent = autoEnabled ? Math.max(current, autoTotal) : current;
@@ -16017,7 +16158,7 @@ async function handleSaveFinancialGoal(e) {
   // Extract Auto-Funding Rules
   const autoEnabled = document.getElementById('goalFormAutoEnabled')?.checked ?? true;
   const allocPct = parseFloat(document.getElementById('goalFormAllocPct')?.value) || 0;
-  const startMonth = document.getElementById('goalFormStartMonth')?.value || 'all';
+  const startMonth = getEffectiveGoalStartMonth();
   const sourceMode = document.getElementById('goalFormSourceMode')?.value || 'all';
   const specificSourcesRaw = document.getElementById('goalFormSpecificSources')?.value || '';
   const specificSources = specificSourcesRaw.split(',').map(s => s.trim()).filter(Boolean);
