@@ -21906,3 +21906,971 @@ body.is-unauthenticated .btn-floating-braindump {
   font-weight: 800;
   box-shadow: 0 2px 10px rgba(79, 209, 165, 0.35);
 }
+
+/* =====================================================================
+   KRISTIN NORDIC LIGHT THEME & MASTER 2-COLUMN EXECUTIVE DASHBOARD
+   Pixel-perfect implementation of the minimalist Scandinavian design
+   ===================================================================== */
+
+:root[data-theme="kristin-light"],
+body[data-theme="kristin-light"],
+:root,
+body {
+  --bg-kristin: #F4F7FB;
+  --surface-kristin: #FFFFFF;
+  --card-border-kristin: #E2E8F0;
+  --text-dark-kristin: #0F172A;
+  --text-muted-kristin: #64748B;
+  --primary-cobalt: #2563EB;
+}
+
+body[data-theme="kristin-light"] {
+  background: #F4F7FB !important;
+  color: #0F172A !important;
+}
+
+body[data-theme="kristin-light"] .app-layout {
+  background: #F4F7FB !important;
+}
+
+body[data-theme="kristin-light"] .nav-floating-capsule {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05) !important;
+}
+
+body[data-theme="kristin-light"] .nav-floating-capsule * {
+  color: #0F172A;
+}
+
+body[data-theme="kristin-light"] .nav-brand-logo {
+  filter: none;
+}
+
+/* -------------------------------------------------------------
+   Master Executive Welcome Header
+   ------------------------------------------------------------- */
+.kristin-welcome-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.kristin-welcome-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.kristin-brand-diamond {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #2563EB;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 10px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  flex-shrink: 0;
+}
+
+.kristin-brand-diamond span {
+  background: #FFFFFF;
+  border-radius: 3px;
+  display: block;
+}
+
+.kristin-welcome-text h1 {
+  font-family: var(--font-body);
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.kristin-welcome-text p {
+  font-size: 13px;
+  color: #64748B;
+  margin: 2px 0 0 0;
+  font-weight: 500;
+}
+
+.kristin-welcome-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kristin-search-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #EDF2F7;
+  padding: 8px 18px;
+  border-radius: 999px;
+  width: 220px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.kristin-search-pill:focus-within {
+  border-color: #2563EB;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.kristin-search-pill input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: #0F172A;
+  width: 100%;
+}
+
+.kristin-search-pill input::placeholder {
+  color: #94A3B8;
+}
+
+.kristin-avatar-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  transition: transform 0.15s ease;
+}
+
+.kristin-avatar-btn:hover {
+  transform: scale(1.05);
+}
+
+/* -------------------------------------------------------------
+   Master 2-Column Hero Grid
+   ------------------------------------------------------------- */
+.kristin-dashboard-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.95fr);
+  gap: 24px;
+  width: 100%;
+  margin-bottom: 32px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .kristin-dashboard-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kristin-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.kristin-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------
+   Left Column: Top Row (Profile + Tasks Cards Grid)
+   ------------------------------------------------------------- */
+.kristin-top-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .kristin-top-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .kristin-profile-card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .kristin-top-grid {
+    grid-template-columns: 1fr;
+  }
+  .kristin-profile-card {
+    grid-column: span 1;
+  }
+}
+
+/* Card 1: Profile Card */
+.kristin-profile-card {
+  background: #FFFFFF;
+  border-radius: 24px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.03);
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  grid-row: span 2;
+}
+
+.kristin-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.kristin-profile-header span {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.kristin-refresh-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.kristin-refresh-btn:hover {
+  color: #0F172A;
+}
+
+.kristin-avatar-container {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  margin: 4px 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kristin-avatar-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.kristin-avatar-img {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+}
+
+.kristin-avatar-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0F172A;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  border: 2px solid #FFFFFF;
+}
+
+.kristin-profile-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.01em;
+}
+
+.kristin-profile-role {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  margin: 0 0 16px 0;
+}
+
+.kristin-micro-pills {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.kristin-micro-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #F8FAFC;
+  border: 1px solid #EDF2F7;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.kristin-micro-pill.coral {
+  color: #E11D48;
+}
+.kristin-micro-pill.amber {
+  color: #D97706;
+}
+
+/* Card 2: Prioritized Tasks (Sunset Peach-Coral Mesh) */
+.kristin-card-coral {
+  background: radial-gradient(circle at 90% 10%, rgba(254, 226, 226, 0.8) 0%, transparent 60%),
+              linear-gradient(145deg, #FDE2D2 0%, #FCA5A5 55%, #F87171 100%);
+  border-radius: 24px;
+  padding: 22px 24px;
+  color: #1E293B;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 8px 24px rgba(248, 113, 113, 0.18);
+  min-height: 140px;
+}
+
+.kristin-task-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.kristin-task-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1E293B;
+  line-height: 1.2;
+}
+
+.kristin-frosted-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #1E293B;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.kristin-task-body {
+  margin-top: 14px;
+}
+
+.kristin-hero-pct {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #0F172A;
+}
+
+.kristin-hero-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.7);
+  margin-top: 4px;
+}
+
+/* Card 3: Additional Tasks (Sky Cyan Mesh) */
+.kristin-card-cyan {
+  background: radial-gradient(circle at 90% 10%, rgba(224, 242, 254, 0.8) 0%, transparent 60%),
+              linear-gradient(145deg, #CFFAFE 0%, #7DD3FC 55%, #38BDF8 100%);
+  border-radius: 24px;
+  padding: 22px 24px;
+  color: #0C4A6E;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.18);
+  min-height: 140px;
+}
+
+.kristin-card-cyan .kristin-hero-pct {
+  color: #0C4A6E;
+}
+.kristin-card-cyan .kristin-hero-sub {
+  color: rgba(12, 74, 110, 0.75);
+}
+
+/* Row Below Cards 2 & 3: Trackers Connected */
+.kristin-trackers-bar {
+  grid-column: 2 / span 2;
+  background: #EDF2F7;
+  border-radius: 18px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .kristin-trackers-bar {
+    grid-column: span 2;
+  }
+}
+
+.kristin-trackers-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kristin-trackers-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.kristin-trackers-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.kristin-trackers-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kristin-app-icon-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  border: 1px solid #E2E8F0;
+}
+
+.kristin-app-more-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.kristin-app-more-btn:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+/* -------------------------------------------------------------
+   Focusing / Productivity Analytics Card
+   ------------------------------------------------------------- */
+.kristin-focusing-card {
+  background: #FFFFFF;
+  border-radius: 28px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.03);
+  padding: 28px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+}
+
+.kristin-focusing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.kristin-focusing-header h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.kristin-focusing-header p {
+  font-size: 12.5px;
+  color: #64748B;
+  margin: 2px 0 0 0;
+  font-weight: 500;
+}
+
+.kristin-range-dropdown {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+}
+
+.kristin-focusing-main-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 90px;
+  align-items: center;
+  gap: 20px;
+}
+
+@media (max-width: 700px) {
+  .kristin-focusing-main-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kristin-month-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.kristin-chevron-btn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.kristin-month-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748B;
+  padding: 3px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kristin-month-label.is-active {
+  background: #2563EB;
+  color: #FFFFFF;
+  padding: 4px 10px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.kristin-wave-stage {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  display: flex;
+  align-items: center;
+}
+
+.kristin-wave-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.kristin-wave-tooltip {
+  position: absolute;
+  top: 15px;
+  left: 36%;
+  transform: translateX(-50%);
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 6px 14px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+  border: 1px solid #E2E8F0;
+  text-align: center;
+}
+
+.kristin-wave-tooltip-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.kristin-wave-tooltip-sub {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.kristin-focus-stat-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.kristin-focus-big-pct {
+  font-size: 38px;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1;
+}
+
+.kristin-focus-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  margin-top: 4px;
+}
+
+.kristin-focusing-legend {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 12px;
+}
+
+.kristin-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.kristin-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.kristin-legend-dot.coral {
+  background: #F87171;
+}
+.kristin-legend-dot.purple {
+  background: #818CF8;
+}
+
+/* -------------------------------------------------------------
+   Right Column: My Meetings Card
+   ------------------------------------------------------------- */
+.kristin-meetings-card {
+  background: #FFFFFF;
+  border-radius: 28px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.03);
+  padding: 28px 28px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kristin-card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kristin-card-header-row h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.kristin-header-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kristin-header-icon-btn:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+.kristin-meetings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kristin-meeting-row {
+  display: grid;
+  grid-template-columns: 85px 1fr 24px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid #F1F5F9;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.kristin-meeting-row:last-child {
+  border-bottom: none;
+}
+
+.kristin-meeting-time-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.kristin-meeting-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.kristin-meeting-time {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.kristin-meeting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kristin-meeting-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kristin-meeting-platform {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.kristin-meeting-arrow {
+  font-size: 14px;
+  color: #94A3B8;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.kristin-meeting-row:hover .kristin-meeting-arrow {
+  transform: translate(2px, -2px);
+  color: #2563EB;
+}
+
+.kristin-see-all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748B;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s ease;
+}
+
+.kristin-see-all-link:hover {
+  color: #2563EB;
+}
+
+/* -------------------------------------------------------------
+   Right Column: Developed Areas Card
+   ------------------------------------------------------------- */
+.kristin-developed-card {
+  background: #FFFFFF;
+  border-radius: 28px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.03);
+  padding: 28px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kristin-developed-card h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.kristin-developed-card p {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  margin: 2px 0 0 0;
+}
+
+.kristin-areas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kristin-area-item {
+  display: grid;
+  grid-template-columns: 110px 1fr 34px 20px;
+  align-items: center;
+  gap: 12px;
+}
+
+.kristin-area-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+}
+
+.kristin-area-bar-track {
+  height: 7px;
+  background: #EDF2F7;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.kristin-area-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #2563EB;
+  transition: width 0.4s ease;
+}
+
+.kristin-area-pct {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748B;
+  text-align: right;
+}
+
+.kristin-area-trend {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.kristin-area-trend.up {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.kristin-area-trend.down {
+  background: #FEF2F2;
+  color: #EF4444;
+}
+
+/* -------------------------------------------------------------
+   Harmonizing Existing Modules (Wealth Card, Cards Grid, Weekly)
+   ------------------------------------------------------------- */
+body[data-theme="kristin-light"] .wealth-card,
+body[data-theme="kristin-light"] .dashboard-card,
+body[data-theme="kristin-light"] .weekly {
+  background: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.03) !important;
+  color: #0F172A !important;
+}
+
+body[data-theme="kristin-light"] .wealth-card * {
+  color: #0F172A;
+}
+
+body[data-theme="kristin-light"] .wealth-pillar-card {
+  background: #F8FAFC !important;
+  border-color: #EDF2F7 !important;
+}
+
+body[data-theme="kristin-light"] .wealth-pillar-card .pillar-value {
+  color: #0F172A !important;
+}
+
+body[data-theme="kristin-light"] .dashboard-card .card-label-title {
+  color: #0F172A !important;
+}
+
+body[data-theme="kristin-light"] .dashboard-card .card-label-sub {
+  color: #64748B !important;
+}
+
+body[data-theme="kristin-light"] .weekly-header h2 {
+  color: #0F172A !important;
+}
+
+body[data-theme="kristin-light"] .task-row {
+  background: #FFFFFF !important;
+  border-color: #F1F5F9 !important;
+  color: #0F172A !important;
+}
+
+body[data-theme="kristin-light"] .task-row:hover {
+  background: #F8FAFC !important;
+}
+
+body[data-theme="kristin-light"] .week-tab {
+  background: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  color: #64748B !important;
+}
+
+body[data-theme="kristin-light"] .week-tab.is-active {
+  background: #2563EB !important;
+  color: #FFFFFF !important;
+  border-color: #2563EB !important;
+}

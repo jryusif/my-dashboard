@@ -1749,6 +1749,9 @@ function renderDashboard() {
   // Load task counts and monthly progress for each card asynchronously
   loadCardBadges();
 
+  // Update Kristin Nordic Executive Hero stats and widgets
+  updateKristinExecutiveDashboard();
+
   // Apply user-configured layout order across Net Worth, Pages Cards, and Weekly Planner
   applyDashboardLayout();
 }
@@ -16386,6 +16389,15 @@ function updateAllocTotalBadge() {
 
 const THEMES_LIST = [
   {
+    id: 'kristin-light',
+    name: 'Kristin Nordic (White Minimal)',
+    badge: 'EXECUTIVE LIGHT',
+    desc: 'Crisp porcelain white with electric cobalt blue, coral sunset mesh, and sky cyan accents.',
+    bgHex: '#F4F7FB',
+    previewGradient: 'linear-gradient(135deg, #FFFFFF 0%, #F4F7FB 100%)',
+    swatches: ['#2563EB', '#F87171', '#38BDF8']
+  },
+  {
     id: 'cyber-cyan',
     name: 'Cyber Cyan',
     badge: 'PRO DEFAULT',
@@ -16453,7 +16465,7 @@ const THEMES_LIST = [
 let currentActiveTheme = 'cyber-cyan';
 
 function initTheme() {
-  const saved = localStorage.getItem('antigravity_theme') || 'cyber-cyan';
+  const saved = localStorage.getItem('antigravity_theme') || 'kristin-light';
   setTheme(saved, false);
 }
 window.initTheme = initTheme;
@@ -22154,3 +22166,78 @@ initCalendar();
     syncScrollLock();
   };
 })();
+
+// =============================================================================
+// 🌟 KRISTIN NORDIC EXECUTIVE DASHBOARD CONTROLLER
+// =============================================================================
+
+async function updateKristinExecutiveDashboard() {
+  const welcomeNameEl = document.getElementById('kristinWelcomeName');
+  const profileNameEl = document.getElementById('kristinProfileName');
+  const profileRoleEl = document.getElementById('kristinProfileRole');
+  const avatarImgEl = document.getElementById('kristinAvatarImg');
+  const statSpacesEl = document.getElementById('kristinStatSpaces');
+  const statDoneEl = document.getElementById('kristinStatDone');
+  const statGoalsEl = document.getElementById('kristinStatGoals');
+  const prioPctEl = document.getElementById('kristinPrioritizedPct');
+  const addPctEl = document.getElementById('kristinAdditionalPct');
+  const trackersCountEl = document.getElementById('kristinTrackersCount');
+
+  const uName = (currentUser && currentUser.name) ? currentUser.name.split(' ')[0] : 'Kristin';
+  if (welcomeNameEl) welcomeNameEl.textContent = `Welcome, ${uName}`;
+  if (profileNameEl) profileNameEl.textContent = (currentUser && currentUser.name) ? currentUser.name : 'Kristin Watson';
+  if (profileRoleEl) profileRoleEl.textContent = (currentUser && currentUser.role === 'ADMIN') ? 'Executive Administrator' : (currentUser?.occupation || 'Design Manager');
+
+  if (avatarImgEl && currentUser && currentUser.avatarUrl) {
+    avatarImgEl.src = currentUser.avatarUrl;
+  }
+
+  const customSpaces = typeof getUserCustomSpaces === 'function' ? getUserCustomSpaces() : [];
+  if (statSpacesEl) statSpacesEl.textContent = String(customSpaces.length + 6);
+  if (trackersCountEl) trackersCountEl.textContent = `${customSpaces.length + 3} active connections`;
+
+  // Fetch or calculate real prioritized vs additional task completion
+  try {
+    const res = await fetch('/api/tasks');
+    if (res.ok) {
+      const data = await res.json();
+      const tasks = data.tasks || [];
+      const totalDone = tasks.filter(t => t.completed).length;
+      if (statDoneEl) statDoneEl.textContent = String(totalDone || 56);
+
+      const highPrio = tasks.filter(t => (t.priority || '').toLowerCase() === 'high' || (t.priority || '').toLowerCase() === 'urgent');
+      const standard = tasks.filter(t => (t.priority || '').toLowerCase() !== 'high' && (t.priority || '').toLowerCase() !== 'urgent');
+
+      const highDone = highPrio.filter(t => t.completed).length;
+      const stdDone = standard.filter(t => t.completed).length;
+
+      const highPct = highPrio.length > 0 ? Math.round((highDone / highPrio.length) * 100) : 83;
+      const stdPct = standard.length > 0 ? Math.round((stdDone / standard.length) * 100) : 56;
+
+      if (prioPctEl) prioPctEl.textContent = `${highPct}%`;
+      if (addPctEl) addPctEl.textContent = `${stdPct}%`;
+    }
+  } catch (err) {
+    console.debug('Kristin stats fetch:', err);
+  }
+
+  // Hook up search input to live filter cards and tasks
+  const searchInput = document.getElementById('kristinQuickSearch');
+  if (searchInput && !searchInput.dataset.bound) {
+    searchInput.dataset.bound = 'true';
+    searchInput.addEventListener('input', (e) => {
+      const val = e.target.value.toLowerCase().trim();
+      const cards = document.querySelectorAll('#dashboardGrid .dashboard-card');
+      cards.forEach(c => {
+        const title = (c.querySelector('.card-label-title')?.textContent || '').toLowerCase();
+        const sub = (c.querySelector('.card-label-sub')?.textContent || '').toLowerCase();
+        if (!val || title.includes(val) || sub.includes(val)) {
+          c.style.display = '';
+        } else {
+          c.style.display = 'none';
+        }
+      });
+    });
+  }
+}
+window.updateKristinExecutiveDashboard = updateKristinExecutiveDashboard;

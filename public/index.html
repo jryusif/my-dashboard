@@ -480,34 +480,350 @@
 
       <!-- Dashboard Home -->
       <section class="dashboard-section" id="dashboardSection">
-        <header class="dashboard-header">
-          <div class="dashboard-header-text">
-            <p class="eyebrow">Overview</p>
-            <h1>My Dashboard</h1>
-          </div>
-          <div class="dashboard-layout-controls" id="dashboardLayoutControls">
-            <div class="layout-controls-tag">
-              <span class="layout-dock-icon">🎛️</span>
-              <span class="layout-dock-label">Top Section:</span>
+        
+        <!-- =========================================================
+             KRISTIN NORDIC EXECUTIVE DASHBOARD HERO
+             Exact mirror of reference image
+             ========================================================= -->
+        
+        <!-- Top Welcome Bar -->
+        <div class="kristin-welcome-bar">
+          <div class="kristin-welcome-left">
+            <div class="kristin-brand-diamond" title="Apex Executive Command">
+              <span></span><span></span><span></span><span></span>
             </div>
-            <div class="dashboard-layout-pills" role="group" aria-label="Dashboard Section Order">
-              <button type="button" class="btn-layout-pill is-active" id="btnLayoutNetworthFirst" data-top="networth" onclick="setDashboardTopSection('networth')" title="Show Net Worth &amp; Wealth Vault on top">
-                <span class="layout-pill-icon">🪙</span> Net Worth
-              </button>
-              <button type="button" class="btn-layout-pill" id="btnLayoutPlannerFirst" data-top="planner" onclick="setDashboardTopSection('planner')" title="Show Weekly Planner on top">
-                <span class="layout-pill-icon">📅</span> Weekly Planner
-              </button>
-              <button type="button" class="btn-layout-pill" id="btnLayoutCardsFirst" data-top="cards" onclick="setDashboardTopSection('cards')" title="Show Focus Spaces &amp; Pages on top">
-                <span class="layout-pill-icon">🚀</span> Pages Cards
-              </button>
-              <button type="button" class="btn-layout-pill btn-layout-pill-gear" id="btnCustomizeLayoutModal" onclick="openDashboardLayoutModal()" title="Customize full section order and arrange visually">
-                <span class="layout-pill-icon">⚙️</span> Reorder...
-              </button>
+            <div class="kristin-welcome-text">
+              <h1 id="kristinWelcomeName">Welcome, Kristin</h1>
+              <p>Your personal dashboard overview</p>
             </div>
           </div>
-        </header>
 
-        <!-- EXECUTIVE SOVEREIGN WEALTH & NET WORTH VAULT -->
+          <div class="kristin-welcome-right">
+            <div class="kristin-search-pill">
+              <span>🔍</span>
+              <input type="text" id="kristinQuickSearch" placeholder="Search..." autocomplete="off" />
+            </div>
+            <button type="button" class="kristin-avatar-btn" id="kristinAvatarNavBtn" onclick="openProfileSection()" title="Account &amp; Settings">
+              👤
+            </button>
+          </div>
+        </div>
+
+        <!-- Master 2-Column Hero Grid -->
+        <div class="kristin-dashboard-hero">
+
+          <!-- -----------------------------------------------------
+               LEFT COLUMN: Profile, Tasks Cards, Trackers, Focusing
+               ----------------------------------------------------- -->
+          <div class="kristin-col-left">
+
+            <!-- Top Grid: Profile + Prioritized + Additional + Trackers -->
+            <div class="kristin-top-grid">
+
+              <!-- Card 1: Profile Card -->
+              <div class="kristin-profile-card">
+                <div class="kristin-profile-header">
+                  <span>Profile</span>
+                  <button type="button" class="kristin-refresh-btn" onclick="renderDashboard()" title="Refresh Overview">↻</button>
+                </div>
+
+                <div class="kristin-avatar-container">
+                  <svg class="kristin-avatar-ring-svg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#FEE2E2" stroke-width="4.5" />
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#F87171" stroke-width="4.5" stroke-dasharray="276" stroke-dashoffset="65" stroke-linecap="round" />
+                  </svg>
+                  <img src="/kristin_avatar.jpg" alt="Profile Avatar" class="kristin-avatar-img" id="kristinAvatarImg" />
+                  <span class="kristin-avatar-badge">★</span>
+                </div>
+
+                <h3 class="kristin-profile-name" id="kristinProfileName">Kristin Watson</h3>
+                <p class="kristin-profile-role" id="kristinProfileRole">Design Manager</p>
+
+                <div class="kristin-micro-pills">
+                  <div class="kristin-micro-pill" title="Connected Spaces &amp; Categories">
+                    <span>👥</span> <span id="kristinStatSpaces">11</span>
+                  </div>
+                  <div class="kristin-micro-pill coral" title="Completed Tasks">
+                    <span>✓</span> <span id="kristinStatDone">56</span>
+                  </div>
+                  <div class="kristin-micro-pill amber" title="Active Goals &amp; Streaks">
+                    <span>🏆</span> <span id="kristinStatGoals">12</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 2: Prioritized Tasks (Sunset Peach-Coral Mesh) -->
+              <div class="kristin-card-coral">
+                <div class="kristin-task-head">
+                  <span class="kristin-task-title">Prioritized<br>tasks</span>
+                  <div class="kristin-frosted-circle">⏱</div>
+                </div>
+                <div class="kristin-task-body">
+                  <div class="kristin-hero-pct" id="kristinPrioritizedPct">83%</div>
+                  <div class="kristin-hero-sub">Avg. Completed</div>
+                </div>
+              </div>
+
+              <!-- Card 3: Additional Tasks (Sky Cyan Mesh) -->
+              <div class="kristin-card-cyan">
+                <div class="kristin-task-head">
+                  <span class="kristin-task-title">Additional<br>tasks</span>
+                  <div class="kristin-frosted-circle">✓</div>
+                </div>
+                <div class="kristin-task-body">
+                  <div class="kristin-hero-pct" id="kristinAdditionalPct">56%</div>
+                  <div class="kristin-hero-sub">Avg. Completed</div>
+                </div>
+              </div>
+
+              <!-- Row Under Cards 2 & 3: Trackers Connected -->
+              <div class="kristin-trackers-bar">
+                <div class="kristin-trackers-info">
+                  <div class="kristin-trackers-title">Trackers connected</div>
+                  <div class="kristin-trackers-sub" id="kristinTrackersCount">3 active connections</div>
+                </div>
+                <div class="kristin-trackers-icons">
+                  <div class="kristin-app-icon-badge" title="Figma / Design">🎨</div>
+                  <div class="kristin-app-icon-badge" title="Notion / Knowledge">📑</div>
+                  <div class="kristin-app-icon-badge" title="Slack / Team">💬</div>
+                  <button type="button" class="kristin-app-more-btn" onclick="openCustomSpaceModal()" title="Add / Manage Spaces">•••</button>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Card 4: Focusing / Productivity Analytics -->
+            <div class="kristin-focusing-card">
+              <div class="kristin-focusing-header">
+                <div>
+                  <h2>Focusing</h2>
+                  <p>Productivity analytics</p>
+                </div>
+                <button type="button" class="kristin-range-dropdown">Range: Last month ⌵</button>
+              </div>
+
+              <div class="kristin-focusing-main-row">
+                <!-- Left Month Selector -->
+                <div class="kristin-month-selector">
+                  <button type="button" class="kristin-chevron-btn" title="Previous Month">︿</button>
+                  <span class="kristin-month-label">Aug</span>
+                  <span class="kristin-month-label is-active">Sep</span>
+                  <span class="kristin-month-label">Oct</span>
+                  <span class="kristin-month-label">Nov</span>
+                  <button type="button" class="kristin-chevron-btn" title="Next Month">﹀</button>
+                </div>
+
+                <!-- Center Wave Stage -->
+                <div class="kristin-wave-stage">
+                  <svg viewBox="0 0 450 140" class="kristin-wave-svg" preserveAspectRatio="none">
+                    <!-- Dotted background grid points -->
+                    <defs>
+                      <pattern id="kristinDots" width="16" height="16" patternUnits="userSpaceOnUse">
+                        <circle cx="2" cy="2" r="0.9" fill="#CBD5E1" opacity="0.6" />
+                      </pattern>
+                    </defs>
+                    <rect x="0" y="0" width="450" height="140" fill="url(#kristinDots)" opacity="0.75" />
+
+                    <!-- Floating dashed marker line -->
+                    <line x1="165" y1="15" x2="165" y2="135" stroke="#CBD5E1" stroke-dasharray="3 3" stroke-width="1.2" />
+
+                    <!-- Purple Wave (Min or lack of focus) -->
+                    <path d="M 0 100 C 60 115, 100 70, 165 40 C 220 15, 260 120, 330 90 C 390 65, 420 105, 450 95" fill="none" stroke="#818CF8" stroke-width="3" stroke-linecap="round" />
+                    
+                    <!-- Coral Wave (Maximum of focus) -->
+                    <path d="M 0 65 C 50 65, 90 35, 130 55 C 165 75, 200 125, 250 85 C 300 45, 360 60, 410 70 C 430 75, 440 90, 450 100" fill="none" stroke="#F87171" stroke-width="3" stroke-linecap="round" />
+
+                    <!-- Peak marker node on wave -->
+                    <circle cx="165" cy="40" r="5" fill="#FFFFFF" stroke="#818CF8" stroke-width="3" />
+                  </svg>
+
+                  <!-- Floating Tooltip matching image -->
+                  <div class="kristin-wave-tooltip">
+                    <div class="kristin-wave-tooltip-title">Week 8</div>
+                    <div class="kristin-wave-tooltip-sub">Unbalanced</div>
+                  </div>
+                </div>
+
+                <!-- Right Hero Focus Stat -->
+                <div class="kristin-focus-stat-col">
+                  <div class="kristin-focus-big-pct">41%</div>
+                  <div class="kristin-focus-stat-label">Avg. Conc-ion</div>
+                </div>
+              </div>
+
+              <!-- Bottom Legend -->
+              <div class="kristin-focusing-legend">
+                <div class="kristin-legend-item">
+                  <span class="kristin-legend-dot coral"></span>
+                  <span>Maximum of focus</span>
+                </div>
+                <div class="kristin-legend-item">
+                  <span class="kristin-legend-dot purple"></span>
+                  <span>Min or lack of focus</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+
+          <!-- -----------------------------------------------------
+               RIGHT COLUMN: My Meetings & Developed Areas
+               ----------------------------------------------------- -->
+          <div class="kristin-col-right">
+
+            <!-- Card 5: My Meetings -->
+            <div class="kristin-meetings-card">
+              <div class="kristin-card-header-row">
+                <h2>My meetings</h2>
+                <button type="button" class="kristin-header-icon-btn" onclick="openPage('Calendar')" title="Open Calendar">📅</button>
+              </div>
+
+              <div class="kristin-meetings-list" id="kristinMeetingsList">
+                <!-- Row 1 -->
+                <div class="kristin-meeting-row" onclick="openPage('Work')">
+                  <div class="kristin-meeting-time-col">
+                    <span class="kristin-meeting-date">Tue, 11 Jul</span>
+                    <span class="kristin-meeting-time">08:15 am</span>
+                  </div>
+                  <div class="kristin-meeting-info">
+                    <div class="kristin-meeting-title">Quick Daily Meeting</div>
+                    <div class="kristin-meeting-platform"><span style="color:#2563EB;">🎥</span> Zoom</div>
+                  </div>
+                  <span class="kristin-meeting-arrow">↗</span>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="kristin-meeting-row" onclick="openPage('Work')">
+                  <div class="kristin-meeting-time-col">
+                    <span class="kristin-meeting-date">Tue, 11 Jul</span>
+                    <span class="kristin-meeting-time">09:30 pm</span>
+                  </div>
+                  <div class="kristin-meeting-info">
+                    <div class="kristin-meeting-title">John Onboarding</div>
+                    <div class="kristin-meeting-platform"><span style="color:#059669;">📹</span> Google Meet</div>
+                  </div>
+                  <span class="kristin-meeting-arrow">↗</span>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="kristin-meeting-row" onclick="openPage('Work')">
+                  <div class="kristin-meeting-time-col">
+                    <span class="kristin-meeting-date">Tue, 12 Jul</span>
+                    <span class="kristin-meeting-time">02:30 pm</span>
+                  </div>
+                  <div class="kristin-meeting-info">
+                    <div class="kristin-meeting-title">Call With a New Team</div>
+                    <div class="kristin-meeting-platform"><span style="color:#059669;">📹</span> Google Meet</div>
+                  </div>
+                  <span class="kristin-meeting-arrow">↗</span>
+                </div>
+
+                <!-- Row 4 -->
+                <div class="kristin-meeting-row" onclick="openPage('Work')">
+                  <div class="kristin-meeting-time-col">
+                    <span class="kristin-meeting-date">Tue, 15 Jul</span>
+                    <span class="kristin-meeting-time">04:00 pm</span>
+                  </div>
+                  <div class="kristin-meeting-info">
+                    <div class="kristin-meeting-title">Lead Designers Event</div>
+                    <div class="kristin-meeting-platform"><span style="color:#2563EB;">🎥</span> Zoom</div>
+                  </div>
+                  <span class="kristin-meeting-arrow">↗</span>
+                </div>
+              </div>
+
+              <button type="button" class="kristin-see-all-link" onclick="openPage('Calendar')">
+                See all meetings &gt;
+              </button>
+            </div>
+
+            <!-- Card 6: Developed Areas -->
+            <div class="kristin-developed-card">
+              <div>
+                <h2>Developed areas</h2>
+                <p>Most common areas of interests</p>
+              </div>
+
+              <div class="kristin-areas-list" id="kristinAreasList">
+                <!-- Area 1: Sport Skills -->
+                <div class="kristin-area-item" onclick="openPage('Workouts')" style="cursor:pointer;" title="View Workouts &amp; Performance">
+                  <span class="kristin-area-name">Sport Skills</span>
+                  <div class="kristin-area-bar-track">
+                    <div class="kristin-area-bar-fill" style="width: 71%;"></div>
+                  </div>
+                  <span class="kristin-area-pct">71%</span>
+                  <span class="kristin-area-trend down">↓</span>
+                </div>
+
+                <!-- Area 2: Blogging -->
+                <div class="kristin-area-item" onclick="openPage('Studies')" style="cursor:pointer;" title="View Studies &amp; Reading">
+                  <span class="kristin-area-name">Blogging</span>
+                  <div class="kristin-area-bar-track">
+                    <div class="kristin-area-bar-fill" style="width: 92%;"></div>
+                  </div>
+                  <span class="kristin-area-pct">92%</span>
+                  <span class="kristin-area-trend up">↑</span>
+                </div>
+
+                <!-- Area 3: Leadership -->
+                <div class="kristin-area-item" onclick="openPage('Work')" style="cursor:pointer;" title="View Work &amp; Career">
+                  <span class="kristin-area-name">Leadership</span>
+                  <div class="kristin-area-bar-track">
+                    <div class="kristin-area-bar-fill" style="width: 33%;"></div>
+                  </div>
+                  <span class="kristin-area-pct">33%</span>
+                  <span class="kristin-area-trend down">↓</span>
+                </div>
+
+                <!-- Area 4: Meditation -->
+                <div class="kristin-area-item" onclick="openPage('Religion')" style="cursor:pointer;" title="View Habits &amp; Mindfulness">
+                  <span class="kristin-area-name">Meditation</span>
+                  <div class="kristin-area-bar-track">
+                    <div class="kristin-area-bar-fill" style="width: 56%;"></div>
+                  </div>
+                  <span class="kristin-area-pct">56%</span>
+                  <span class="kristin-area-trend up">↑</span>
+                </div>
+
+                <!-- Area 5: Philosophy -->
+                <div class="kristin-area-item" onclick="openPage('Finance')" style="cursor:pointer;" title="View Finance &amp; Capital">
+                  <span class="kristin-area-name">Philosophy</span>
+                  <div class="kristin-area-bar-track">
+                    <div class="kristin-area-bar-fill" style="width: 79%;"></div>
+                  </div>
+                  <span class="kristin-area-pct">79%</span>
+                  <span class="kristin-area-trend up">↑</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Section Layout Controls Bar -->
+        <div class="dashboard-layout-controls" id="dashboardLayoutControls" style="margin-bottom: 24px;">
+          <div class="layout-controls-tag">
+            <span class="layout-dock-icon">🎛️</span>
+            <span class="layout-dock-label">Sections Order:</span>
+          </div>
+          <div class="dashboard-layout-pills" role="group" aria-label="Dashboard Section Order">
+            <button type="button" class="btn-layout-pill is-active" id="btnLayoutNetworthFirst" data-top="networth" onclick="setDashboardTopSection('networth')" title="Show Net Worth &amp; Wealth Vault on top">
+              <span class="layout-pill-icon">🪙</span> Net Worth
+            </button>
+            <button type="button" class="btn-layout-pill" id="btnLayoutPlannerFirst" data-top="planner" onclick="setDashboardTopSection('planner')" title="Show Weekly Planner on top">
+              <span class="layout-pill-icon">📅</span> Weekly Planner
+            </button>
+            <button type="button" class="btn-layout-pill" id="btnLayoutCardsFirst" data-top="cards" onclick="setDashboardTopSection('cards')" title="Show Focus Spaces &amp; Pages on top">
+              <span class="layout-pill-icon">🚀</span> Pages Cards
+            </button>
+            <button type="button" class="btn-layout-pill btn-layout-pill-gear" id="btnCustomizeLayoutModal" onclick="openDashboardLayoutModal()" title="Customize full section order and arrange visually">
+              <span class="layout-pill-icon">⚙️</span> Reorder...
+            </button>
+          </div>
+        </div>
+<!-- EXECUTIVE SOVEREIGN WEALTH & NET WORTH VAULT -->
         <div class="wealth-card is-locked" id="wealthCard">
           <!-- Top Row Header -->
           <div class="wealth-card-top-header">
