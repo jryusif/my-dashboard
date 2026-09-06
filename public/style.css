@@ -3245,22 +3245,23 @@ body.is-scrolled .main-top-navbar,
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.modal h2 {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 500;
+.modal h2, .modal h3, .modal-title {
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-style: normal;
+  font-weight: 700;
   margin: 0 0 18px;
-  font-size: 26px;
-  color: var(--ink);
+  font-size: 24px;
+  color: #F8FAFC;
+  letter-spacing: -0.01em;
 }
 
 .modal label {
   font-size: 11.5px;
   font-weight: 700;
-  color: var(--ink-soft);
+  color: #CBD5E1;
   margin-top: 14px;
   margin-bottom: 6px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -3271,17 +3272,17 @@ body.is-scrolled .main-top-navbar,
   font-size: 14px;
   padding: 11px 14px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(14, 18, 30, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(14, 18, 30, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: var(--ink);
+  color: #F8FAFC;
   width: 100%;
   box-sizing: border-box;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 .modal input:not([type="checkbox"]):not([type="radio"])::placeholder,
-.modal textarea::placeholder { color: var(--ink-soft); }
+.modal textarea::placeholder { color: #64748B; }
 .modal input:not([type="checkbox"]):not([type="radio"]):focus,
 .modal select:focus,
 .modal textarea:focus {
@@ -3289,7 +3290,7 @@ body.is-scrolled .main-top-navbar,
   border-color: rgba(56, 189, 248, 0.6);
   box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
 }
-.modal select option { background: #0e121c; color: var(--ink); }
+.modal select option { background: #0e121c; color: #F8FAFC; }
 
 .modal-actions {
   display: flex;
@@ -23863,16 +23864,187 @@ body[data-theme="kristin-light"] .btn-layout-pill.is-active {
 }
 
 /* Modals Backdrops & Surfaces in Light Theme */
+body[data-theme="kristin-light"] .modal-backdrop,
+[data-theme="kristin-light"] .modal-backdrop {
+  background: rgba(15, 23, 42, 0.48) !important;
+  backdrop-filter: blur(12px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+}
+
+body[data-theme="kristin-light"] .modal,
+body[data-theme="kristin-light"] form.modal,
+body[data-theme="kristin-light"] .routine-modal,
+body[data-theme="kristin-light"] .dental-case-modal,
 body[data-theme="kristin-light"] .modal-content,
 body[data-theme="kristin-light"] .modal-dialog,
-body[data-theme="kristin-light"] .modal-box {
+body[data-theme="kristin-light"] .modal-box,
+[data-theme="kristin-light"] .modal,
+[data-theme="kristin-light"] form.modal {
   background: #FFFFFF !important;
   border: 1px solid #E2E8F0 !important;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
   color: #0F172A !important;
+  padding: 32px 34px !important;
 }
-body[data-theme="kristin-light"] .modal-content * {
-  color: #0F172A;
+
+body[data-theme="kristin-light"] .modal h2,
+body[data-theme="kristin-light"] .modal h3,
+body[data-theme="kristin-light"] #modalTitle,
+body[data-theme="kristin-light"] #editModalTitle,
+body[data-theme="kristin-light"] .modal-title,
+[data-theme="kristin-light"] .modal h2,
+[data-theme="kristin-light"] .modal h3,
+[data-theme="kristin-light"] #modalTitle {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+  font-size: 22px !important;
+  color: #0F172A !important;
+  margin: 0 0 20px 0 !important;
+  letter-spacing: -0.02em !important;
+}
+
+body[data-theme="kristin-light"] .modal label,
+[data-theme="kristin-light"] .modal label {
+  color: #475569 !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  margin-top: 16px !important;
+  margin-bottom: 6px !important;
+  display: block !important;
+}
+
+body[data-theme="kristin-light"] .modal input:not([type="checkbox"]):not([type="radio"]),
+body[data-theme="kristin-light"] .modal select,
+body[data-theme="kristin-light"] .modal textarea,
+[data-theme="kristin-light"] .modal input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="kristin-light"] .modal select,
+[data-theme="kristin-light"] .modal textarea {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  padding: 11px 14px !important;
+  border-radius: 12px !important;
+  border: 1.5px solid #CBD5E1 !important;
+  background: #F8FAFC !important;
+  color: #0F172A !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.18s ease !important;
+}
+
+body[data-theme="kristin-light"] .modal input::placeholder,
+body[data-theme="kristin-light"] .modal textarea::placeholder,
+[data-theme="kristin-light"] .modal input::placeholder,
+[data-theme="kristin-light"] .modal textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+body[data-theme="kristin-light"] .modal input:focus,
+body[data-theme="kristin-light"] .modal select:focus,
+body[data-theme="kristin-light"] .modal textarea:focus,
+[data-theme="kristin-light"] .modal input:focus,
+[data-theme="kristin-light"] .modal select:focus,
+[data-theme="kristin-light"] .modal textarea:focus {
+  background: #FFFFFF !important;
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14) !important;
+  outline: none !important;
+}
+
+body[data-theme="kristin-light"] .modal select,
+[data-theme="kristin-light"] .modal select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 14px !important;
+  padding-right: 38px !important;
+  cursor: pointer !important;
+}
+
+body[data-theme="kristin-light"] .modal select option,
+[data-theme="kristin-light"] .modal select option {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  font-size: 14px !important;
+}
+
+body[data-theme="kristin-light"] .modal input[type="date"],
+[data-theme="kristin-light"] .modal input[type="date"] {
+  color-scheme: light !important;
+  color: #0F172A !important;
+  cursor: pointer !important;
+}
+
+body[data-theme="kristin-light"] .modal .modal-actions,
+[data-theme="kristin-light"] .modal .modal-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  margin-top: 26px !important;
+}
+
+body[data-theme="kristin-light"] .modal .btn-secondary,
+body[data-theme="kristin-light"] .modal #cancelBtn,
+body[data-theme="kristin-light"] .modal #editCancelBtn,
+[data-theme="kristin-light"] .modal .btn-secondary,
+[data-theme="kristin-light"] .modal #cancelBtn,
+[data-theme="kristin-light"] .modal #editCancelBtn {
+  background: #F1F5F9 !important;
+  color: #334155 !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 999px !important;
+  padding: 10px 22px !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+body[data-theme="kristin-light"] .modal .btn-secondary:hover,
+body[data-theme="kristin-light"] .modal #cancelBtn:hover,
+body[data-theme="kristin-light"] .modal #editCancelBtn:hover,
+[data-theme="kristin-light"] .modal .btn-secondary:hover,
+[data-theme="kristin-light"] .modal #cancelBtn:hover,
+[data-theme="kristin-light"] .modal #editCancelBtn:hover {
+  background: #E2E8F0 !important;
+  color: #0F172A !important;
+  border-color: #94A3B8 !important;
+  transform: translateY(-1px) !important;
+}
+
+body[data-theme="kristin-light"] .modal .btn-primary,
+body[data-theme="kristin-light"] .modal button[type="submit"],
+[data-theme="kristin-light"] .modal .btn-primary,
+[data-theme="kristin-light"] .modal button[type="submit"] {
+  background: #2563EB !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 10px 24px !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+body[data-theme="kristin-light"] .modal .btn-primary:hover,
+body[data-theme="kristin-light"] .modal button[type="submit"]:hover,
+[data-theme="kristin-light"] .modal .btn-primary:hover,
+[data-theme="kristin-light"] .modal button[type="submit"]:hover {
+  background: #1D4ED8 !important;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
+  transform: translateY(-1px) !important;
 }
 
 /* =====================================================================
