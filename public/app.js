@@ -5984,18 +5984,26 @@ function allocTile(label, alloc) {
 
 function renderGoalCard(goal) {
   const pct = Math.max(0, Math.min(100, goal.progressPct || 0));
+  const isAuto = Boolean(goal.isAutoAllocated);
   return `
-    <div class="goal-card">
+    <div class="goal-card ${isAuto ? 'is-auto-funded' : ''}">
       <div class="goal-card-header">
-        <span class="goal-name">${escapeHtml(goal.goal)}</span>
-        <span class="goal-type">${escapeHtml(goal.type || '')}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="goal-name">${escapeHtml(goal.goal)}</span>
+          ${isAuto ? `<span class="goal-auto-badge" title="Automatically funded with ${goal.allocPct}% of all monthly logged income">⚡ ${goal.allocPct}% Monthly Income Share</span>` : ''}
+        </div>
+        <span class="goal-type">${escapeHtml(goal.type || 'Financial Target')}</span>
       </div>
       <div class="goal-amounts">
         <span><strong>${fmtMoney(goal.current)}</strong> of ${fmtMoney(goal.target)}</span>
-        <span>${fmtPct(goal.progressPct)}</span>
+        <span class="goal-pct-val ${pct >= 100 ? 'is-complete' : ''}">${fmtPct(goal.progressPct)}</span>
       </div>
-      <div class="goal-bar"><div class="goal-bar-fill" style="width:${pct}%"></div></div>
-      ${goal.deadline ? `<div class="goal-meta">Deadline: ${fmtDate(goal.deadline)} · Remaining: ${fmtMoney(goal.remaining)}</div>` : ''}
+      <div class="goal-bar"><div class="goal-bar-fill ${isAuto ? 'auto-fill' : ''}" style="width:${pct}%"></div></div>
+      <div class="goal-meta">
+        ${goal.deadline ? `<span>Deadline: ${fmtDate(goal.deadline)}</span> · ` : ''}
+        <span>Remaining: <strong>${fmtMoney(goal.remaining)}</strong></span>
+        ${isAuto ? ` · <span class="goal-auto-subtext">⚡ Auto-funds ${goal.allocPct}% from logged income</span>` : ''}
+      </div>
     </div>
   `;
 }
@@ -15219,7 +15227,8 @@ async function loadProfileFinancialGoals() {
     }
 
     container.innerHTML = goals.map(g => {
-      const pct = g.targetAmount > 0 ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0;
+      const rawPct = g.targetAmount > 0 ? (g.currentAmount / g.targetAmount) * 100 : 0;
+      const pct = Math.min(100, Math.round(rawPct * 10) / 10);
       let icon = '🎯';
       let displayTitle = g.title || '';
       const emojiMatch = displayTitle.match(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u);
@@ -15228,12 +15237,13 @@ async function loadProfileFinancialGoals() {
         displayTitle = displayTitle.slice(emojiMatch[0].length).trim();
       }
       return `
-        <div class="profile-goal-card" id="goalCard_${g.id}">
+        <div class="profile-goal-card ${g.isAutoAllocated ? 'is-auto-funded' : ''}" id="goalCard_${g.id}">
           <div class="profile-goal-head">
-            <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <span style="font-size:20px;">${icon}</span>
               <div>
                 <h4 class="profile-goal-title">${escapeHtml(displayTitle || g.title)}</h4>
+                ${g.isAutoAllocated ? `<span class="goal-auto-badge" style="font-size:10px;padding:2px 7px;">⚡ ${g.allocPct}% Monthly Income Share</span>` : ''}
               </div>
             </div>
             ${g.deadline ? `<span class="profile-goal-deadline">📅 ${fmtDate(g.deadline)}</span>` : ''}
@@ -15244,7 +15254,7 @@ async function loadProfileFinancialGoals() {
               <span style="font-weight: 700; color: ${pct >= 100 ? '#10b981' : '#38bdf8'};">${pct}%</span>
             </div>
             <div class="profile-goal-bar">
-              <div class="profile-goal-bar-fill" style="width: ${pct}%;"></div>
+              <div class="profile-goal-bar-fill ${g.isAutoAllocated ? 'auto-fill' : ''}" style="width: ${Math.max(0, Math.min(100, pct))}%;"></div>
             </div>
           </div>
           <div class="profile-goal-actions">

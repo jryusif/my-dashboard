@@ -1,6 +1,32 @@
 import { prisma } from '@/lib/prisma.js';
 import { getAuthUser, errorResponse, successResponse } from '@/lib/auth.js';
 
+function normalizeGoalName(name) {
+  if (!name || typeof name !== 'string') return '';
+  return name
+    .replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u, '')
+    .trim()
+    .toLowerCase();
+}
+
+function matchAllocationForGoal(goalTitle, allocations) {
+  if (!allocations || !Array.isArray(allocations)) return null;
+  const normTitle = normalizeGoalName(goalTitle);
+  if (!normTitle) return null;
+
+  // Exact match
+  let match = allocations.find(a => normalizeGoalName(a.name) === normTitle);
+  if (match) return match;
+
+  // Partial match
+  match = allocations.find(a => {
+    const normAlloc = normalizeGoalName(a.name);
+    if (!normAlloc || normAlloc.length < 3) return false;
+    return normTitle.includes(normAlloc) || normAlloc.includes(normTitle);
+  });
+  return match || null;
+}
+
 export async function GET(req) {
   try {
     const auth = getAuthUser(req);
@@ -11,7 +37,54 @@ export async function GET(req) {
       orderBy: { createdAt: 'desc' }
     });
 
-    return successResponse({ goals });
+    const setting = await prisma.financialSetting.findUnique({
+      where: { userId: auth.userId }
+    });
+
+    let userAllocations = setting?.allocations;
+    if (typeof userAllocations === 'string') {
+      try { userAllocations = JSON.parse(userAllocations); } catch {}
+    }
+
+    const regularIncomeTx = await prisma.financialTransaction.findMany({
+      where: {
+        userId: auth.userId,
+        type: 'income',
+        NOT: { category: 'Saved Cash Baseline' }
+      },
+      select: { amount: true }
+    });
+    const allRegularIncome = regularIncomeTx.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    const enrichedGoals = goals.map(g => {
+      const match = matchAllocationForGoal(g.title, userAllocations);
+      let allocPct = 0;
+      let isAutoAllocated = false;
+      let effectiveCurrent = g.currentAmount || 0;
+
+      if (match && parseFloat(match.pct) > 0) {
+        allocPct = parseFloat(match.pct);
+        isAutoAllocated = true;
+        const autoAmount = Math.round(allRegularIncome * (allocPct / 100));
+        effectiveCurrent = Math.max(effectiveCurrent, autoAmount);
+
+        if (g.currentAmount !== effectiveCurrent) {
+          prisma.financialGoal.update({
+            where: { id: g.id },
+            data: { currentAmount: effectiveCurrent }
+          }).catch(() => {});
+        }
+      }
+
+      return {
+        ...g,
+        currentAmount: effectiveCurrent,
+        isAutoAllocated,
+        allocPct
+      };
+    });
+
+    return successResponse({ goals: enrichedGoals });
   } catch (err) {
     console.error('Fetch goals error:', err);
     return errorResponse('Failed to fetch financial goals.');

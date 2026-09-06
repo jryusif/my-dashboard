@@ -10,6 +10,32 @@ async function resolveUserId(req) {
   return null;
 }
 
+function normalizeGoalName(name) {
+  if (!name || typeof name !== 'string') return '';
+  return name
+    .replace(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})\s*/u, '')
+    .trim()
+    .toLowerCase();
+}
+
+function matchAllocationForGoal(goalTitle, allocations) {
+  if (!allocations || !Array.isArray(allocations)) return null;
+  const normTitle = normalizeGoalName(goalTitle);
+  if (!normTitle) return null;
+
+  // Exact match
+  let match = allocations.find(a => normalizeGoalName(a.name) === normTitle);
+  if (match) return match;
+
+  // Partial match: title contains allocation name or vice versa
+  match = allocations.find(a => {
+    const normAlloc = normalizeGoalName(a.name);
+    if (!normAlloc || normAlloc.length < 3) return false;
+    return normTitle.includes(normAlloc) || normAlloc.includes(normTitle);
+  });
+  return match || null;
+}
+
 export async function GET(req) {
   try {
     const userId = await resolveUserId(req);
@@ -162,16 +188,46 @@ export async function GET(req) {
       allocations: calculatedAllocations
     };
 
-    const formattedGoals = goals.map(g => ({
-      id: g.id,
-      goal: g.title,
-      type: 'Financial Target',
-      target: g.targetAmount,
-      current: g.currentAmount,
-      progressPct: g.targetAmount > 0 ? Math.round((g.currentAmount / g.targetAmount) * 100) : 0,
-      deadline: g.deadline,
-      remaining: Math.max(0, g.targetAmount - g.currentAmount)
-    }));
+    const formattedGoals = goals.map(g => {
+      const match = matchAllocationForGoal(g.title, userAllocations);
+      let allocPct = 0;
+      let isAutoAllocated = false;
+      let effectiveCurrent = g.currentAmount || 0;
+
+      if (match && parseFloat(match.pct) > 0) {
+        allocPct = parseFloat(match.pct);
+        isAutoAllocated = true;
+        // Auto-accumulate percentage from all logged regular income
+        const autoAmount = Math.round(allRegularIncome * (allocPct / 100));
+        effectiveCurrent = Math.max(effectiveCurrent, autoAmount);
+
+        // Keep database record synchronized
+        if (g.currentAmount !== effectiveCurrent && userId) {
+          prisma.financialGoal.update({
+            where: { id: g.id },
+            data: { currentAmount: effectiveCurrent }
+          }).catch(e => console.warn('Could not sync goal currentAmount:', e));
+        }
+      }
+
+      const progressPct = g.targetAmount > 0
+        ? Math.min(100, Math.round((effectiveCurrent / g.targetAmount) * 1000) / 10)
+        : 0;
+
+      return {
+        id: g.id,
+        goal: g.title,
+        type: isAutoAllocated ? `Auto-Funded (${allocPct}%)` : 'Financial Target',
+        target: g.targetAmount,
+        current: effectiveCurrent,
+        progressPct,
+        deadline: g.deadline,
+        remaining: Math.max(0, g.targetAmount - effectiveCurrent),
+        isAutoAllocated,
+        allocPct,
+        monthAllocated: isAutoAllocated ? Math.round(totalIncome * (allocPct / 100)) : 0
+      };
+    });
 
     const netWorth = {
       totalAssets: Math.round(totalAssets),
