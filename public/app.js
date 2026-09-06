@@ -1336,6 +1336,323 @@ function openEditSpaceModal(spaceId) {
 }
 window.openEditSpaceModal = openEditSpaceModal;
 
+// =============================================================================
+// 🎛️ DASHBOARD ADJUSTABLE LAYOUT ENGINE (PER-USER CUSTOM ORDER)
+// =============================================================================
+
+const DASHBOARD_SECTIONS_DEF = [
+  {
+    id: 'networth',
+    elementId: 'wealthCard',
+    title: 'Net Worth & Wealth Overview',
+    icon: '🪙',
+    desc: 'Biometric vault, live gold rates, liquid cash reserves & total portfolio valuation'
+  },
+  {
+    id: 'cards',
+    elementId: 'dashboardGrid',
+    title: 'Focus Spaces & Pages Cards',
+    icon: '🚀',
+    desc: '10 primary focus areas, custom spaces, clinical gallery, trading journal & habits'
+  },
+  {
+    id: 'planner',
+    elementId: 'weeklySection',
+    title: 'Weekly Planner',
+    icon: '📅',
+    desc: '7-day schedule, day-by-day task lists, category matrix & completion metrics'
+  }
+];
+
+const DEFAULT_DASHBOARD_LAYOUT = ['networth', 'cards', 'planner'];
+
+function getDashboardLayoutStorageKey() {
+  const uid = (currentUser && currentUser.id) ? currentUser.id : 'guest';
+  return `antigravity_dashboard_layout_${uid}`;
+}
+
+function getDashboardLayout() {
+  // 1. Check user profile from database if available
+  if (currentUser?.departmentSegments?.dashboardLayout && Array.isArray(currentUser.departmentSegments.dashboardLayout)) {
+    const valid = sanitizeLayoutOrder(currentUser.departmentSegments.dashboardLayout);
+    if (valid.length === DEFAULT_DASHBOARD_LAYOUT.length) return valid;
+  }
+
+  // 2. Check local storage for current user
+  try {
+    const raw = localStorage.getItem(getDashboardLayoutStorageKey());
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const valid = sanitizeLayoutOrder(parsed);
+      if (valid.length === DEFAULT_DASHBOARD_LAYOUT.length) return valid;
+    }
+  } catch (err) {
+    console.warn('[DashboardLayout] Failed to read cached layout:', err);
+  }
+
+  return [...DEFAULT_DASHBOARD_LAYOUT];
+}
+window.getDashboardLayout = getDashboardLayout;
+
+function sanitizeLayoutOrder(order) {
+  if (!Array.isArray(order)) return [...DEFAULT_DASHBOARD_LAYOUT];
+  const supported = ['networth', 'cards', 'planner'];
+  const filtered = order.filter(id => supported.includes(id));
+  const unique = [...new Set(filtered)];
+  // Add any missing sections
+  supported.forEach(id => {
+    if (!unique.includes(id)) unique.push(id);
+  });
+  return unique;
+}
+
+let isSyncingDashboardLayout = false;
+
+async function saveDashboardLayout(newOrder, syncToDatabase = true) {
+  const sanitized = sanitizeLayoutOrder(newOrder);
+  
+  // 1. Instant local persistence
+  try {
+    localStorage.setItem(getDashboardLayoutStorageKey(), JSON.stringify(sanitized));
+  } catch (e) {
+    console.warn('[DashboardLayout] LocalStorage write failed:', e);
+  }
+
+  // 2. Apply to DOM immediately
+  applyDashboardLayout(sanitized);
+
+  // 3. Sync to user profile in database
+  if (syncToDatabase && currentUser && authToken && !isSyncingDashboardLayout) {
+    try {
+      isSyncingDashboardLayout = true;
+      currentUser.departmentSegments = currentUser.departmentSegments || {};
+      currentUser.departmentSegments.dashboardLayout = sanitized;
+      localStorage.setItem('antigravity_user', JSON.stringify(currentUser));
+
+      await fetch('/api/user/segments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          departmentSegments: currentUser.departmentSegments
+        })
+      });
+    } catch (err) {
+      console.warn('[DashboardLayout] Failed to sync layout to cloud profile:', err);
+    } finally {
+      isSyncingDashboardLayout = false;
+    }
+  }
+}
+window.saveDashboardLayout = saveDashboardLayout;
+
+function applyDashboardLayout(order = null) {
+  const container = document.getElementById('dashboardSection');
+  if (!container) return;
+
+  const currentOrder = order || getDashboardLayout();
+  const topSection = currentOrder[0] || 'networth';
+
+  // Mark container with top section attribute
+  container.setAttribute('data-top-section', topSection);
+
+  // Map of elements
+  const elMap = {
+    networth: document.getElementById('wealthCard'),
+    cards: document.getElementById('dashboardGrid'),
+    planner: document.getElementById('weeklySection')
+  };
+
+  // Re-append elements in currentOrder (preserves internal state & listeners)
+  currentOrder.forEach(key => {
+    const el = elMap[key];
+    if (el && el.parentElement === container) {
+      container.appendChild(el);
+    }
+  });
+
+  // Update layout button pills in dashboard header
+  updateLayoutPillsUi(topSection, currentOrder);
+}
+window.applyDashboardLayout = applyDashboardLayout;
+
+function updateLayoutPillsUi(topSection, currentOrder) {
+  const btnNetworth = document.getElementById('btnLayoutNetworthFirst');
+  const btnPlanner = document.getElementById('btnLayoutPlannerFirst');
+  const btnCards = document.getElementById('btnLayoutCardsFirst');
+
+  if (btnNetworth) btnNetworth.classList.toggle('is-active', topSection === 'networth');
+  if (btnPlanner) btnPlanner.classList.toggle('is-active', topSection === 'planner');
+  if (btnCards) btnCards.classList.toggle('is-active', topSection === 'cards');
+}
+
+function setDashboardTopSection(topKey) {
+  const current = getDashboardLayout();
+  const filtered = current.filter(k => k !== topKey);
+  const newOrder = [topKey, ...filtered];
+  
+  saveDashboardLayout(newOrder, true);
+  
+  const labelMap = {
+    networth: '🪙 Net Worth & Wealth Overview',
+    planner: '📅 Weekly Planner',
+    cards: '🚀 Focus Spaces & Pages Cards'
+  };
+  showToast(`Dashboard reordered: ${labelMap[topKey] || topKey} is now on top!`);
+}
+window.setDashboardTopSection = setDashboardTopSection;
+
+function setDashboardPreset(presetKey) {
+  let newOrder;
+  if (presetKey === 'planner-first') {
+    newOrder = ['planner', 'cards', 'networth'];
+  } else if (presetKey === 'cards-first') {
+    newOrder = ['cards', 'networth', 'planner'];
+  } else {
+    newOrder = ['networth', 'cards', 'planner'];
+  }
+
+  saveDashboardLayout(newOrder, true);
+  renderLayoutModalItems(newOrder);
+
+  const labelMap = {
+    'planner-first': '📅 Weekly Planner First',
+    'cards-first': '🚀 Pages Cards First',
+    'networth-first': '🪙 Net Worth First'
+  };
+  showToast(`Applied preset: ${labelMap[presetKey]}`);
+}
+window.setDashboardPreset = setDashboardPreset;
+
+function resetDashboardLayoutToDefault() {
+  saveDashboardLayout([...DEFAULT_DASHBOARD_LAYOUT], true);
+  renderLayoutModalItems(DEFAULT_DASHBOARD_LAYOUT);
+  showToast('Dashboard layout reset to default.');
+}
+window.resetDashboardLayoutToDefault = resetDashboardLayoutToDefault;
+
+// ── Modal Management ──
+function openDashboardLayoutModal() {
+  const backdrop = document.getElementById('dashboardLayoutModalBackdrop');
+  if (backdrop) {
+    renderLayoutModalItems();
+    backdrop.hidden = false;
+    backdrop.removeAttribute('hidden');
+    backdrop.style.setProperty('display', 'flex', 'important');
+  }
+}
+window.openDashboardLayoutModal = openDashboardLayoutModal;
+
+function closeDashboardLayoutModal() {
+  const backdrop = document.getElementById('dashboardLayoutModalBackdrop');
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.setAttribute('hidden', '');
+    backdrop.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closeDashboardLayoutModal = closeDashboardLayoutModal;
+
+let layoutDragSrcIndex = null;
+
+function renderLayoutModalItems(customOrder = null) {
+  const listEl = document.getElementById('layoutReorderList');
+  if (!listEl) return;
+
+  const currentOrder = customOrder || getDashboardLayout();
+  const defMap = new Map(DASHBOARD_SECTIONS_DEF.map(d => [d.id, d]));
+
+  listEl.innerHTML = currentOrder.map((sectionId, idx) => {
+    const item = defMap.get(sectionId) || { id: sectionId, title: sectionId, icon: '📦', desc: '' };
+    const isFirst = idx === 0;
+    const isLast = idx === currentOrder.length - 1;
+
+    return `
+      <div class="layout-reorder-item" draggable="true" data-index="${idx}" data-id="${item.id}">
+        <span class="layout-item-rank ${isFirst ? 'rank-first' : ''}">${idx + 1}</span>
+        <div class="layout-item-icon-wrap">${item.icon}</div>
+        <div class="layout-item-info">
+          <div class="layout-item-title">${item.title}</div>
+          <div class="layout-item-desc">${item.desc}</div>
+        </div>
+        <div class="layout-item-btns">
+          <button type="button" class="btn-layout-move" title="Move up" onclick="moveDashboardSection('${item.id}', -1)" ${isFirst ? 'disabled' : ''}>
+            ⬆️
+          </button>
+          <button type="button" class="btn-layout-move" title="Move down" onclick="moveDashboardSection('${item.id}', 1)" ${isLast ? 'disabled' : ''}>
+            ⬇️
+          </button>
+        </div>
+        <span class="layout-item-drag-handle" title="Drag to reorder">☰</span>
+      </div>
+    `;
+  }).join('');
+
+  // Attach Drag-and-Drop listeners
+  attachLayoutDragListeners();
+}
+
+function moveDashboardSection(sectionId, delta) {
+  const currentOrder = getDashboardLayout();
+  const idx = currentOrder.indexOf(sectionId);
+  if (idx === -1) return;
+  const targetIdx = idx + delta;
+  if (targetIdx < 0 || targetIdx >= currentOrder.length) return;
+
+  const updated = [...currentOrder];
+  const [removed] = updated.splice(idx, 1);
+  updated.splice(targetIdx, 0, removed);
+
+  saveDashboardLayout(updated, true);
+  renderLayoutModalItems(updated);
+}
+window.moveDashboardSection = moveDashboardSection;
+
+function attachLayoutDragListeners() {
+  const listEl = document.getElementById('layoutReorderList');
+  if (!listEl) return;
+
+  const items = listEl.querySelectorAll('.layout-reorder-item');
+  items.forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      layoutDragSrcIndex = Number(item.dataset.index);
+      item.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.dataset.index);
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('is-dragging');
+      items.forEach(i => i.classList.remove('drag-over'));
+      layoutDragSrcIndex = null;
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      item.classList.add('drag-over');
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over');
+    });
+
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      const targetIndex = Number(item.dataset.index);
+      if (layoutDragSrcIndex !== null && layoutDragSrcIndex !== targetIndex) {
+        const currentOrder = getDashboardLayout();
+        const updated = [...currentOrder];
+        const [removed] = updated.splice(layoutDragSrcIndex, 1);
+        updated.splice(targetIndex, 0, removed);
+
+        saveDashboardLayout(updated, true);
+        renderLayoutModalItems(updated);
+      }
+    });
+  });
+}
+
 function renderDashboard() {
   const isAdmin = currentUser && currentUser.role === 'ADMIN';
   const canAccessDental = isAdmin || Boolean(currentUser?.dentalApproved);
@@ -1431,6 +1748,9 @@ function renderDashboard() {
 
   // Load task counts and monthly progress for each card asynchronously
   loadCardBadges();
+
+  // Apply user-configured layout order across Net Worth, Pages Cards, and Weekly Planner
+  applyDashboardLayout();
 }
 
 async function loadCardBadges() {
@@ -19605,6 +19925,7 @@ initTopNavScroll();
 initScrollToTop();
 initBrainDump();
 initHabitTracker();
+applyDashboardLayout();
 
 if (authToken && currentUser) {
   document.body.classList.remove('is-unauthenticated');

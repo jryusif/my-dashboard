@@ -481,8 +481,30 @@
       <!-- Dashboard Home -->
       <section class="dashboard-section" id="dashboardSection">
         <header class="dashboard-header">
-          <p class="eyebrow">Overview</p>
-          <h1>My Dashboard</h1>
+          <div class="dashboard-header-text">
+            <p class="eyebrow">Overview</p>
+            <h1>My Dashboard</h1>
+          </div>
+          <div class="dashboard-layout-controls" id="dashboardLayoutControls">
+            <div class="layout-controls-tag">
+              <span class="layout-dock-icon">🎛️</span>
+              <span class="layout-dock-label">Top Section:</span>
+            </div>
+            <div class="dashboard-layout-pills" role="group" aria-label="Dashboard Section Order">
+              <button type="button" class="btn-layout-pill is-active" id="btnLayoutNetworthFirst" data-top="networth" onclick="setDashboardTopSection('networth')" title="Show Net Worth &amp; Wealth Vault on top">
+                <span class="layout-pill-icon">🪙</span> Net Worth
+              </button>
+              <button type="button" class="btn-layout-pill" id="btnLayoutPlannerFirst" data-top="planner" onclick="setDashboardTopSection('planner')" title="Show Weekly Planner on top">
+                <span class="layout-pill-icon">📅</span> Weekly Planner
+              </button>
+              <button type="button" class="btn-layout-pill" id="btnLayoutCardsFirst" data-top="cards" onclick="setDashboardTopSection('cards')" title="Show Focus Spaces &amp; Pages on top">
+                <span class="layout-pill-icon">🚀</span> Pages Cards
+              </button>
+              <button type="button" class="btn-layout-pill btn-layout-pill-gear" id="btnCustomizeLayoutModal" onclick="openDashboardLayoutModal()" title="Customize full section order and arrange visually">
+                <span class="layout-pill-icon">⚙️</span> Reorder...
+              </button>
+            </div>
+          </div>
         </header>
 
         <!-- EXECUTIVE SOVEREIGN WEALTH & NET WORTH VAULT -->
@@ -3514,6 +3536,58 @@
       <div class="modal-actions" style="margin-top: 24px;">
         <button type="button" class="btn-secondary" id="btnAdminConfirmCancel" onclick="closeAdminConfirmModal()">Cancel</button>
         <button type="button" class="btn-primary" id="btnAdminConfirmExecute">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       🎛️ CUSTOMIZE DASHBOARD LAYOUT MODAL (PER-USER REORDERABLE SECTIONS)
+       =================================================================== -->
+  <div class="modal-backdrop" id="dashboardLayoutModalBackdrop" hidden>
+    <div class="modal dashboard-layout-modal" role="dialog" aria-modal="true" aria-labelledby="dashboardLayoutModalTitle">
+      <button type="button" class="modal-close-btn" onclick="closeDashboardLayoutModal()" title="Close modal">✕</button>
+      
+      <div class="modal-header">
+        <div class="space-modal-badge">🎛️ PERSONALIZED WORKSPACE</div>
+        <h2 id="dashboardLayoutModalTitle">Customize Dashboard Layout</h2>
+        <p class="subtitle">Arrange the 3 main overview blocks to match your daily workflow. Changes are automatically saved to your profile.</p>
+      </div>
+
+      <!-- Quick Preset Buttons -->
+      <div class="layout-modal-presets">
+        <span class="layout-preset-label">Quick Presets:</span>
+        <div class="layout-preset-btns">
+          <button type="button" class="btn-layout-preset" onclick="setDashboardPreset('networth-first')">
+            <span>🪙</span> Net Worth on Top
+          </button>
+          <button type="button" class="btn-layout-preset" onclick="setDashboardPreset('planner-first')">
+            <span>📅</span> Weekly Planner on Top
+          </button>
+          <button type="button" class="btn-layout-preset" onclick="setDashboardPreset('cards-first')">
+            <span>🚀</span> Pages Cards on Top
+          </button>
+        </div>
+      </div>
+
+      <!-- Reorderable Items List -->
+      <div class="layout-reorder-wrap">
+        <div class="reorder-wrap-header">
+          <span class="reorder-wrap-label">Top-to-Bottom Order</span>
+          <span class="reorder-wrap-hint">Use arrows or drag to rearrange</span>
+        </div>
+        <div class="layout-reorder-list" id="layoutReorderList">
+          <!-- Populated dynamically by app.js -->
+        </div>
+      </div>
+
+      <!-- Modal Actions Footer -->
+      <div class="layout-modal-footer">
+        <button type="button" class="btn-secondary" onclick="resetDashboardLayoutToDefault()">
+          <span>↺</span> Reset to Default
+        </button>
+        <button type="button" class="btn-primary" onclick="closeDashboardLayoutModal()">
+          <span>✓</span> Done &amp; Save
+        </button>
       </div>
     </div>
   </div>
