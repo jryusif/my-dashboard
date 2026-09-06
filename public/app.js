@@ -627,6 +627,9 @@ async function loadTasks() {
   if (typeof syncAllWebsiteTasksWithCalendar === 'function') {
     setTimeout(syncAllWebsiteTasksWithCalendar, 20);
   }
+  if (typeof renderKristinHighPriorityTasks === 'function') {
+    renderKristinHighPriorityTasks();
+  }
 }
 
 function renderDateLabel(isoDate) {
@@ -1068,6 +1071,9 @@ async function syncBoards() {
   await loadCardBadges();
   if (typeof updateWeekTabBadges === 'function') {
     updateWeekTabBadges();
+  }
+  if (typeof renderKristinHighPriorityTasks === 'function') {
+    renderKristinHighPriorityTasks();
   }
   // Step 3: Reload open category page (reads from DB directly)
   if (currentCategoryPage) {
@@ -23094,8 +23100,240 @@ async function updateKristinExecutiveDashboard() {
   } catch (err) {
     console.debug('initKristinMapAndWeather error:', err);
   }
+
+  // Render Today's High Priority Tasks card
+  try {
+    await renderKristinHighPriorityTasks();
+  } catch (err) {
+    console.debug('renderKristinHighPriorityTasks error:', err);
+  }
 }
 window.updateKristinExecutiveDashboard = updateKristinExecutiveDashboard;
+
+// =============================================================================
+// 🔥 KRISTIN EXECUTIVE TODAY'S HIGH PRIORITY TASKS CONTROLLER
+// =============================================================================
+
+async function renderKristinHighPriorityTasks() {
+  const container = document.getElementById('kristinHighPrioList');
+  const badgeEl = document.getElementById('kristinPrioBadge');
+  const completedSubEl = document.getElementById('kristinPrioCompletedSub');
+  if (!container) return;
+
+  const todayStr = toISODate(new Date());
+
+  // 1. Gather all candidate tasks from in-memory cache, StorageService, or API
+  let allTasksList = [];
+  if (Array.isArray(currentTodayTasks) && currentTodayTasks.length > 0) {
+    allTasksList = [...currentTodayTasks];
+  } else if (Array.isArray(window.calTasksCache) && window.calTasksCache.length > 0) {
+    allTasksList = [...window.calTasksCache];
+  } else if (window.StorageService) {
+    allTasksList = window.StorageService.tasks.getAll(false);
+  }
+
+  // If local list is empty, fetch from API
+  if (allTasksList.length === 0) {
+    try {
+      const res = await fetch(`/api/tasks?date=${todayStr}`);
+      if (res.ok) {
+        const data = await res.json();
+        allTasksList = data.tasks || [];
+      }
+    } catch (e) {
+      console.debug('Error fetching today tasks for priority card:', e);
+    }
+  }
+
+  // Filter for today or overdue tasks
+  const todayOrOverdue = allTasksList.filter(t => {
+    if (t.deleted_at || t.category === 'Routine') return false;
+    const taskDate = t.date || t.dueDate;
+    if (!taskDate) return true; // floating task
+    return taskDate <= todayStr;
+  });
+
+  // Filter high/urgent priority tasks
+  let highPrioTasks = todayOrOverdue.filter(t => {
+    const p = (t.priority || '').toLowerCase();
+    return p === 'high' || p === 'urgent';
+  });
+
+  // If there are no high/urgent priority tasks specifically, show today's active pending tasks
+  // so the user still has actionable tasks on their dashboard
+  if (highPrioTasks.length === 0) {
+    const todayTasksOnly = todayOrOverdue.filter(t => (t.date || t.dueDate) === todayStr);
+    if (todayTasksOnly.length > 0) {
+      highPrioTasks = todayTasksOnly;
+    }
+  }
+
+  // Sort: pending first, then urgent before high, then by time or title
+  highPrioTasks.sort((a, b) => {
+    if (Boolean(a.completed) !== Boolean(b.completed)) {
+      return a.completed ? 1 : -1;
+    }
+    const aPrio = (a.priority || '').toLowerCase() === 'urgent' ? 2 : 1;
+    const bPrio = (b.priority || '').toLowerCase() === 'urgent' ? 2 : 1;
+    if (aPrio !== bPrio) return bPrio - aPrio;
+    return (a.time || a.timeBlock || '').localeCompare(b.time || b.timeBlock || '');
+  });
+
+  const totalCount = highPrioTasks.length;
+  const doneCount = highPrioTasks.filter(t => Boolean(t.completed)).length;
+  const pendingCount = totalCount - doneCount;
+
+  // Update header badge
+  if (badgeEl) {
+    if (totalCount === 0 || pendingCount === 0) {
+      badgeEl.className = 'kristin-prio-badge all-clear';
+      badgeEl.innerHTML = '<span>✓</span> All Clear';
+    } else {
+      const urgentCount = highPrioTasks.filter(t => !t.completed && (t.priority || '').toLowerCase() === 'urgent').length;
+      badgeEl.className = 'kristin-prio-badge';
+      if (urgentCount > 0) {
+        badgeEl.innerHTML = `<span>⚡</span> ${urgentCount} Urgent`;
+      } else {
+        badgeEl.innerHTML = `<span>🔥</span> ${pendingCount} High`;
+      }
+    }
+  }
+
+  // Update footer count
+  if (completedSubEl) {
+    completedSubEl.textContent = `${doneCount} of ${totalCount} completed`;
+  }
+
+  // Empty state
+  if (totalCount === 0) {
+    container.innerHTML = `
+      <div class="kristin-prio-empty-state">
+        <div class="kristin-prio-empty-icon">🎯</div>
+        <div class="kristin-prio-empty-title">All High Priority Tasks Clear</div>
+        <div class="kristin-prio-empty-sub">No urgent tasks pending for today. You are completely caught up!</div>
+        <button type="button" class="kristin-prio-add-quick-btn" onclick="openCreateTaskModalForToday('high')">
+          <span>➕</span> Add Priority Task
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  // Render task items
+  container.innerHTML = highPrioTasks.map(task => {
+    const isDone = Boolean(task.completed);
+    const p = (task.priority || 'high').toLowerCase();
+    const isUrgent = p === 'urgent';
+    const cat = task.category || 'Work';
+    const catIcon = (typeof CATEGORY_ICON !== 'undefined' && CATEGORY_ICON[cat]) ? CATEGORY_ICON[cat] : '💼';
+
+    // Parse appointment time if present in title or time field
+    let rawTitle = task.title || task.task || 'Untitled Task';
+    let displayTitle = rawTitle;
+    let appointmentTime = task.time || task.timeBlock || '';
+    const timeMatch = rawTitle.match(/\(([^)]*(?:AM|PM|am|pm|\d{1,2}:\d{2})[^)]*)\)/) || rawTitle.match(/\[([^\]]*(?:AM|PM|am|pm|\d{1,2}:\d{2})[^\]]*)\]/);
+    if (timeMatch) {
+      appointmentTime = timeMatch[1];
+      displayTitle = rawTitle.replace(timeMatch[0], '').trim();
+    }
+
+    const isOverdue = !isDone && (task.date || task.dueDate) && (task.date || task.dueDate) < todayStr;
+
+    return `
+      <div class="kristin-prio-task-item ${isDone ? 'is-done' : ''}" data-id="${task.id}">
+        <label class="kristin-prio-check-wrap" title="${isDone ? 'Mark uncompleted' : 'Mark completed'}">
+          <input type="checkbox" class="kristin-prio-checkbox" ${isDone ? 'checked' : ''} onchange="toggleKristinPriorityTask('${task.id}', this.checked, this)" />
+        </label>
+        <div class="kristin-prio-task-main" onclick="openEditModalById('${task.id}')" title="Click to edit task">
+          <div class="kristin-prio-title-row">
+            <span class="kristin-prio-task-title">${escapeHtml(displayTitle)}</span>
+            <span class="kristin-prio-level-pill ${isUrgent ? 'urgent' : 'high'}">${isUrgent ? '⚡ Urgent' : '🔥 High'}</span>
+          </div>
+          <div class="kristin-prio-task-meta">
+            <span class="kristin-prio-category-pill">${catIcon} ${escapeHtml(cat)}</span>
+            ${appointmentTime ? `<span class="kristin-prio-time-badge">🕒 ${escapeHtml(appointmentTime)}</span>` : ''}
+            ${isOverdue ? `<span class="kristin-prio-overdue-pill">Overdue</span>` : ''}
+          </div>
+        </div>
+        <button type="button" class="kristin-prio-edit-btn" onclick="openEditModalById('${task.id}')" title="Edit Task Details">
+          ✎
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+window.renderKristinHighPriorityTasks = renderKristinHighPriorityTasks;
+
+async function toggleKristinPriorityTask(id, completed, inputEl) {
+  const itemEl = inputEl?.closest('.kristin-prio-task-item');
+  if (itemEl) itemEl.classList.toggle('is-done', completed);
+
+  // Call global toggleTask
+  if (typeof toggleTask === 'function') {
+    const dummyRow = document.querySelector(`.task-row[data-id="${id}"]`) || document.createElement('div');
+    await toggleTask(id, completed, dummyRow);
+  }
+
+  // Re-render priority card metrics
+  renderKristinHighPriorityTasks();
+}
+window.toggleKristinPriorityTask = toggleKristinPriorityTask;
+
+window.openCreateTaskModalForToday = function(priority = 'high') {
+  if (typeof openAddModal === 'function') {
+    openAddModal();
+    const dueDateInput = document.getElementById('taskDueDate');
+    const prioritySelect = document.getElementById('taskPriority');
+    if (dueDateInput) dueDateInput.value = toISODate(new Date());
+    if (prioritySelect) prioritySelect.value = priority === 'urgent' ? 'urgent' : 'high';
+  } else if (typeof openCalNewTaskModal === 'function') {
+    openCalNewTaskModal(toISODate(new Date()));
+  }
+};
+
+window.openEditModalById = function(id) {
+  let task = null;
+  if (Array.isArray(currentTodayTasks)) {
+    task = currentTodayTasks.find(t => String(t.id) === String(id));
+  }
+  if (!task && Array.isArray(window.calTasksCache)) {
+    task = window.calTasksCache.find(t => String(t.id) === String(id));
+  }
+  if (!task && window.StorageService) {
+    task = window.StorageService.tasks.get(String(id));
+  }
+  if (task && typeof openEditModal === 'function') {
+    openEditModal({
+      id: task.id,
+      task: task.task || task.title,
+      dueDate: task.dueDate || task.date,
+      priority: task.priority
+    }, syncBoards);
+  } else {
+    fetch(`/api/tasks/${id}`)
+      .then(r => r.json())
+      .then(t => {
+        if (t && typeof openEditModal === 'function') {
+          openEditModal({
+            id: t.id,
+            task: t.title || t.task,
+            dueDate: t.dueDate || t.date,
+            priority: t.priority
+          }, syncBoards);
+        }
+      })
+      .catch(() => {
+        if (typeof showToast === 'function') showToast('Could not load task details.');
+      });
+  }
+};
+
+window.scrollToPlannerSection = function() {
+  const el = document.getElementById('weeklySection') || document.getElementById('dashboardGrid');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
 
 // =============================================================================
 // 🗺️ KRISTIN EXECUTIVE LOCATION & REAL WEATHER MAP CONTROLLER

@@ -509,78 +509,77 @@
           </div>
         </div>
 
-        <!-- Master 2-Column Hero Grid -->
+        <!-- Master Executive Hero Dashboard Layout -->
         <div class="kristin-dashboard-hero">
 
           <!-- -----------------------------------------------------
-               LEFT COLUMN: Profile, Tasks Cards, Trackers, Focusing
+               TOP ROW: Profile, Map & Live Weather, Tasks Velocity Stack
                ----------------------------------------------------- -->
-          <div class="kristin-col-left">
+          <div class="kristin-top-row">
 
-            <!-- Top Grid: Profile + Prioritized + Additional + Trackers -->
-            <div class="kristin-top-grid">
-
-              <!-- Card 1: Profile Card -->
-              <div class="kristin-profile-card">
-                <div class="kristin-profile-header">
-                  <span>Profile</span>
-                  <button type="button" class="kristin-refresh-btn" onclick="renderDashboard()" title="Refresh Overview">↻</button>
-                </div>
-
-                <div class="kristin-avatar-container">
-                  <svg class="kristin-avatar-ring-svg" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="#FEE2E2" stroke-width="4.5" />
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="#F87171" stroke-width="4.5" stroke-dasharray="276" stroke-dashoffset="65" stroke-linecap="round" />
-                  </svg>
-                  <img src="/kristin_avatar.jpg" alt="Profile Avatar" class="kristin-avatar-img" id="kristinAvatarImg" />
-                  <span class="kristin-avatar-badge">★</span>
-                </div>
-
-                <h3 class="kristin-profile-name" id="kristinProfileName">Kristin Watson</h3>
-                <p class="kristin-profile-role" id="kristinProfileRole">Design Manager</p>
-
-                <div class="kristin-micro-pills">
-                  <div class="kristin-micro-pill" title="Connected Spaces &amp; Categories">
-                    <span>👥</span> <span id="kristinStatSpaces">11</span>
-                  </div>
-                  <div class="kristin-micro-pill coral" title="Completed Tasks">
-                    <span>✓</span> <span id="kristinStatDone">56</span>
-                  </div>
-                  <div class="kristin-micro-pill amber" title="Active Goals &amp; Streaks">
-                    <span>🏆</span> <span id="kristinStatGoals">12</span>
-                  </div>
-                </div>
+            <!-- Card 1: Profile Card -->
+            <div class="kristin-profile-card">
+              <div class="kristin-profile-header">
+                <span>Profile</span>
+                <button type="button" class="kristin-refresh-btn" onclick="renderDashboard()" title="Refresh Overview">↻</button>
               </div>
 
-              <!-- Card 2: Interactive Real Location & Weather Map (Reference Design) -->
-              <div class="kristin-map-weather-card" id="kristinMapWeatherCard" title="Live Local Weather & Regional Map">
-                <div id="kristinMapContainer" class="kristin-map-container"></div>
-                <!-- Ambient pulsating location pin -->
-                <div class="kristin-map-pin-badge" id="kristinMapPinBadge" title="Your Coordinates">
-                  <div class="kristin-pulse-ring"></div>
-                  <div class="kristin-pin-dot"></div>
-                </div>
-                <!-- Bottom Frosted Glassmorphism Overlay (Matching User's Reference Image) -->
-                <div class="kristin-map-overlay-glass">
-                  <div class="kristin-map-time-row">
-                    <span id="kristinMapTime">12:00</span> &bull; <span id="kristinMapGmt">GMT+2</span>
-                  </div>
-                  <div class="kristin-map-main-row">
-                    <div class="kristin-map-city-group" onclick="promptChangeLocation()" title="Click to refresh or detect location">
-                      <svg class="kristin-map-nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <polygon points="3 11 22 2 13 21 11 13 3 11" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-                      </svg>
-                      <span class="kristin-map-city-name" id="kristinMapCity">Detecting...</span>
-                    </div>
-                    <div class="kristin-map-temp-val" id="kristinMapTemp">+16&deg;</div>
-                  </div>
-                </div>
-                <button type="button" class="kristin-map-locate-btn" onclick="refreshUserLocation(true)" title="Recenter to my current location">
-                  <span>🎯</span>
-                </button>
+              <div class="kristin-avatar-container">
+                <svg class="kristin-avatar-ring-svg" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="#FEE2E2" stroke-width="4.5" />
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="#F87171" stroke-width="4.5" stroke-dasharray="276" stroke-dashoffset="65" stroke-linecap="round" />
+                </svg>
+                <img src="/kristin_avatar.jpg" alt="Profile Avatar" class="kristin-avatar-img" id="kristinAvatarImg" />
+                <span class="kristin-avatar-badge">★</span>
               </div>
 
-              <!-- Card 3: Prioritized Tasks (Sunset Peach-Coral Mesh) -->
+              <h3 class="kristin-profile-name" id="kristinProfileName">Kristin Watson</h3>
+              <p class="kristin-profile-role" id="kristinProfileRole">Design Manager</p>
+
+              <div class="kristin-micro-pills">
+                <div class="kristin-micro-pill" title="Connected Spaces &amp; Categories">
+                  <span>👥</span> <span id="kristinStatSpaces">11</span>
+                </div>
+                <div class="kristin-micro-pill coral" title="Completed Tasks">
+                  <span>✓</span> <span id="kristinStatDone">56</span>
+                </div>
+                <div class="kristin-micro-pill amber" title="Active Goals &amp; Streaks">
+                  <span>🏆</span> <span id="kristinStatGoals">12</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Interactive Real Location & Weather Map -->
+            <div class="kristin-map-weather-card" id="kristinMapWeatherCard" title="Live Local Weather &amp; Regional Map">
+              <div id="kristinMapContainer" class="kristin-map-container"></div>
+              <!-- Ambient pulsating location pin -->
+              <div class="kristin-map-pin-badge" id="kristinMapPinBadge" title="Your Coordinates">
+                <div class="kristin-pulse-ring"></div>
+                <div class="kristin-pin-dot"></div>
+              </div>
+              <!-- Bottom Frosted Glassmorphism Overlay -->
+              <div class="kristin-map-overlay-glass">
+                <div class="kristin-map-time-row">
+                  <span id="kristinMapTime">12:00</span> &bull; <span id="kristinMapGmt">GMT+2</span>
+                </div>
+                <div class="kristin-map-main-row">
+                  <div class="kristin-map-city-group" onclick="promptChangeLocation()" title="Click to refresh or detect location">
+                    <svg class="kristin-map-nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <polygon points="3 11 22 2 13 21 11 13 3 11" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span class="kristin-map-city-name" id="kristinMapCity">Detecting...</span>
+                  </div>
+                  <div class="kristin-map-temp-val" id="kristinMapTemp">+16&deg;</div>
+                </div>
+              </div>
+              <button type="button" class="kristin-map-locate-btn" onclick="refreshUserLocation(true)" title="Recenter to my current location">
+                <span>🎯</span>
+              </button>
+            </div>
+
+            <!-- Card 3: Task Velocity Column (Coral & Cyan Stack) -->
+            <div class="kristin-task-cards-stack">
+              <!-- Prioritized Tasks (Sunset Peach-Coral Mesh) -->
               <div class="kristin-card-coral">
                 <div class="kristin-task-head">
                   <span class="kristin-task-title">Prioritized<br>tasks</span>
@@ -592,7 +591,7 @@
                 </div>
               </div>
 
-              <!-- Card 3: Additional Tasks (Sky Cyan Mesh) -->
+              <!-- Additional Tasks (Sky Cyan Mesh) -->
               <div class="kristin-card-cyan">
                 <div class="kristin-task-head">
                   <span class="kristin-task-title">Additional<br>tasks</span>
@@ -603,22 +602,14 @@
                   <div class="kristin-hero-sub">Avg. Completed</div>
                 </div>
               </div>
-
-              <!-- Row Under Cards 2 & 3: Trackers Connected -->
-              <div class="kristin-trackers-bar">
-                <div class="kristin-trackers-info">
-                  <div class="kristin-trackers-title">Trackers connected</div>
-                  <div class="kristin-trackers-sub" id="kristinTrackersCount">3 active connections</div>
-                </div>
-                <div class="kristin-trackers-icons">
-                  <div class="kristin-app-icon-badge" title="Figma / Design">🎨</div>
-                  <div class="kristin-app-icon-badge" title="Notion / Knowledge">📑</div>
-                  <div class="kristin-app-icon-badge" title="Slack / Team">💬</div>
-                  <button type="button" class="kristin-app-more-btn" onclick="openCustomSpaceModal()" title="Add / Manage Spaces">•••</button>
-                </div>
-              </div>
-
             </div>
+
+          </div>
+
+          <!-- -----------------------------------------------------
+               MID ROW: Productivity Analytics & Today's High Priority Tasks
+               ----------------------------------------------------- -->
+          <div class="kristin-mid-row">
 
             <!-- Card 4: Focusing / Productivity Analytics -->
             <div class="kristin-focusing-card">
@@ -644,28 +635,18 @@
                 <!-- Center Wave Stage -->
                 <div class="kristin-wave-stage">
                   <svg viewBox="0 0 450 140" class="kristin-wave-svg" preserveAspectRatio="none">
-                    <!-- Dotted background grid points -->
                     <defs>
                       <pattern id="kristinDots" width="16" height="16" patternUnits="userSpaceOnUse">
                         <circle cx="2" cy="2" r="0.9" fill="#CBD5E1" opacity="0.6" />
                       </pattern>
                     </defs>
                     <rect x="0" y="0" width="450" height="140" fill="url(#kristinDots)" opacity="0.75" />
-
-                    <!-- Floating dashed marker line -->
                     <line x1="165" y1="15" x2="165" y2="135" stroke="#CBD5E1" stroke-dasharray="3 3" stroke-width="1.2" />
-
-                    <!-- Purple Wave (Min or lack of focus) -->
                     <path d="M 0 100 C 60 115, 100 70, 165 40 C 220 15, 260 120, 330 90 C 390 65, 420 105, 450 95" fill="none" stroke="#818CF8" stroke-width="3" stroke-linecap="round" />
-                    
-                    <!-- Coral Wave (Maximum of focus) -->
                     <path d="M 0 65 C 50 65, 90 35, 130 55 C 165 75, 200 125, 250 85 C 300 45, 360 60, 410 70 C 430 75, 440 90, 450 100" fill="none" stroke="#F87171" stroke-width="3" stroke-linecap="round" />
-
-                    <!-- Peak marker node on wave -->
                     <circle cx="165" cy="40" r="5" fill="#FFFFFF" stroke="#818CF8" stroke-width="3" />
                   </svg>
 
-                  <!-- Floating Tooltip matching image -->
                   <div class="kristin-wave-tooltip">
                     <div class="kristin-wave-tooltip-title">Week 8</div>
                     <div class="kristin-wave-tooltip-sub">Unbalanced</div>
@@ -692,81 +673,32 @@
               </div>
             </div>
 
-          </div>
-
-
-          <!-- -----------------------------------------------------
-               RIGHT COLUMN: My Meetings & Developed Areas
-               ----------------------------------------------------- -->
-          <div class="kristin-col-right">
-
-            <!-- Card 5: My Meetings -->
-            <div class="kristin-meetings-card">
+            <!-- Card 5: Today's High Priority Tasks (Replaces My Meetings) -->
+            <div class="kristin-meetings-card kristin-priority-card" id="kristinPriorityCard">
               <div class="kristin-card-header-row">
-                <h2>My meetings</h2>
-                <button type="button" class="kristin-header-icon-btn" onclick="openPage('Calendar')" title="Open Calendar">📅</button>
-              </div>
-
-              <div class="kristin-meetings-list" id="kristinMeetingsList">
-                <!-- Row 1 -->
-                <div class="kristin-meeting-row" onclick="openPage('Work')">
-                  <div class="kristin-meeting-time-col">
-                    <span class="kristin-meeting-date">Tue, 11 Jul</span>
-                    <span class="kristin-meeting-time">08:15 am</span>
-                  </div>
-                  <div class="kristin-meeting-info">
-                    <div class="kristin-meeting-title">Quick Daily Meeting</div>
-                    <div class="kristin-meeting-platform"><span style="color:#2563EB;">🎥</span> Zoom</div>
-                  </div>
-                  <span class="kristin-meeting-arrow">↗</span>
+                <div class="kristin-prio-header-title">
+                  <h2>Today's high priority tasks</h2>
+                  <span class="kristin-prio-badge" id="kristinPrioBadge">High Priority</span>
                 </div>
-
-                <!-- Row 2 -->
-                <div class="kristin-meeting-row" onclick="openPage('Work')">
-                  <div class="kristin-meeting-time-col">
-                    <span class="kristin-meeting-date">Tue, 11 Jul</span>
-                    <span class="kristin-meeting-time">09:30 pm</span>
-                  </div>
-                  <div class="kristin-meeting-info">
-                    <div class="kristin-meeting-title">John Onboarding</div>
-                    <div class="kristin-meeting-platform"><span style="color:#059669;">📹</span> Google Meet</div>
-                  </div>
-                  <span class="kristin-meeting-arrow">↗</span>
-                </div>
-
-                <!-- Row 3 -->
-                <div class="kristin-meeting-row" onclick="openPage('Work')">
-                  <div class="kristin-meeting-time-col">
-                    <span class="kristin-meeting-date">Tue, 12 Jul</span>
-                    <span class="kristin-meeting-time">02:30 pm</span>
-                  </div>
-                  <div class="kristin-meeting-info">
-                    <div class="kristin-meeting-title">Call With a New Team</div>
-                    <div class="kristin-meeting-platform"><span style="color:#059669;">📹</span> Google Meet</div>
-                  </div>
-                  <span class="kristin-meeting-arrow">↗</span>
-                </div>
-
-                <!-- Row 4 -->
-                <div class="kristin-meeting-row" onclick="openPage('Work')">
-                  <div class="kristin-meeting-time-col">
-                    <span class="kristin-meeting-date">Tue, 15 Jul</span>
-                    <span class="kristin-meeting-time">04:00 pm</span>
-                  </div>
-                  <div class="kristin-meeting-info">
-                    <div class="kristin-meeting-title">Lead Designers Event</div>
-                    <div class="kristin-meeting-platform"><span style="color:#2563EB;">🎥</span> Zoom</div>
-                  </div>
-                  <span class="kristin-meeting-arrow">↗</span>
+                <div class="kristin-prio-header-actions">
+                  <button type="button" class="kristin-header-icon-btn" onclick="openCreateTaskModalForToday('high')" title="Add High Priority Task">➕</button>
+                  <button type="button" class="kristin-header-icon-btn" onclick="openPage('Calendar')" title="Open Calendar">📅</button>
                 </div>
               </div>
 
-              <button type="button" class="kristin-see-all-link" onclick="openPage('Calendar')">
-                See all meetings &gt;
-              </button>
+              <!-- High Priority Tasks Container (Real-Time Dynamic List) -->
+              <div class="kristin-meetings-list kristin-prio-tasks-list" id="kristinHighPrioList">
+                <!-- Dynamically populated by app.js -->
+              </div>
+
+              <div class="kristin-prio-card-footer">
+                <button type="button" class="kristin-see-all-link" onclick="scrollToPlannerSection()">
+                  See all tasks in planner &gt;
+                </button>
+                <span class="kristin-prio-completed-sub" id="kristinPrioCompletedSub">0 completed</span>
+              </div>
             </div>
 
-            </div>
           </div>
 
         </div>

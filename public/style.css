@@ -22069,75 +22069,162 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 }
 
 /* -------------------------------------------------------------
-   Master 2-Column Hero Grid
+   Master Executive Hero Dashboard Layout
    ------------------------------------------------------------- */
 .kristin-dashboard-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.95fr);
-  gap: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   width: 100%;
-  margin-bottom: 32px;
-  align-items: start;
+  margin-bottom: 28px;
 }
 
-@media (max-width: 1200px) {
-  .kristin-dashboard-hero {
-    grid-template-columns: 1fr;
-  }
-}
-
-.kristin-col-left {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 0;
-}
-
-.kristin-col-right {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 0;
-}
-
-/* -------------------------------------------------------------
-   Left Column: Top Row (Profile + Map/Weather + Tasks Cards Grid)
-   ------------------------------------------------------------- */
-.kristin-top-grid {
+/* Row 1: Executive KPI & Quick-Glance Row */
+.kristin-top-row {
   display: grid;
-  grid-template-columns: 215px minmax(235px, 1.2fr) 1fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 16px;
+  grid-template-columns: 220px minmax(280px, 1.35fr) minmax(230px, 1.05fr);
+  gap: 18px;
+  align-items: stretch;
+  width: 100%;
 }
 
-@media (max-width: 1280px) {
-  .kristin-top-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .kristin-profile-card,
-  .kristin-map-weather-card {
-    grid-row: span 1;
-    min-height: 240px;
-  }
-  .kristin-trackers-bar {
-    grid-column: span 2;
-  }
+/* Card 1: Profile Card */
+.kristin-profile-card {
+  background: #FFFFFF;
+  border-radius: 26px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.03);
+  padding: 20px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  height: 260px;
+  box-sizing: border-box;
 }
 
-@media (max-width: 600px) {
-  .kristin-top-grid {
-    grid-template-columns: 1fr;
-  }
-  .kristin-profile-card,
-  .kristin-map-weather-card,
-  .kristin-card-coral,
-  .kristin-card-cyan,
-  .kristin-trackers-bar {
-    grid-column: span 1;
-  }
+.kristin-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 8px;
 }
 
-/* Card 2: Interactive Real Location & Weather Map (Reference Design) */
+.kristin-profile-header span {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.kristin-refresh-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.kristin-refresh-btn:hover {
+  color: #0F172A;
+}
+
+.kristin-avatar-container {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  margin: 2px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kristin-avatar-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.kristin-avatar-img {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+}
+
+.kristin-avatar-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #0F172A;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  border: 2px solid #FFFFFF;
+}
+
+.kristin-profile-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.kristin-profile-role {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748B;
+  margin: 0 0 12px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.kristin-micro-pills {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.kristin-micro-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #F8FAFC;
+  border: 1px solid #EDF2F7;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.kristin-micro-pill.coral {
+  color: #E11D48;
+}
+.kristin-micro-pill.amber {
+  color: #D97706;
+}
+
+/* Card 2: Interactive Real Location & Weather Map */
 .kristin-map-weather-card {
   background: #0F172A;
   border-radius: 26px;
@@ -22147,9 +22234,10 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  grid-row: span 2;
-  min-height: 250px;
+  height: 260px;
+  min-height: 260px;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .kristin-map-container {
@@ -22203,7 +22291,6 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
-/* Frosted Glassmorphism Overlay (Matching User's Reference Screenshot) */
 .kristin-map-overlay-glass {
   position: absolute;
   bottom: 12px;
@@ -22215,7 +22302,7 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   -webkit-backdrop-filter: blur(18px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 20px;
-  padding: 12px 16px 14px 16px;
+  padding: 11px 15px 13px 15px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
@@ -22228,11 +22315,11 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 }
 
 .kristin-map-time-row {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.8);
   letter-spacing: 0.2px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -22255,8 +22342,8 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 }
 
 .kristin-map-nav-arrow {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: #EAB308;
   stroke: #EAB308;
   fill: none;
@@ -22270,7 +22357,7 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 }
 
 .kristin-map-city-name {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: #FFFFFF;
   letter-spacing: -0.5px;
@@ -22282,7 +22369,7 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 }
 
 .kristin-map-temp-val {
-  font-size: 27px;
+  font-size: 25px;
   font-weight: 400;
   color: #FFFFFF;
   letter-spacing: -0.5px;
@@ -22318,180 +22405,73 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   background: rgba(15, 23, 42, 0.9);
 }
 
-/* Card 1: Profile Card */
-.kristin-profile-card {
-  background: #FFFFFF;
-  border-radius: 24px;
-  border: 1px solid #E2E8F0;
-  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.03);
-  padding: 22px 18px;
+/* Card 3: Task Velocity Column (Coral & Cyan Stack) */
+.kristin-task-cards-stack {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  position: relative;
-  grid-row: span 2;
+  gap: 14px;
+  height: 260px;
+  box-sizing: border-box;
 }
 
-.kristin-profile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 12px;
-}
-
-.kristin-profile-header span {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0F172A;
-}
-
-.kristin-refresh-btn {
-  background: none;
-  border: none;
-  font-size: 14px;
-  color: #94A3B8;
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-.kristin-refresh-btn:hover {
-  color: #0F172A;
-}
-
-.kristin-avatar-container {
-  position: relative;
-  width: 90px;
-  height: 90px;
-  margin: 4px 0 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.kristin-avatar-ring-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.kristin-avatar-img {
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
-  object-fit: cover;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
-}
-
-.kristin-avatar-badge {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #0F172A;
-  color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  border: 2px solid #FFFFFF;
-}
-
-.kristin-profile-name {
-  font-size: 17px;
-  font-weight: 800;
-  color: #0F172A;
-  margin: 0 0 2px 0;
-  letter-spacing: -0.01em;
-}
-
-.kristin-profile-role {
-  font-size: 12px;
-  font-weight: 500;
-  color: #64748B;
-  margin: 0 0 16px 0;
-}
-
-.kristin-micro-pills {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  margin-top: auto;
-}
-
-.kristin-micro-pill {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #F8FAFC;
-  border: 1px solid #EDF2F7;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #334155;
-}
-
-.kristin-micro-pill.coral {
-  color: #E11D48;
-}
-.kristin-micro-pill.amber {
-  color: #D97706;
-}
-
-/* Card 2: Prioritized Tasks (Sunset Peach-Coral Mesh) */
+/* Card 3a: Prioritized Tasks (Sunset Peach-Coral Mesh) */
 .kristin-card-coral {
   background: radial-gradient(circle at 90% 10%, rgba(254, 226, 226, 0.8) 0%, transparent 60%),
               linear-gradient(145deg, #FDE2D2 0%, #FCA5A5 55%, #F87171 100%);
-  border-radius: 24px;
-  padding: 22px 24px;
+  border-radius: 20px;
+  padding: 16px 20px;
   color: #1E293B;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 8px 24px rgba(248, 113, 113, 0.18);
-  min-height: 140px;
+  box-shadow: 0 6px 20px rgba(248, 113, 113, 0.16);
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.kristin-card-coral:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(248, 113, 113, 0.24);
 }
 
 .kristin-task-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .kristin-task-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #1E293B;
   line-height: 1.2;
 }
 
 .kristin-frosted-circle {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 12px;
   color: #1E293B;
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.65);
 }
 
 .kristin-task-body {
-  margin-top: 14px;
+  margin-top: auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
 }
 
 .kristin-hero-pct {
-  font-size: 38px;
+  font-size: 32px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -22499,24 +22479,31 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 }
 
 .kristin-hero-sub {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: rgba(15, 23, 42, 0.7);
-  margin-top: 4px;
 }
 
-/* Card 3: Additional Tasks (Sky Cyan Mesh) */
+/* Card 3b: Additional Tasks (Sky Cyan Mesh) */
 .kristin-card-cyan {
   background: radial-gradient(circle at 90% 10%, rgba(224, 242, 254, 0.8) 0%, transparent 60%),
               linear-gradient(145deg, #CFFAFE 0%, #7DD3FC 55%, #38BDF8 100%);
-  border-radius: 24px;
-  padding: 22px 24px;
+  border-radius: 20px;
+  padding: 16px 20px;
   color: #0C4A6E;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.18);
-  min-height: 140px;
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.16);
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.kristin-card-cyan:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(56, 189, 248, 0.24);
 }
 
 .kristin-card-cyan .kristin-hero-pct {
@@ -22526,78 +22513,13 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   color: rgba(12, 74, 110, 0.75);
 }
 
-/* Row Below Cards 2 & 3: Trackers Connected */
-.kristin-trackers-bar {
-  grid-column: 2 / span 2;
-  background: #EDF2F7;
-  border-radius: 18px;
-  padding: 12px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-@media (max-width: 900px) {
-  .kristin-trackers-bar {
-    grid-column: span 2;
-  }
-}
-
-.kristin-trackers-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.kristin-trackers-title {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: #0F172A;
-}
-
-.kristin-trackers-sub {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: #64748B;
-}
-
-.kristin-trackers-icons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.kristin-app-icon-badge {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
-  border: 1px solid #E2E8F0;
-}
-
-.kristin-app-more-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  color: #64748B;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.kristin-app-more-btn:hover {
-  background: #2563EB;
-  color: #FFFFFF;
+/* Row 2: Mid Row Grid (Focusing + Today's High Priority Tasks) */
+.kristin-mid-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.05fr);
+  gap: 18px;
+  align-items: stretch;
+  width: 100%;
 }
 
 /* -------------------------------------------------------------
@@ -22786,31 +22708,68 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 }
 
 /* -------------------------------------------------------------
-   Right Column: My Meetings Card
+   Today's High Priority Tasks Card
    ------------------------------------------------------------- */
-.kristin-meetings-card {
+.kristin-meetings-card,
+.kristin-priority-card {
   background: #FFFFFF;
   border-radius: 28px;
   border: 1px solid #E2E8F0;
   box-shadow: 0 8px 30px rgba(15, 23, 42, 0.03);
-  padding: 28px 28px 22px;
+  padding: 26px 26px 22px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  justify-content: space-between;
+  min-height: 330px;
+  box-sizing: border-box;
 }
 
 .kristin-card-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
 }
 
-.kristin-card-header-row h2 {
-  font-size: 20px;
+.kristin-prio-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kristin-card-header-row h2,
+.kristin-prio-header-title h2 {
+  font-size: 19px;
   font-weight: 800;
   color: #0F172A;
   margin: 0;
   letter-spacing: -0.01em;
+}
+
+.kristin-prio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #FFE4E6;
+  color: #E11D48;
+  letter-spacing: 0.2px;
+}
+
+.kristin-prio-badge.all-clear {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.kristin-prio-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .kristin-header-icon-btn {
@@ -22822,7 +22781,7 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13.5px;
   color: #334155;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -22831,54 +22790,83 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 .kristin-header-icon-btn:hover {
   background: #2563EB;
   color: #FFFFFF;
+  border-color: #2563EB;
 }
 
-.kristin-meetings-list {
+/* High Priority Tasks List */
+.kristin-meetings-list,
+.kristin-prio-tasks-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 230px;
+  padding-right: 4px;
+  margin: 10px 0;
+  flex: 1;
 }
 
-.kristin-meeting-row {
-  display: grid;
-  grid-template-columns: 85px 1fr 24px;
+.kristin-prio-task-item {
+  display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 0;
-  border-bottom: 1px solid #F1F5F9;
-  cursor: pointer;
-  transition: background 0.15s ease;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  border: 1px solid #F1F5F9;
+  border-radius: 14px;
+  transition: all 0.15s ease;
 }
 
-.kristin-meeting-row:last-child {
-  border-bottom: none;
+.kristin-prio-task-item:hover {
+  background: #F1F5F9;
+  border-color: #E2E8F0;
+  transform: translateY(-1px);
 }
 
-.kristin-meeting-time-col {
-  display: flex;
-  flex-direction: column;
+.kristin-prio-task-item.is-done {
+  opacity: 0.55;
+  background: #F8FAFC;
 }
 
-.kristin-meeting-date {
-  font-size: 11px;
-  font-weight: 600;
+.kristin-prio-task-item.is-done .kristin-prio-task-title {
+  text-decoration: line-through;
   color: #64748B;
 }
 
-.kristin-meeting-time {
-  font-size: 13px;
-  font-weight: 800;
-  color: #0F172A;
+.kristin-prio-check-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
-.kristin-meeting-info {
+.kristin-prio-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: #10B981;
+  cursor: pointer;
+  margin: 0;
+}
+
+.kristin-prio-task-main {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+}
+
+.kristin-prio-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
-.kristin-meeting-title {
+.kristin-prio-task-title {
   font-size: 13.5px;
   font-weight: 700;
   color: #0F172A;
@@ -22887,24 +22875,147 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   text-overflow: ellipsis;
 }
 
-.kristin-meeting-platform {
+.kristin-prio-level-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.kristin-prio-level-pill.urgent {
+  background: #FFE4E6;
+  color: #E11D48;
+  border: 1px solid #FECDD3;
+}
+
+.kristin-prio-level-pill.high {
+  background: #FFEDD5;
+  color: #EA580C;
+  border: 1px solid #FED7AA;
+}
+
+.kristin-prio-task-meta {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 11px;
+  color: #64748B;
+  flex-wrap: wrap;
+}
+
+.kristin-prio-category-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 10.5px;
+  color: #334155;
+}
+
+.kristin-prio-time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 11px;
   font-weight: 600;
   color: #64748B;
 }
 
-.kristin-meeting-arrow {
-  font-size: 14px;
-  color: #94A3B8;
-  transition: transform 0.15s ease, color 0.15s ease;
+.kristin-prio-overdue-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #FEE2E2;
+  color: #DC2626;
 }
 
-.kristin-meeting-row:hover .kristin-meeting-arrow {
-  transform: translate(2px, -2px);
+.kristin-prio-edit-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.kristin-prio-edit-btn:hover {
   color: #2563EB;
+  background: #EFF6FF;
+}
+
+.kristin-prio-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.kristin-prio-completed-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+/* Empty state when no urgent tasks */
+.kristin-prio-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px 16px;
+  gap: 8px;
+  flex: 1;
+}
+
+.kristin-prio-empty-icon {
+  font-size: 30px;
+  margin-bottom: 2px;
+}
+
+.kristin-prio-empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.kristin-prio-empty-sub {
+  font-size: 12px;
+  color: #64748B;
+  max-width: 260px;
+  line-height: 1.4;
+}
+
+.kristin-prio-add-quick-btn {
+  margin-top: 6px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  color: #1E293B;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kristin-prio-add-quick-btn:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
 }
 
 .kristin-see-all-link {
@@ -22923,6 +23034,50 @@ body[data-theme="kristin-light"] .nav-brand-logo {
 
 .kristin-see-all-link:hover {
   color: #2563EB;
+}
+
+/* Responsive Overrides for Hero Layout */
+@media (max-width: 1200px) {
+  .kristin-top-row {
+    grid-template-columns: 210px 1.2fr 1fr;
+  }
+  .kristin-mid-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .kristin-top-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .kristin-task-cards-stack {
+    grid-column: span 2;
+    flex-direction: row;
+    height: auto;
+  }
+  .kristin-card-coral,
+  .kristin-card-cyan {
+    flex: 1;
+    min-height: 130px;
+  }
+}
+
+@media (max-width: 600px) {
+  .kristin-top-row {
+    grid-template-columns: 1fr;
+  }
+  .kristin-task-cards-stack {
+    grid-column: span 1;
+    flex-direction: column;
+    height: auto;
+  }
+  .kristin-card-coral,
+  .kristin-card-cyan {
+    min-height: 120px;
+  }
+  .kristin-mid-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* -------------------------------------------------------------
