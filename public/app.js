@@ -24971,13 +24971,11 @@ function renderShariahCard(shariah, company) {
   const impureVal = typeof shariah.impureRatioPct === 'number' ? shariah.impureRatioPct : null;
   const purifVal = typeof shariah.purificationPct === 'number' ? shariah.purificationPct : 0.0;
 
-  // Detect impossible ratios (>100%) — these are calculation errors, not real results
-  const debtIsError = debtVal !== null && debtVal > 100;
-  const cashIsError = cashVal !== null && cashVal > 100;
+  // Detect impossible ratios — only impure income as % of revenue cannot exceed 100%
   const impureIsError = impureVal !== null && impureVal > 100;
 
-  const debtPass = debtVal !== null && !debtIsError && debtVal <= 33.0;
-  const cashPass = cashVal !== null && !cashIsError && cashVal <= 33.0;
+  const debtPass = debtVal !== null && debtVal <= 33.0;
+  const cashPass = cashVal !== null && cashVal <= 33.0;
   const impurePass = impureVal !== null && !impureIsError && impureVal <= 5.0;
 
   // Dual Business Activity & Revenue Screen (AAOIFI Standard No. 21 Rule 1 & 2)
@@ -25126,13 +25124,13 @@ function renderShariahCard(shariah, company) {
         <div class="ratio-top-line">
           <span class="ratio-name">Debt Ratio</span>
           <span class="ratio-values">
-            <span class="ratio-actual" style="color: ${debtIsError ? '#f59e0b' : (debtPass ? '#10b981' : (debtVal === null ? '#f59e0b' : '#ef4444'))}">${debtIsError ? 'Calc. Error ⚠️' : (debtVal !== null ? `${debtVal}%` : 'REVIEW')}</span>
+            <span class="ratio-actual" style="color: ${debtPass ? '#10b981' : (debtVal === null ? '#f59e0b' : '#ef4444')}">${debtVal !== null ? `${debtVal}%` : 'REVIEW'}</span>
             <span class="ratio-limit">(Limit: 33%)</span>
-            <span>${debtIsError ? '⚠️' : (debtPass ? '✓' : (debtVal === null ? '🟡' : '✕'))}</span>
+            <span>${debtPass ? '✓' : (debtVal === null ? '🟡' : '✕')}</span>
           </span>
         </div>
         <div class="ratio-bar-track">
-          <div class="ratio-bar-fill ${debtIsError ? 'is-review' : (debtPass ? 'is-pass' : (debtVal === null ? 'is-review' : 'is-fail'))}" style="width: ${debtIsError ? '0' : Math.min(100, (debtVal || 0) * 3)}%;"></div>
+          <div class="ratio-bar-fill ${debtPass ? 'is-pass' : (debtVal === null ? 'is-review' : 'is-fail')}" style="width: ${debtVal === null ? '0' : Math.min(100, (debtVal || 0) * 3)}%;"></div>
         </div>
       </div>
 
@@ -25141,13 +25139,13 @@ function renderShariahCard(shariah, company) {
         <div class="ratio-top-line">
           <span class="ratio-name">Cash &amp; Interest-Bearing Securities</span>
           <span class="ratio-values">
-            <span class="ratio-actual" style="color: ${cashIsError ? '#f59e0b' : (cashPass ? '#10b981' : (cashVal === null ? '#f59e0b' : '#ef4444'))}">${cashIsError ? 'Calc. Error ⚠️' : (cashVal !== null ? `${cashVal}%` : 'REVIEW')}</span>
+            <span class="ratio-actual" style="color: ${cashPass ? '#10b981' : (cashVal === null ? '#f59e0b' : '#ef4444')}">${cashVal !== null ? `${cashVal}%` : 'REVIEW'}</span>
             <span class="ratio-limit">(Limit: 33%)</span>
-            <span>${cashIsError ? '⚠️' : (cashPass ? '✓' : (cashVal === null ? '🟡' : '✕'))}</span>
+            <span>${cashPass ? '✓' : (cashVal === null ? '🟡' : '✕')}</span>
           </span>
         </div>
         <div class="ratio-bar-track">
-          <div class="ratio-bar-fill ${cashIsError ? 'is-review' : (cashPass ? 'is-pass' : (cashVal === null ? 'is-review' : 'is-fail'))}" style="width: ${cashIsError ? '0' : Math.min(100, (cashVal || 0) * 3)}%;"></div>
+          <div class="ratio-bar-fill ${cashPass ? 'is-pass' : (cashVal === null ? 'is-review' : 'is-fail')}" style="width: ${cashVal === null ? '0' : Math.min(100, (cashVal || 0) * 3)}%;"></div>
         </div>
       </div>
 
