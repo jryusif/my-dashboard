@@ -86,7 +86,7 @@ export async function POST(request) {
     } catch (_) {}
 
     // Fetch official SEC facts targeting the latest periodic filing
-    const secFacts = await getCompanyFinancialFacts(company.cik, latestSecFiling?.accessionNumber || null);
+    const secFacts = await getCompanyFinancialFacts(company.cik, latestSecFiling?.accessionNumber || null, ticker);
     if (latestSecFiling && secFacts.periodInfo) {
       secFacts.periodInfo.form = secFacts.periodInfo.form || latestSecFiling.form;
       secFacts.periodInfo.filingDate = secFacts.periodInfo.filingDate || latestSecFiling.filingDate;
