@@ -346,3 +346,161 @@ model NotificationLog {
   @@index([userId, read])
   @@map("notification_logs")
 }
+
+model SystemSetting {
+  key       String   @id @db.VarChar(255)
+  value     String   @db.Text
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Stock Screening & Intelligence Suite Models
+// ─────────────────────────────────────────────────────────────
+
+model StockCompany {
+  id              String                   @id @default(cuid())
+  ticker          String                   @unique
+  cik             String?                  // 10-digit CIK for SEC EDGAR
+  name            String
+  exchange        String?                  // NASDAQ, NYSE, etc.
+  sector          String?
+  industry        String?
+  country         String?                  @default("United States")
+  hqAddress       String?
+  incCountry      String?
+  description     String?                  @db.Text
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  filings         StockFiling[]
+  financials      StockFinancialSnapshot[]
+  screenings      StockShariahScreening[]
+  marketSnapshots StockMarketSnapshot[]
+  newsArticles    StockNewsArticle[]
+
+  @@index([ticker])
+  @@map("stock_companies")
+}
+
+model StockFiling {
+  id              String       @id @default(cuid())
+  companyId       String       @map("company_id")
+  form            String       // 10-K, 10-Q, 8-K
+  accessionNumber String       @unique @map("accession_number")
+  filingDate      String       @map("filing_date") // YYYY-MM-DD
+  reportDate      String?      @map("report_date")
+  primaryDocUrl   String?      @map("primary_doc_url")
+  isMaterial      Boolean      @default(false) @map("is_material")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  company         StockCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, filingDate])
+  @@map("stock_filings")
+}
+
+model StockFinancialSnapshot {
+  id                String       @id @default(cuid())
+  companyId         String       @map("company_id")
+  fiscalYear        Int?         @map("fiscal_year")
+  fiscalPeriod      String?      @map("fiscal_period") // Q1, Q2, Q3, FY
+  form              String?      // 10-Q, 10-K
+  filingDate        String?      @map("filing_date")
+  totalAssets       Float?       @map("total_assets")
+  totalDebt         Float?       @map("total_debt")
+  cashAndSecurities Float?       @map("cash_and_securities")
+  totalRevenue      Float?       @map("total_revenue")
+  interestIncome    Float?       @map("interest_income")
+  impureIncome      Float?       @map("impure_income")
+  marketCapAtReport Float?       @map("market_cap_at_report")
+  rawXbrlData       Json?        @map("raw_xbrl_data")
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  company           StockCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("stock_financial_snapshots")
+}
+
+model StockShariahScreening {
+  id                 String       @id @default(cuid())
+  companyId          String       @map("company_id")
+  status             String       // 'PASS' | 'FAIL' | 'REVIEW_REQUIRED' | 'DATA_STALE'
+  methodology        String       @default("AAOIFI")
+  debtRatioPct       Float?       @map("debt_ratio_pct")
+  debtThresholdPct   Float        @default(33.0) @map("debt_threshold_pct")
+  cashRatioPct       Float?       @map("cash_ratio_pct")
+  cashThresholdPct   Float        @default(33.0) @map("cash_threshold_pct")
+  impureRatioPct     Float?       @map("impure_ratio_pct")
+  impureThresholdPct Float        @default(5.0) @map("impure_threshold_pct")
+  purificationPct    Float?       @map("purification_pct")
+  businessActivity   String?      @map("business_activity")
+  businessStatus     String?      @map("business_status") // 'PASS' | 'FAIL'
+  calculationDetails Json?        @map("calculation_details")
+  reviewReasons      Json?        @map("review_reasons")
+  screenedAt         DateTime     @default(now()) @map("screened_at")
+  expiresAt          DateTime     @map("expires_at")
+  lastFilingUsed     String?      @map("last_filing_used")
+  previousStatus     String?      @map("previous_status")
+  statusChangeNote   String?      @map("status_change_note")
+
+  company            StockCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, screenedAt])
+  @@map("stock_shariah_screenings")
+}
+
+model StockMarketSnapshot {
+  id                String       @id @default(cuid())
+  companyId         String       @map("company_id")
+  price             Float
+  changePct         Float        @map("change_pct")
+  volume            Float?
+  avgVolume         Float?       @map("avg_volume")
+  rvol              Float?
+  freeFloat         Float?       @map("free_float")
+  sharesOutstanding Float?       @map("shares_outstanding")
+  marketCap         Float?       @map("market_cap")
+  bid               Float?
+  ask               Float?
+  spread            Float?
+  dayHigh           Float?       @map("day_high")
+  dayLow            Float?       @map("day_low")
+  open              Float?
+  prevClose         Float?       @map("prev_close")
+  fiftyTwoWeekHigh  Float?       @map("fifty_two_week_high")
+  fiftyTwoWeekLow   Float?       @map("fifty_two_week_low")
+  source            String       @default("Free Market Provider")
+  isRealTime        Boolean      @default(false) @map("is_real_time")
+  bidAskStatus      String?      @default("Delayed") @map("bid_ask_status")
+  quoteTimestamp    DateTime     @default(now()) @map("quote_timestamp")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  company           StockCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("stock_market_snapshots")
+}
+
+model StockNewsArticle {
+  id             String       @id @default(cuid())
+  companyId      String       @map("company_id")
+  headline       String
+  summary        String?      @db.Text
+  url            String?
+  source         String
+  publishedAt    DateTime     @map("published_at")
+  sentiment      String       @default("Neutral") // 'Positive' | 'Negative' | 'Neutral' | 'Mixed'
+  catalyst       String?      // 'Earnings', 'Partnership', 'FDA', 'Guidance', etc.
+  importance     String?      @default("MEDIUM")  // 'HIGH' | 'MEDIUM' | 'LOW'
+  tradingImpact  String?      @map("trading_impact") // 'Potentially bullish' | 'Potentially bearish' | 'Neutral' | 'Unclear'
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  company        StockCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, publishedAt])
+  @@map("stock_news_articles")
+}
+

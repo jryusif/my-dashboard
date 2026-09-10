@@ -5636,6 +5636,7 @@ async function openTradingPage(view = 'journal') {
   const tradeSec = document.getElementById('tradingSection');
   if (tradeSec) tradeSec.hidden = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (typeof initStockScreener === 'function') initStockScreener();
   switchTradingView(view);
   renderTradingSuite();
 }
@@ -24640,3 +24641,742 @@ function initKristinMapAndWeather() {
   }
 }
 window.initKristinMapAndWeather = initKristinMapAndWeather;
+
+// =============================================================================
+// STOCK SCREENING & INTELLIGENCE SUITE (CLIENT CONTROLLER)
+// =============================================================================
+
+let activeScreenerTicker = null;
+let activeScreenerPayload = null;
+let activeNewsFilterTab = 'sevenDays';
+let screenerSearchTimer = null;
+
+function initStockScreener() {
+  const searchInput = document.getElementById('screenerSearchInput');
+  const clearBtn = document.getElementById('screenerClearSearchBtn');
+  const autoList = document.getElementById('screenerAutocompleteList');
+
+  if (!searchInput) return;
+
+  // Debounced input search
+  searchInput.addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    if (clearBtn) clearBtn.style.display = val.length > 0 ? 'flex' : 'none';
+
+    if (screenerSearchTimer) clearTimeout(screenerSearchTimer);
+    if (val.length < 1) {
+      if (autoList) autoList.style.display = 'none';
+      return;
+    }
+
+    screenerSearchTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/trading/screener/search?q=${encodeURIComponent(val)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        renderScreenerAutocomplete(data.results || []);
+      } catch (err) {
+        console.warn('Screener search failed:', err);
+      }
+    }, 280);
+  });
+
+  // Enter key selection
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const val = searchInput.value.trim().toUpperCase();
+      if (val) {
+        if (autoList) autoList.style.display = 'none';
+        selectScreenerTicker(val);
+      }
+    }
+  });
+
+  // Close dropdown on click outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.screener-search-bar-wrap')) {
+      if (autoList) autoList.style.display = 'none';
+    }
+  });
+}
+
+function renderScreenerAutocomplete(results) {
+  const listEl = document.getElementById('screenerAutocompleteList');
+  if (!listEl) return;
+
+  if (!results || results.length === 0) {
+    listEl.innerHTML = `
+      <div style="padding: 12px 16px; font-size: 13px; color: var(--text-muted, #94a3b8);">
+        No matching US equities found in SEC registry. Press Enter to search symbol directly.
+      </div>
+    `;
+    listEl.style.display = 'block';
+    return;
+  }
+
+  listEl.innerHTML = results.map(item => `
+    <div class="screener-auto-item" onclick="selectScreenerTicker('${item.ticker}')">
+      <div class="screener-auto-left">
+        <span class="screener-auto-ticker">${item.ticker}</span>
+        <span class="screener-auto-name">${item.name}</span>
+      </div>
+      <div class="screener-auto-right">
+        <span>${item.exchange || 'US Market'} &bull; ${item.country || 'USA'}</span>
+      </div>
+    </div>
+  `).join('');
+
+  listEl.style.display = 'block';
+}
+
+function clearScreenerSearch() {
+  const searchInput = document.getElementById('screenerSearchInput');
+  const clearBtn = document.getElementById('screenerClearSearchBtn');
+  const autoList = document.getElementById('screenerAutocompleteList');
+
+  if (searchInput) searchInput.value = '';
+  if (clearBtn) clearBtn.style.display = 'none';
+  if (autoList) autoList.style.display = 'none';
+}
+window.clearScreenerSearch = clearScreenerSearch;
+
+async function selectScreenerTicker(ticker) {
+  if (!ticker) return;
+  const normTicker = ticker.trim().toUpperCase();
+  activeScreenerTicker = normTicker;
+
+  // Close autocomplete
+  const autoList = document.getElementById('screenerAutocompleteList');
+  if (autoList) autoList.style.display = 'none';
+
+  // Set search input value
+  const searchInput = document.getElementById('screenerSearchInput');
+  if (searchInput) searchInput.value = normTicker;
+  const clearBtn = document.getElementById('screenerClearSearchBtn');
+  if (clearBtn) clearBtn.style.display = 'flex';
+
+  // Show loading box
+  const loadingBox = document.getElementById('screenerLoadingBox');
+  const cardsGrid = document.getElementById('screenerCardsGrid');
+  const selectedBar = document.getElementById('screenerSelectedBar');
+
+  if (loadingBox) loadingBox.style.display = 'flex';
+  if (cardsGrid) cardsGrid.style.display = 'none';
+
+  try {
+    const res = await fetch(`/api/trading/screener/data?ticker=${encodeURIComponent(normTicker)}`);
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    activeScreenerPayload = data;
+
+    // Render Company Bar
+    renderScreenerSelectedBar(data.company || {});
+
+    // Render 3 Cards
+    renderShariahCard(data.shariah || {}, data.company || {});
+    renderTradingDataCard(data.market || {}, data.company || {});
+    renderNewsCard(data.news || {}, data.company || {});
+
+    if (loadingBox) loadingBox.style.display = 'none';
+    if (cardsGrid) cardsGrid.style.display = 'grid';
+  } catch (err) {
+    console.error('Failed to load screener data:', err);
+    if (loadingBox) {
+      loadingBox.innerHTML = `
+        <div style="color: #ef4444; font-size: 24px;">⚠️</div>
+        <div class="screener-loading-text">
+          <strong style="color: #ef4444;">Could not load intelligence for ${normTicker}</strong>
+          <p>Please verify ticker symbol and try again. ${err.message}</p>
+        </div>
+        <button type="button" class="btn-secondary btn-sm" onclick="selectScreenerTicker('${normTicker}')">↻ Retry</button>
+      `;
+      loadingBox.style.display = 'flex';
+    }
+  }
+}
+window.selectScreenerTicker = selectScreenerTicker;
+
+function renderScreenerSelectedBar(company) {
+  const bar = document.getElementById('screenerSelectedBar');
+  if (!bar) return;
+
+  const tBadge = document.getElementById('selectedStockTicker');
+  const cName = document.getElementById('selectedStockName');
+  const exTag = document.getElementById('selectedStockExchange');
+  const coTag = document.getElementById('selectedStockCountry');
+  const secTag = document.getElementById('selectedStockSector');
+
+  if (tBadge) tBadge.textContent = company.ticker || activeScreenerTicker;
+  if (cName) cName.textContent = company.name || activeScreenerTicker;
+  if (exTag) exTag.textContent = company.exchange || 'NASDAQ';
+  if (coTag) coTag.textContent = `🇺🇸 ${company.country || 'United States'}`;
+  if (secTag) secTag.textContent = company.sector || 'Technology';
+
+  bar.style.display = 'flex';
+}
+
+function formatLargeCurrency(val) {
+  if (val === null || val === undefined || isNaN(val)) return 'N/A';
+  const abs = Math.abs(val);
+  if (abs >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
+  return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatLargeNumber(val) {
+  if (val === null || val === undefined || isNaN(val)) return 'N/A';
+  const abs = Math.abs(val);
+  if (abs >= 1e9) return `${(val / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${(val / 1e3).toFixed(1)}K`;
+  return val.toLocaleString('en-US');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CARD 1: SHARIAH SCREENING RENDERING
+// ─────────────────────────────────────────────────────────────────────────────
+
+function renderShariahCard(shariah, company) {
+  const card = document.getElementById('cardShariah');
+  if (!card) return;
+
+  const status = (shariah.status || 'REVIEW_REQUIRED').toUpperCase();
+  let statusClass = 'is-review';
+  let statusIcon = '🟡';
+  let statusText = 'REVIEW REQUIRED';
+  let statusSub = 'Manual audit recommended for non-disclosed line items';
+
+  if (status === 'PASS') {
+    statusClass = 'is-pass';
+    statusIcon = '🟢';
+    statusText = 'SHARIAH PASS';
+    statusSub = 'Fully compliant under AAOIFI Standard No. 21';
+  } else if (status === 'FAIL') {
+    statusClass = 'is-fail';
+    statusIcon = '🔴';
+    statusText = 'SHARIAH FAIL';
+    statusSub = 'One or more financial ratios or business activities exceed limits';
+  } else if (status === 'DATA_STALE' || shariah.isStale) {
+    statusClass = 'is-stale';
+    statusIcon = '⚪';
+    statusText = 'DATA STALE';
+    statusSub = 'Screening older than 7 days — refresh required';
+  }
+
+  // Format dates
+  const screenedDate = shariah.screenedAt ? new Date(shariah.screenedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent';
+  const nextRefresh = shariah.nextRefreshDate ? new Date(shariah.nextRefreshDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'In 7 Days';
+  const periodStr = shariah.periodInfo ? `${shariah.periodInfo.fiscalPeriod || 'Q2'} ${shariah.periodInfo.fiscalYear || ''}` : 'Latest Periodic';
+  const filingStr = shariah.periodInfo ? `${shariah.periodInfo.form || '10-Q'} (Filed ${shariah.periodInfo.filingDate || ''})` : (shariah.lastFilingUsed ? `10-Q (${shariah.lastFilingUsed.substring(0, 15)}...)` : 'SEC EDGAR');
+
+  // Ratios
+  const debtVal = typeof shariah.debtRatioPct === 'number' ? shariah.debtRatioPct : null;
+  const cashVal = typeof shariah.cashRatioPct === 'number' ? shariah.cashRatioPct : null;
+  const impureVal = typeof shariah.impureRatioPct === 'number' ? shariah.impureRatioPct : null;
+  const purifVal = typeof shariah.purificationPct === 'number' ? shariah.purificationPct : 0.0;
+
+  const debtPass = debtVal !== null && debtVal <= 33.0;
+  const cashPass = cashVal !== null && cashVal <= 33.0;
+  const impurePass = impureVal !== null && impureVal <= 5.0;
+  const businessPass = shariah.businessStatus === 'PASS';
+
+  card.innerHTML = `
+    <!-- Card Header -->
+    <div class="screener-card-header">
+      <div class="screener-card-title">
+        <span>🕌</span>
+        <span>SHARIAH SCREENING</span>
+      </div>
+      <button type="button" class="btn-secondary btn-sm" id="btnRefreshShariah" onclick="refreshScreenerShariah()" title="Recalculate against official SEC EDGAR disclosures">
+        <span id="shariahRefreshIcon">↻</span> Refresh
+      </button>
+    </div>
+
+    <!-- Status Verdict Banner -->
+    <div class="shariah-status-banner ${statusClass}">
+      <div class="shariah-status-text">
+        <span class="shariah-status-icon">${statusIcon}</span>
+        <div>
+          <div class="shariah-verdict-title">${statusText}</div>
+          <div class="shariah-verdict-sub">${statusSub}</div>
+        </div>
+      </div>
+      <span class="stock-sub-tag" style="font-size:10px; font-weight:700;">AAOIFI #21</span>
+    </div>
+
+    <!-- Status Change Notice (if any) -->
+    ${shariah.statusChangeNote ? `
+      <div style="background:rgba(239,68,68,0.08); border-left:3px solid #ef4444; padding:8px 12px; border-radius:6px; font-size:11.5px; color:#dc2626;">
+        <strong>⚠️ Status Changed:</strong> ${shariah.statusChangeNote}
+      </div>
+    ` : ''}
+
+    <!-- Timestamps & Freshness Panel -->
+    <div class="shariah-meta-panel">
+      <div class="shariah-meta-row">
+        <span class="shariah-meta-label">Last Screening Update:</span>
+        <span class="shariah-meta-val">${screenedDate}</span>
+      </div>
+      <div class="shariah-meta-row">
+        <span class="shariah-meta-label">Financial Period:</span>
+        <span class="shariah-meta-val">${periodStr}</span>
+      </div>
+      <div class="shariah-meta-row">
+        <span class="shariah-meta-label">SEC Filing:</span>
+        <span class="shariah-meta-val">${filingStr}</span>
+      </div>
+      <div class="shariah-meta-row">
+        <span class="shariah-meta-label">Next Scheduled Refresh:</span>
+        <span class="shariah-meta-val">${nextRefresh}</span>
+      </div>
+    </div>
+
+    <!-- Key Financial Ratios -->
+    <div class="shariah-ratios-list">
+      <!-- 1. Business Activity -->
+      <div class="ratio-item-row">
+        <div class="ratio-top-line">
+          <span class="ratio-name">Business Activity (${shariah.businessActivity || company.sector || 'Technology'})</span>
+          <span class="ratio-values">
+            <span class="ratio-actual" style="color: ${businessPass ? '#10b981' : '#ef4444'}">${businessPass ? '✓ PASS' : '✕ FAIL'}</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- 2. Debt Ratio -->
+      <div class="ratio-item-row">
+        <div class="ratio-top-line">
+          <span class="ratio-name">Debt Ratio</span>
+          <span class="ratio-values">
+            <span class="ratio-actual" style="color: ${debtPass ? '#10b981' : (debtVal === null ? '#f59e0b' : '#ef4444')}">${debtVal !== null ? `${debtVal}%` : 'REVIEW'}</span>
+            <span class="ratio-limit">(Limit: 33%)</span>
+            <span>${debtPass ? '✓' : (debtVal === null ? '🟡' : '✕')}</span>
+          </span>
+        </div>
+        <div class="ratio-bar-track">
+          <div class="ratio-bar-fill ${debtPass ? 'is-pass' : (debtVal === null ? 'is-review' : 'is-fail')}" style="width: ${Math.min(100, (debtVal || 0) * 3)}%;"></div>
+        </div>
+      </div>
+
+      <!-- 3. Cash / Securities -->
+      <div class="ratio-item-row">
+        <div class="ratio-top-line">
+          <span class="ratio-name">Cash &amp; Interest-Bearing Securities</span>
+          <span class="ratio-values">
+            <span class="ratio-actual" style="color: ${cashPass ? '#10b981' : (cashVal === null ? '#f59e0b' : '#ef4444')}">${cashVal !== null ? `${cashVal}%` : 'REVIEW'}</span>
+            <span class="ratio-limit">(Limit: 33%)</span>
+            <span>${cashPass ? '✓' : (cashVal === null ? '🟡' : '✕')}</span>
+          </span>
+        </div>
+        <div class="ratio-bar-track">
+          <div class="ratio-bar-fill ${cashPass ? 'is-pass' : (cashVal === null ? 'is-review' : 'is-fail')}" style="width: ${Math.min(100, (cashVal || 0) * 3)}%;"></div>
+        </div>
+      </div>
+
+      <!-- 4. Impure Income -->
+      <div class="ratio-item-row">
+        <div class="ratio-top-line">
+          <span class="ratio-name">Impure &amp; Interest Income</span>
+          <span class="ratio-values">
+            <span class="ratio-actual" style="color: ${impurePass ? '#10b981' : (impureVal === null ? '#f59e0b' : '#ef4444')}">${impureVal !== null ? `${impureVal}%` : 'REVIEW'}</span>
+            <span class="ratio-limit">(Limit: 5%)</span>
+            <span>${impurePass ? '✓' : (impureVal === null ? '🟡' : '✕')}</span>
+          </span>
+        </div>
+        <div class="ratio-bar-track">
+          <div class="ratio-bar-fill ${impurePass ? 'is-pass' : (impureVal === null ? 'is-review' : 'is-fail')}" style="width: ${Math.min(100, (impureVal || 0) * 20)}%;"></div>
+        </div>
+      </div>
+
+      <!-- 5. Purification -->
+      <div class="purification-box">
+        <span>Required Dividend Purification:</span>
+        <strong>${purifVal.toFixed(2)}%</strong>
+      </div>
+    </div>
+
+    <!-- Actions & Disclaimers -->
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button type="button" class="btn-secondary" style="width:100%; justify-content:center;" onclick="openScreenerCalcDetailsModal()">
+        <span>🧮</span> View Calculation Details
+      </button>
+
+      <p style="margin:0; font-size:10.5px; color:var(--text-muted, #64748b); line-height:1.35;">
+        Shariah screening is based on the selected AAOIFI methodology and available SEC company disclosures. It is an analytical screening tool and not a fatwa.
+      </p>
+    </div>
+
+    <!-- Card Footer -->
+    <div class="screener-card-footer">
+      <span>Source: <strong>SEC EDGAR (Official XBRL)</strong></span>
+      <span class="stock-sub-tag">Quality: ${shariah.dataQuality || 'HIGH'}</span>
+    </div>
+  `;
+}
+
+async function refreshScreenerShariah() {
+  if (!activeScreenerTicker) return;
+  const btn = document.getElementById('btnRefreshShariah');
+  const icon = document.getElementById('shariahRefreshIcon');
+  if (btn) btn.disabled = true;
+  if (icon) icon.style.display = 'inline-block';
+  if (icon) icon.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { duration: 800, iterations: Infinity });
+
+  try {
+    const res = await fetch('/api/trading/screener/refresh-shariah', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticker: activeScreenerTicker })
+    });
+    if (!res.ok) throw new Error('Refresh failed');
+    const data = await res.json();
+    if (activeScreenerPayload) {
+      activeScreenerPayload.shariah = data.shariah;
+    }
+    renderShariahCard(data.shariah, activeScreenerPayload?.company || {});
+  } catch (err) {
+    alert('Shariah refresh failed: ' + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+window.refreshScreenerShariah = refreshScreenerShariah;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CARD 2: TRADING DATA RENDERING
+// ─────────────────────────────────────────────────────────────────────────────
+
+function renderTradingDataCard(market, company) {
+  const card = document.getElementById('cardTrading');
+  if (!card) return;
+
+  const price = market.price !== null && market.price !== undefined ? `$${market.price.toFixed(2)}` : 'N/A';
+  const changePct = typeof market.changePct === 'number' ? market.changePct : 0.0;
+  const isUp = changePct >= 0;
+  const changeSign = isUp ? '+' : '';
+  const changeFormatted = `${changeSign}${changePct.toFixed(2)}%`;
+
+  const volume = formatLargeNumber(market.volume);
+  const avgVol = formatLargeNumber(market.avgVolume);
+  const rvol = market.rvol !== null && market.rvol !== undefined ? `${market.rvol}x` : 'N/A';
+  const marketCap = formatLargeCurrency(market.marketCap);
+  const shares = formatLargeNumber(market.sharesOutstanding);
+  const freeFloat = market.freeFloat ? formatLargeNumber(market.freeFloat) : 'N/A';
+
+  // Bid / Ask
+  let bidAskHtml = '';
+  if (market.bid !== null && market.ask !== null) {
+    bidAskHtml = `
+      <div class="metric-data-row">
+        <span class="metric-data-label">Bid / Ask:</span>
+        <span class="metric-data-val">$${market.bid.toFixed(2)} / $${market.ask.toFixed(2)}</span>
+      </div>
+      <div class="metric-data-row">
+        <span class="metric-data-label">Spread:</span>
+        <span class="metric-data-val">$${(market.spread || 0).toFixed(2)}</span>
+      </div>
+    `;
+  } else {
+    bidAskHtml = `
+      <div class="metric-data-row">
+        <span class="metric-data-label">Bid / Ask / Spread:</span>
+        <span class="bid-ask-note">Unavailable on current free feed</span>
+      </div>
+    `;
+  }
+
+  card.innerHTML = `
+    <!-- Card Header -->
+    <div class="screener-card-header">
+      <div class="screener-card-title">
+        <span>📊</span>
+        <span>TRADING DATA</span>
+      </div>
+      <span class="stock-sub-tag" style="font-size:10px;">${market.isRealTime ? 'Real-Time' : 'Delayed (15m)'}</span>
+    </div>
+
+    <!-- Top Priority: Price, Change %, Volume, RVOL -->
+    <div class="trading-data-hero">
+      <div>
+        <div class="trading-hero-price">${price}</div>
+        <div style="font-size:11px; color:var(--text-muted, #64748b); margin-top:2px;">
+          Updated: ${market.formattedEtTime || 'Current Session'}
+        </div>
+      </div>
+      <div class="trading-hero-change ${isUp ? 'is-up' : 'is-down'}">
+        ${changeFormatted}
+      </div>
+    </div>
+
+    <!-- Structured Data Priority Ordering -->
+    <div class="trading-metrics-table">
+      <!-- 1. Volume & RVOL -->
+      <div class="metric-data-row">
+        <span class="metric-data-label">Day Volume:</span>
+        <span class="metric-data-val">${volume}</span>
+      </div>
+      <div class="metric-data-row">
+        <span class="metric-data-label">Avg Volume (30D):</span>
+        <span class="metric-data-val">${avgVol}</span>
+      </div>
+      <div class="metric-data-row">
+        <span class="metric-data-label">Relative Volume (RVOL):</span>
+        <span class="metric-data-val" style="color: ${market.rvol >= 1.5 ? '#10b981' : 'inherit'}">${rvol}</span>
+      </div>
+
+      <!-- 2. Free Float, Market Cap, Shares -->
+      <div class="metric-data-row">
+        <span class="metric-data-label">Free Float:</span>
+        <span class="metric-data-val">${freeFloat}</span>
+      </div>
+      <div class="metric-data-row">
+        <span class="metric-data-label">Market Capitalization:</span>
+        <span class="metric-data-val">${marketCap}</span>
+      </div>
+      <div class="metric-data-row">
+        <span class="metric-data-label">Shares Outstanding:</span>
+        <span class="metric-data-val">${shares}</span>
+      </div>
+
+      <!-- 3. Bid, Ask, Spread -->
+      ${bidAskHtml}
+
+      <!-- Range Metrics -->
+      <div class="metric-data-row">
+        <span class="metric-data-label">Day Range (L - H):</span>
+        <span class="metric-data-val">${market.dayLow ? `$${market.dayLow}` : 'N/A'} — ${market.dayHigh ? `$${market.dayHigh}` : 'N/A'}</span>
+      </div>
+      <div class="metric-data-row">
+        <span class="metric-data-label">52W Range (L - H):</span>
+        <span class="metric-data-val">${market.fiftyTwoWeekLow ? `$${market.fiftyTwoWeekLow}` : 'N/A'} — ${market.fiftyTwoWeekHigh ? `$${market.fiftyTwoWeekHigh}` : 'N/A'}</span>
+      </div>
+
+      <!-- 4. Country & Corporate Jurisdiction -->
+      <div class="metric-data-row">
+        <span class="metric-data-label">Country:</span>
+        <span class="metric-data-val">🇺🇸 ${company.country || 'United States'}</span>
+      </div>
+      <div class="metric-data-row">
+        <span class="metric-data-label">Headquarters:</span>
+        <span class="metric-data-val">${company.hqAddress || 'California, USA'}</span>
+      </div>
+      <div class="metric-data-row">
+        <span class="metric-data-label">Incorporation State:</span>
+        <span class="metric-data-val">${company.incCountry || 'Delaware, USA'}</span>
+      </div>
+      <div class="metric-data-row">
+        <span class="metric-data-label">Exchange / Sector:</span>
+        <span class="metric-data-val">${company.exchange || 'NASDAQ'} &bull; ${company.sector || 'Tech'}</span>
+      </div>
+    </div>
+
+    <!-- Card Footer -->
+    <div class="screener-card-footer">
+      <span>Source: <strong>${market.source || 'Consolidated Feed'}</strong></span>
+      <span class="stock-sub-tag">Quality: ${market.dataQuality || 'MEDIUM'}</span>
+    </div>
+  `;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CARD 3: LATEST NEWS & CATALYSTS RENDERING
+// ─────────────────────────────────────────────────────────────────────────────
+
+function renderNewsCard(news, company) {
+  const card = document.getElementById('cardNews');
+  if (!card) return;
+
+  const counts = news.counts || { today: 0, threeDays: 0, sevenDays: 0 };
+  const sentiment = news.overallSentiment || 'Neutral';
+  let sentClass = 'is-neu';
+  if (sentiment === 'Positive') sentClass = 'is-pos';
+  else if (sentiment === 'Negative') sentClass = 'is-neg';
+  else if (sentiment === 'Mixed') sentClass = 'is-mix';
+
+  // Get articles for active tab
+  const articlesBucket = news.articles || {};
+  let currentArticles = articlesBucket[activeNewsFilterTab] || [];
+  if (currentArticles.length === 0 && activeNewsFilterTab !== 'sevenDays') {
+    currentArticles = articlesBucket['sevenDays'] || [];
+  }
+
+  card.innerHTML = `
+    <!-- Card Header -->
+    <div class="screener-card-header">
+      <div class="screener-card-title">
+        <span>📰</span>
+        <span>LATEST NEWS</span>
+      </div>
+      <span class="stock-sub-tag" style="font-size:10px;">5-15m Cache</span>
+    </div>
+
+    <!-- Top News Summary: Latest Catalyst, Sentiment, Strength -->
+    <div class="news-summary-banner">
+      <div>
+        <div style="font-size:10.5px; color:var(--text-muted, #64748b); font-weight:600; text-transform:uppercase;">Latest Catalyst</div>
+        <span class="news-catalyst-pill">${news.latestCatalyst || 'Market Update'}</span>
+      </div>
+      <div>
+        <div style="font-size:10.5px; color:var(--text-muted, #64748b); font-weight:600; text-transform:uppercase;">News Sentiment</div>
+        <span class="news-sentiment-pill ${sentClass}">
+          ${sentiment === 'Positive' ? '🟢 Positive' : (sentiment === 'Negative' ? '🔴 Negative' : (sentiment === 'Mixed' ? '🟡 Mixed' : '⚪ Neutral'))}
+        </span>
+      </div>
+      <div>
+        <div style="font-size:10.5px; color:var(--text-muted, #64748b); font-weight:600; text-transform:uppercase;">Strength</div>
+        <span class="stock-sub-tag" style="font-weight:700;">${news.catalystStrength || 'MEDIUM'}</span>
+      </div>
+    </div>
+
+    <!-- Time Filter Tabs: Today, 3 Days, 7 Days -->
+    <div class="news-tabs-bar">
+      <button type="button" class="news-tab-btn ${activeNewsFilterTab === 'today' ? 'active' : ''}" onclick="switchScreenerNewsTab('today')">
+        Today (${counts.today || 0})
+      </button>
+      <button type="button" class="news-tab-btn ${activeNewsFilterTab === 'threeDays' ? 'active' : ''}" onclick="switchScreenerNewsTab('threeDays')">
+        3 Days (${counts.threeDays || 0})
+      </button>
+      <button type="button" class="news-tab-btn ${activeNewsFilterTab === 'sevenDays' ? 'active' : ''}" onclick="switchScreenerNewsTab('sevenDays')">
+        7 Days (${counts.sevenDays || 0})
+      </button>
+    </div>
+
+    <!-- News Articles Scroll List -->
+    <div class="news-articles-scroll">
+      ${currentArticles.length > 0 ? currentArticles.map(article => `
+        <div class="news-article-card">
+          <a href="${article.url || '#'}" target="_blank" rel="noopener noreferrer" class="news-headline-link">
+            ${article.headline}
+          </a>
+          <div class="news-card-meta">
+            <span>${article.source} &bull; ${article.age}</span>
+            <div class="news-badge-group">
+              <span class="news-sentiment-pill ${article.sentiment === 'Positive' ? 'is-pos' : (article.sentiment === 'Negative' ? 'is-neg' : (article.sentiment === 'Mixed' ? 'is-mix' : 'is-neu'))}">
+                ${article.sentiment}
+              </span>
+              <span class="stock-sub-tag" style="font-size:10px;">${article.catalyst || 'Update'}</span>
+            </div>
+          </div>
+          ${article.summary && article.summary !== article.headline ? `
+            <p style="margin:2px 0 0 0; font-size:11px; color:var(--text-muted, #64748b); line-height:1.35;">
+              ${article.summary.length > 130 ? `${article.summary.substring(0, 130)}...` : article.summary}
+            </p>
+          ` : ''}
+          <div style="font-size:10.5px; color:#3b82f6; font-weight:600; margin-top:2px;">
+            Impact: ${article.tradingImpact || 'Neutral'}
+          </div>
+        </div>
+      `).join('') : `
+        <div style="text-align:center; padding:24px 12px; font-size:12.5px; color:var(--text-muted, #94a3b8);">
+          No headline catalysts recorded in this filter period.
+        </div>
+      `}
+    </div>
+
+    <!-- News Disclaimer -->
+    <p style="margin:0; font-size:10.5px; color:var(--text-muted, #64748b); line-height:1.35;">
+      News sentiment is algorithmic and should not be considered investment advice.
+    </p>
+
+    <!-- Card Footer -->
+    <div class="screener-card-footer">
+      <span>Updated: <strong>${news.lastUpdatedEt || 'Current'}</strong></span>
+      <span class="stock-sub-tag">Source: Free Feed</span>
+    </div>
+  `;
+}
+
+function switchScreenerNewsTab(tabKey) {
+  activeNewsFilterTab = tabKey;
+  if (activeScreenerPayload) {
+    renderNewsCard(activeScreenerPayload.news || {}, activeScreenerPayload.company || {});
+  }
+}
+window.switchScreenerNewsTab = switchScreenerNewsTab;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCREENER MODALS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function openScreenerCalcDetailsModal() {
+  const backdrop = document.getElementById('screenerCalcDetailsModalBackdrop');
+  const container = document.getElementById('calcDetailsContainer');
+  const meta = document.getElementById('calcDetailsCompanyMeta');
+  if (!backdrop || !container) return;
+
+  const shariah = activeScreenerPayload?.shariah;
+  const company = activeScreenerPayload?.company;
+
+  if (meta && company) {
+    meta.textContent = `${company.name} (${company.ticker}) — AAOIFI Standard No. 21 Screening Ratios`;
+  }
+
+  const details = shariah?.calculationDetails || [];
+
+  if (details.length === 0) {
+    container.innerHTML = `
+      <div style="padding:20px; text-align:center; color:var(--text-muted, #64748b);">
+        No calculation details available for this stock.
+      </div>
+    `;
+  } else {
+    container.innerHTML = details.map(item => `
+      <div class="calc-ratio-card">
+        <div class="calc-ratio-header">
+          <strong>${item.title}</strong>
+          <span class="stock-sub-tag" style="color: ${item.status === 'PASS' ? '#10b981' : (item.status === 'FAIL' ? '#ef4444' : '#f59e0b')}; font-weight:700;">
+            ${item.status}
+          </span>
+        </div>
+        <div class="calc-ratio-grid">
+          <div class="calc-item">
+            <label>Numerator (${item.numeratorLabel || 'Numerator'}):</label>
+            <span>${item.numerator !== null && item.numerator !== undefined ? formatLargeCurrency(item.numerator) : 'N/A'}</span>
+          </div>
+          <div class="calc-item">
+            <label>Denominator (${item.denominatorLabel || 'Denominator'}):</label>
+            <span>${item.denominator !== null && item.denominator !== undefined ? formatLargeCurrency(item.denominator) : 'N/A'}</span>
+          </div>
+          <div class="calc-item">
+            <label>Formula:</label>
+            <span style="font-family:monospace; font-size:11px;">${item.formula || 'Numerator / Denominator × 100'}</span>
+          </div>
+          <div class="calc-item">
+            <label>Result / Threshold:</label>
+            <span>${item.resultFormatted || 'N/A'} (Limit: ${item.thresholdFormatted || '≤ 33%'})</span>
+          </div>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted, #64748b); padding-top:4px; border-top:1px dashed var(--border-color, rgba(0,0,0,0.06));">
+          Source Filing: <strong>${item.source || 'SEC EDGAR XBRL'}</strong>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  backdrop.hidden = false;
+}
+window.openScreenerCalcDetailsModal = openScreenerCalcDetailsModal;
+
+function closeScreenerCalcDetailsModal() {
+  const backdrop = document.getElementById('screenerCalcDetailsModalBackdrop');
+  if (backdrop) backdrop.hidden = true;
+}
+window.closeScreenerCalcDetailsModal = closeScreenerCalcDetailsModal;
+
+function openScreenerMethodologyModal() {
+  const backdrop = document.getElementById('screenerMethodologyModalBackdrop');
+  if (backdrop) backdrop.hidden = false;
+}
+window.openScreenerMethodologyModal = openScreenerMethodologyModal;
+
+function closeScreenerMethodologyModal() {
+  const backdrop = document.getElementById('screenerMethodologyModalBackdrop');
+  if (backdrop) backdrop.hidden = true;
+}
+window.closeScreenerMethodologyModal = closeScreenerMethodologyModal;
+
+// Document Ready bootstrap
+document.addEventListener('DOMContentLoaded', () => {
+  initStockScreener();
+});

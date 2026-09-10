@@ -968,6 +968,88 @@
           </div>
         </header>
 
+        <!-- ===================================================================
+             STOCK SCREENING & INTELLIGENCE SUITE (INDEPENDENT 3-CARD COMMAND)
+             =================================================================== -->
+        <div class="stock-screener-suite" id="stockScreenerSuite">
+          <div class="stock-screener-header-card">
+            <div class="screener-brand-bar">
+              <div class="screener-brand-title">
+                <span class="screener-pulse-dot"></span>
+                <span class="screener-eyebrow">EQUITY INTELLIGENCE</span>
+                <h3 class="screener-heading">US Stock Screener &amp; Compliance</h3>
+              </div>
+              <div class="screener-quick-tickers" id="screenerQuickTickers">
+                <span class="quick-label">Instant Screener:</span>
+                <button type="button" class="quick-ticker-pill" onclick="selectScreenerTicker('NVDA')">NVDA</button>
+                <button type="button" class="quick-ticker-pill" onclick="selectScreenerTicker('AAPL')">AAPL</button>
+                <button type="button" class="quick-ticker-pill" onclick="selectScreenerTicker('MSFT')">MSFT</button>
+                <button type="button" class="quick-ticker-pill" onclick="selectScreenerTicker('TSLA')">TSLA</button>
+                <button type="button" class="quick-ticker-pill" onclick="selectScreenerTicker('AMD')">AMD</button>
+                <button type="button" class="quick-ticker-pill" onclick="selectScreenerTicker('PLTR')">PLTR</button>
+                <button type="button" class="quick-ticker-pill" onclick="selectScreenerTicker('JPM')">JPM</button>
+              </div>
+            </div>
+
+            <!-- Search Bar with Autocomplete Dropdown -->
+            <div class="screener-search-bar-wrap">
+              <div class="screener-input-box">
+                <span class="screener-search-icon">🔍</span>
+                <input type="text" id="screenerSearchInput" class="screener-search-input" placeholder="Search ticker or company name (e.g. NVDA, AAPL, Tesla, Microsoft, Palantir)..." autocomplete="off" spellcheck="false" />
+                <button type="button" id="screenerClearSearchBtn" class="screener-clear-icon" style="display:none;" onclick="clearScreenerSearch()">✕</button>
+              </div>
+              <div id="screenerAutocompleteList" class="screener-autocomplete-popup" style="display:none;"></div>
+            </div>
+
+            <!-- Active Selected Stock Bar -->
+            <div id="screenerSelectedBar" class="screener-selected-bar" style="display:none;">
+              <div class="selected-stock-left">
+                <div class="selected-ticker-tag" id="selectedStockTicker">NVDA</div>
+                <div class="selected-stock-info">
+                  <h4 class="selected-company-name" id="selectedStockName">NVIDIA Corporation</h4>
+                  <div class="selected-stock-tags">
+                    <span class="stock-sub-tag" id="selectedStockExchange">NASDAQ</span>
+                    <span class="stock-sub-tag" id="selectedStockCountry">🇺🇸 United States</span>
+                    <span class="stock-sub-tag" id="selectedStockSector">Technology</span>
+                  </div>
+                </div>
+              </div>
+              <div class="selected-stock-right">
+                <button type="button" class="btn-secondary btn-sm" onclick="openScreenerMethodologyModal()">
+                  <span>⚖️</span> Methodology &amp; Rules
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading State Indicator -->
+          <div id="screenerLoadingBox" class="screener-loading-box" style="display:none;">
+            <div class="screener-spinner"></div>
+            <div class="screener-loading-text">
+              <strong id="screenerLoadingTitle">Fetching SEC EDGAR &amp; Market Intelligence...</strong>
+              <p id="screenerLoadingSub">Parsing official XBRL filings, calculating AAOIFI Shariah ratios, and consolidating market depth.</p>
+            </div>
+          </div>
+
+          <!-- 3-CARDS SCREENER GRID -->
+          <div id="screenerCardsGrid" class="screener-cards-grid" style="display:none;">
+            <!-- CARD 1: SHARIAH SCREENING -->
+            <div class="screener-card shariah-card" id="cardShariah">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+
+            <!-- CARD 2: TRADING DATA -->
+            <div class="screener-card trading-card" id="cardTrading">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+
+            <!-- CARD 3: LATEST NEWS -->
+            <div class="screener-card news-card" id="cardNews">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+          </div>
+        </div>
+
         <!-- Critical Risk Alert Banner (Dynamic) -->
         <div class="trading-risk-alert-banner" id="tradingRiskAlertBanner" style="display:none;">
           <div class="alert-icon">🛑</div>
@@ -6663,6 +6745,110 @@
           <button type="submit" class="btn-rec-modal-save" id="btnSaveRecurringRule">Save Recurring Rule</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Screener Shariah Calculation Details -->
+  <div class="modal-backdrop" id="screenerCalcDetailsModalBackdrop" hidden>
+    <div class="modal-window screener-modal-window" role="dialog" aria-labelledby="calcDetailsModalTitle" aria-modal="true" style="max-width: 780px;">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">MATHEMATICAL PROOF &amp; AUDIT TRAIL</span>
+          <h2 id="calcDetailsModalTitle">🧮 Shariah Ratio Calculation Breakdown</h2>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="closeScreenerCalcDetailsModal()" aria-label="Close modal">✕</button>
+      </div>
+      <div class="screener-modal-content">
+        <p class="screener-calc-sub" id="calcDetailsCompanyMeta">NVIDIA Corporation (NVDA) — AAOIFI Standard No. 21 Screening</p>
+        <div class="calc-ratios-container" id="calcDetailsContainer">
+          <!-- Populated dynamically -->
+        </div>
+        <div class="shariah-modal-disclaimer">
+          <strong>SEC Disclosures Audit Note:</strong>
+          <p>Financial numerators and denominators are parsed directly from official SEC EDGAR 10-K/10-Q XBRL instance documents. The engine performs deterministic validation without probabilistic estimation.</p>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" onclick="closeScreenerCalcDetailsModal()">Close Details</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Screener Methodology Transparency -->
+  <div class="modal-backdrop" id="screenerMethodologyModalBackdrop" hidden>
+    <div class="modal-window screener-modal-window" role="dialog" aria-labelledby="methodologyModalTitle" aria-modal="true" style="max-width: 720px;">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">GOVERNANCE &amp; METHODOLOGY</span>
+          <h2 id="methodologyModalTitle">⚖️ Shariah Screening Methodology</h2>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="closeScreenerMethodologyModal()" aria-label="Close modal">✕</button>
+      </div>
+      <div class="screener-modal-content">
+        <div class="methodology-card">
+          <h4>Standard Reference: AAOIFI Shariah Standard No. 21</h4>
+          <p>This screening system implements the internationally recognized equity governance standard published by the Accounting and Auditing Organization for Islamic Financial Institutions (AAOIFI).</p>
+        </div>
+
+        <div class="methodology-rules-grid">
+          <div class="meth-rule-box">
+            <span class="meth-rule-num">1</span>
+            <div class="meth-rule-body">
+              <strong>Business Activity Permissibility</strong>
+              <p>Primary business must be permissible (Halal). Impermissible businesses (Conventional Commercial Banking, Insurance, Alcohol, Gambling, Tobacco, Adult Entertainment, Defense Armaments, Pork) are strictly excluded and flagged 🔴 FAIL.</p>
+            </div>
+          </div>
+
+          <div class="meth-rule-box">
+            <span class="meth-rule-num">2</span>
+            <div class="meth-rule-body">
+              <strong>Debt to Market Cap Ratio (Limit: ≤ 33%)</strong>
+              <p>Total interest-bearing debt (Short-term borrowings + Long-term debt) divided by market capitalization must not exceed 33.0%.</p>
+            </div>
+          </div>
+
+          <div class="meth-rule-box">
+            <span class="meth-rule-num">3</span>
+            <div class="meth-rule-body">
+              <strong>Cash &amp; Interest-Bearing Securities Ratio (Limit: ≤ 33%)</strong>
+              <p>Cash, cash equivalents, and interest-bearing marketable securities divided by market capitalization must not exceed 33.0%.</p>
+            </div>
+          </div>
+
+          <div class="meth-rule-box">
+            <span class="meth-rule-num">4</span>
+            <div class="meth-rule-body">
+              <strong>Impure &amp; Interest Income Ratio (Limit: ≤ 5%)</strong>
+              <p>Interest income and non-operating prohibited revenues divided by Total Net Revenue must not exceed 5.0%.</p>
+            </div>
+          </div>
+
+          <div class="meth-rule-box">
+            <span class="meth-rule-num">5</span>
+            <div class="meth-rule-body">
+              <strong>Purification Calculation</strong>
+              <p>Purification percentage indicates the proportion of dividends or earnings originating from non-operating interest income to be donated to charity without expectation of reward.</p>
+            </div>
+          </div>
+
+          <div class="meth-rule-box">
+            <span class="meth-rule-num">6</span>
+            <div class="meth-rule-body">
+              <strong>7-Day Automatic Refresh &amp; SEC Filing Trigger</strong>
+              <p>Screening results are cached for 7 days. If a new official SEC filing (10-K, 10-Q, material 8-K) is published by EDGAR prior to 7 days, an immediate re-evaluation is automatically triggered.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="shariah-notice-box">
+          <strong>Important Disclaimers:</strong>
+          <p>1. <em>"Shariah screening is based on the selected methodology and available company disclosures. It is a screening tool and not a fatwa."</em></p>
+          <p>2. <em>"News sentiment is algorithmic and should not be considered investment advice."</em></p>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" onclick="closeScreenerMethodologyModal()">Understood</button>
+      </div>
     </div>
   </div>
 
