@@ -80,7 +80,10 @@ export async function GET(request) {
     let marketResult = null;
     let marketError = null;
     const latestMarket = company.marketSnapshots?.[0];
-    const marketCacheValid = latestMarket && (now.getTime() - new Date(latestMarket.updatedAt).getTime() < 90 * 1000) && !forceRefresh;
+    const marketCacheValid = latestMarket && 
+      (now.getTime() - new Date(latestMarket.updatedAt).getTime() < 90 * 1000) && 
+      !forceRefresh && 
+      (latestMarket.sharesOutstanding !== null && latestMarket.marketCap !== null);
 
     if (marketCacheValid) {
       marketResult = {
@@ -118,17 +121,22 @@ export async function GET(request) {
       };
     } else {
       try {
-        // We will enrich with shares outstanding if available from SEC facts
+        // We will enrich with shares outstanding & float if available from SEC facts
         let secShares = null;
+        let secFloatUsd = null;
         if (company.cik) {
           try {
             const facts = await getCompanyFinancialFacts(company.cik);
-            // check facts for common shares
             secShares = facts?.metrics?.sharesOutstanding || null;
+            secFloatUsd = facts?.metrics?.publicFloatUsd || null;
           } catch (_) {}
         }
 
-        const freshMarket = await getMarketData(company.ticker, { sharesOutstanding: secShares });
+        const freshMarket = await getMarketData(company.ticker, { 
+          cik: company.cik, 
+          sharesOutstanding: secShares,
+          publicFloatUsd: secFloatUsd
+        });
         marketResult = freshMarket;
 
         // Upsert into DB

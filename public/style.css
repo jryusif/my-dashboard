@@ -27882,6 +27882,64 @@ body[data-theme="kristin-light"] .category-quick-form select {
   opacity: 0.9;
 }
 
+/* SEC Statutory Deadline Explainer Notice */
+.sec-statutory-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  background: var(--bg-surface-elevated, rgba(59, 130, 246, 0.05));
+  border: 1px dashed var(--border-color, rgba(59, 130, 246, 0.25));
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-muted, #64748b);
+  line-height: 1.35;
+  margin: 2px 0 3px 0;
+}
+
+[data-theme="kristin-dark"] .sec-statutory-notice,
+[data-theme="dark"] .sec-statutory-notice {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.28);
+  color: #94a3b8;
+}
+
+.sec-statutory-notice strong {
+  color: var(--text-primary, #1e293b);
+  font-weight: 600;
+}
+
+[data-theme="kristin-dark"] .sec-statutory-notice strong,
+[data-theme="dark"] .sec-statutory-notice strong {
+  color: #cbd5e1;
+}
+
+.sec-notice-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sec-lag-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-surface-elevated, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.09));
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  letter-spacing: -0.1px;
+}
+
+[data-theme="kristin-dark"] .sec-lag-pill,
+[data-theme="dark"] .sec-lag-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+}
+
 /* Shariah Financial Ratios List */
 .shariah-ratios-list {
   display: flex;

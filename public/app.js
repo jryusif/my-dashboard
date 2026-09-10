@@ -24903,6 +24903,15 @@ function renderShariahCard(shariah, company) {
     }
   }
 
+  // Compute lag days between reportDate and filingDate
+  let filingLagDays = typeof shariah.periodInfo?.filingLagDays === 'number' ? shariah.periodInfo.filingLagDays : null;
+  if (filingLagDays === null && reportDateObj && filingDateObj) {
+    const diffMs = filingDateObj.getTime() - reportDateObj.getTime();
+    if (diffMs > 0) {
+      filingLagDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    }
+  }
+
   // Financial Period
   const periodStr = shariah.periodInfo ? `${shariah.periodInfo.fiscalPeriod || 'Q2'} ${shariah.periodInfo.fiscalYear || ''}` : 'Latest Periodic';
 
@@ -24971,13 +24980,33 @@ function renderShariahCard(shariah, company) {
         <span class="shariah-meta-label">Last Screening Update:</span>
         <span class="shariah-meta-val">${screenedDate}</span>
       </div>
+
+      <!-- Field 1: Financial Data As Of (Report Date / Fiscal Period End) -->
       <div class="shariah-meta-row">
-        <span class="shariah-meta-label">Financial Data As Of:</span>
+        <span class="shariah-meta-label">Financial Data As Of (Report Date):</span>
         <div class="shariah-meta-val" style="display:inline-flex; align-items:center; gap:6px;">
           <span>${financialDataAsOfFormatted}</span>
           ${isFilingOlderThan90Days ? `<span class="filing-stale-badge" title="SEC disclosures are ${daysSinceFiling} days old (>90 days)">⚠️ &gt;90d Old</span>` : ''}
         </div>
       </div>
+
+      <!-- Field 2: SEC Official Filing Date -->
+      <div class="shariah-meta-row">
+        <span class="shariah-meta-label">SEC Filing Date:</span>
+        <div class="shariah-meta-val" style="display:inline-flex; align-items:center; gap:6px;">
+          <span>${filingDateFormatted || 'Available on SEC'}</span>
+          ${filingLagDays !== null ? `<span class="sec-lag-pill" title="Submitted ${filingLagDays} days after fiscal period end">+${filingLagDays}d lag</span>` : ''}
+        </div>
+      </div>
+
+      <!-- Statutory Grace Period / Filing Window Explainer -->
+      <div class="sec-statutory-notice">
+        <span class="sec-notice-icon">ℹ️</span>
+        <span class="sec-notice-text">
+          <strong>SEC Statutory Reporting Window:</strong> The ${filingLagDays ? `${filingLagDays}-day` : '40–45 day'} difference between Period End (${financialDataAsOfFormatted}) and SEC Filing Date (${filingDateFormatted}) is normal and reflects federal SEC statutory filing deadlines (typically 40–45 days for 10-Q).
+        </span>
+      </div>
+
       <div class="shariah-meta-row">
         <span class="shariah-meta-label">Financial Period:</span>
         <span class="shariah-meta-val">${periodStr}</span>
@@ -25247,7 +25276,10 @@ function renderTradingDataCard(market, company) {
     <!-- Card Footer -->
     <div class="screener-card-footer">
       <span>Source: <strong>${market.source || 'Consolidated Feed'}</strong></span>
-      <span class="stock-sub-tag">Quality: ${market.dataQuality || 'MEDIUM'}</span>
+      <div style="display:flex; align-items:center; gap:6px;">
+        ${(market.isFallbackUsed || (market.source && market.source.includes('Fallback'))) ? `<span class="stock-sub-tag" style="background:rgba(59,130,246,0.12); color:#2563eb; border:1px solid rgba(59,130,246,0.25); font-size:10px;" title="Shares, Market Cap, or Float filled via backup provider">Fallback Active</span>` : ''}
+        <span class="stock-sub-tag">Quality: ${market.dataQuality || 'MEDIUM'}</span>
+      </div>
     </div>
   `;
 }
