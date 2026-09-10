@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveTickerCik, getCompanyFinancialFacts, getCompanySubmissions, COUNTRY_FLAGS, COUNTRY_CODES } from '@/lib/sec-provider';
+import { resolveTickerCik, getCompanyFinancialFacts, getCompanySubmissions, COUNTRY_FLAGS, COUNTRY_CODES, AUTHORITATIVE_PERIODIC_FORMS } from '@/lib/sec-provider';
 import { screenCompanyShariah } from '@/lib/shariah-engine';
 import { getMarketData } from '@/lib/market-provider';
 import { SHARIAH_CONFIG } from '@/lib/shariah-config';
@@ -77,11 +77,16 @@ export async function POST(request) {
       }
     }
 
-    // Extract latest periodic filing (10-Q or 10-K) to guarantee newest facts
+    // Extract latest periodic filing to guarantee newest facts
     let latestSecFiling = null;
     if (Array.isArray(secSubmissions?.filings)) {
-      const periodicFilings = secSubmissions.filings.filter(f => f.form === '10-Q' || f.form === '10-K' || f.form === '10-Q/A' || f.form === '10-K/A');
-      periodicFilings.sort((a, b) => (b.filingDate || '').localeCompare(a.filingDate || ''));
+      const periodicFilings = secSubmissions.filings.filter(f => f.form && AUTHORITATIVE_PERIODIC_FORMS.includes(f.form));
+      periodicFilings.sort((a, b) => {
+        const fA = a.filingDate || '';
+        const fB = b.filingDate || '';
+        if (fB !== fA) return fB.localeCompare(fA);
+        return (b.reportDate || '').localeCompare(a.reportDate || '');
+      });
       latestSecFiling = periodicFilings[0] || null;
     }
 
@@ -98,7 +103,8 @@ export async function POST(request) {
       secFacts.periodInfo.form = secFacts.periodInfo.form || latestSecFiling.form;
       secFacts.periodInfo.filingDate = secFacts.periodInfo.filingDate || latestSecFiling.filingDate;
       secFacts.periodInfo.accessionNumber = secFacts.periodInfo.accessionNumber || latestSecFiling.accessionNumber;
-      secFacts.periodInfo.reportDate = secFacts.periodInfo.reportDate || latestSecFiling.reportDate || secFacts.periodInfo.endDate;
+      secFacts.periodInfo.reportDate = secFacts.periodInfo.reportDate || secFacts.periodInfo.endDate || latestSecFiling.reportDate;
+      secFacts.periodInfo.endDate = secFacts.periodInfo.endDate || secFacts.periodInfo.reportDate || latestSecFiling.reportDate;
       secFacts.periodInfo.primaryDocUrl = secFacts.periodInfo.primaryDocUrl || latestSecFiling.primaryDocUrl;
     }
     const previousScreening = company.screenings?.[0] || null;

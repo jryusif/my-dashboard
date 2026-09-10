@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveTickerCik, getCompanySubmissions, getCompanyFinancialFacts, COUNTRY_FLAGS, COUNTRY_CODES } from '@/lib/sec-provider';
+import { resolveTickerCik, getCompanySubmissions, getCompanyFinancialFacts, COUNTRY_FLAGS, COUNTRY_CODES, AUTHORITATIVE_PERIODIC_FORMS } from '@/lib/sec-provider';
 import { screenCompanyShariah } from '@/lib/shariah-engine';
 import { getMarketData } from '@/lib/market-provider';
 import { getCompanyNews } from '@/lib/news-provider';
@@ -185,10 +185,15 @@ export async function GET(request) {
     const currentScreening = company.screenings?.[0];
     const previousScreening = company.screenings?.[1];
 
-    // Check for latest periodic filing (10-Q or 10-K) from official SEC EDGAR:
+    // Check for latest periodic filing from official SEC EDGAR:
     let newMaterialFilingDetected = false;
-    const periodicFilings = (secSubmissions?.filings || []).filter(f => f.form === '10-Q' || f.form === '10-K');
-    periodicFilings.sort((a, b) => (b.filingDate || '').localeCompare(a.filingDate || ''));
+    const periodicFilings = (secSubmissions?.filings || []).filter(f => f.form && AUTHORITATIVE_PERIODIC_FORMS.includes(f.form));
+    periodicFilings.sort((a, b) => {
+      const fA = a.filingDate || '';
+      const fB = b.filingDate || '';
+      if (fB !== fA) return fB.localeCompare(fA);
+      return (b.reportDate || '').localeCompare(a.reportDate || '');
+    });
     const latestSecFiling = periodicFilings[0] || null;
 
     if (latestSecFiling) {
@@ -211,7 +216,12 @@ export async function GET(request) {
       Array.isArray(parsedReviewReasons) &&
       parsedReviewReasons.some(r => typeof r === 'string' && r.includes('Interest income was not explicitly itemized'));
 
-    const requiresRecalculation = !currentScreening || isScreeningStale || newMaterialFilingDetected || forceRefresh || hasImpureBug;
+    // Check if cached report date is outdated compared to latest periodic filing report date
+    const latestFin = company.financials?.[0];
+    const cachedReportDate = latestFin?.rawXbrlData?.periodInfo?.reportDate || latestFin?.rawXbrlData?.periodInfo?.endDate || null;
+    const isReportDateOutdated = Boolean(latestSecFiling?.reportDate && cachedReportDate && latestSecFiling.reportDate > cachedReportDate);
+
+    const requiresRecalculation = !currentScreening || isScreeningStale || newMaterialFilingDetected || forceRefresh || hasImpureBug || isReportDateOutdated;
 
     if (!requiresRecalculation && currentScreening) {
       // Return cached Shariah screening
@@ -259,15 +269,16 @@ export async function GET(request) {
       }
 
       const latestFin = company.financials?.[0];
+      const rawPeriod = latestFin?.rawXbrlData?.periodInfo;
       const cachedPeriodInfo = {
-        form: latestSecFiling?.form || latestFin?.form || '10-Q',
-        fiscalYear: latestFin?.fiscalYear || null,
-        fiscalPeriod: latestFin?.fiscalPeriod || null,
-        reportDate: latestSecFiling?.reportDate || latestFin?.rawXbrlData?.periodInfo?.reportDate || latestFin?.rawXbrlData?.periodInfo?.endDate || latestFin?.rawXbrlData?.assets?.end || null,
-        endDate: latestSecFiling?.reportDate || latestFin?.rawXbrlData?.periodInfo?.endDate || latestFin?.rawXbrlData?.assets?.end || null,
-        filingDate: latestSecFiling?.filingDate || latestFin?.filingDate || null,
-        accessionNumber: latestSecFiling?.accessionNumber || currentScreening.lastFilingUsed || null,
-        primaryDocUrl: latestSecFiling?.primaryDocUrl || null
+        form: rawPeriod?.form || latestSecFiling?.form || latestFin?.form || '10-Q',
+        fiscalYear: rawPeriod?.fiscalYear || latestFin?.fiscalYear || null,
+        fiscalPeriod: rawPeriod?.fiscalPeriod || latestFin?.fiscalPeriod || null,
+        reportDate: rawPeriod?.reportDate || rawPeriod?.endDate || latestSecFiling?.reportDate || null,
+        endDate: rawPeriod?.endDate || rawPeriod?.reportDate || latestSecFiling?.reportDate || null,
+        filingDate: rawPeriod?.filingDate || latestSecFiling?.filingDate || latestFin?.filingDate || null,
+        accessionNumber: rawPeriod?.accessionNumber || latestSecFiling?.accessionNumber || currentScreening.lastFilingUsed || null,
+        primaryDocUrl: latestSecFiling?.primaryDocUrl || (company.cik ? `https://www.sec.gov/edgar/browse/?CIK=${parseInt(company.cik, 10)}` : null)
       };
 
       shariahResult = {
