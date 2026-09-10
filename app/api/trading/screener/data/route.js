@@ -201,7 +201,17 @@ export async function GET(request) {
 
     const screeningAgeMs = currentScreening ? (now.getTime() - new Date(currentScreening.screenedAt).getTime()) : Infinity;
     const isScreeningStale = screeningAgeMs > (SHARIAH_CONFIG.screeningValidityDays * 24 * 60 * 60 * 1000);
-    const requiresRecalculation = !currentScreening || isScreeningStale || newMaterialFilingDetected || forceRefresh;
+    
+    // Check if screening was trapped in REVIEW_REQUIRED due to the unitemized interest income bug
+    const parsedReviewReasons = typeof currentScreening?.reviewReasons === 'string' 
+      ? JSON.parse(currentScreening.reviewReasons || '[]') 
+      : (currentScreening?.reviewReasons || []);
+    const hasImpureBug = currentScreening?.status === 'REVIEW_REQUIRED' && 
+      (currentScreening.impureRatioPct === null) &&
+      Array.isArray(parsedReviewReasons) &&
+      parsedReviewReasons.some(r => typeof r === 'string' && r.includes('Interest income was not explicitly itemized'));
+
+    const requiresRecalculation = !currentScreening || isScreeningStale || newMaterialFilingDetected || forceRefresh || hasImpureBug;
 
     if (!requiresRecalculation && currentScreening) {
       // Return cached Shariah screening
@@ -211,6 +221,15 @@ export async function GET(request) {
       const calculationDetails = Array.isArray(rawCalcDetails) ? [...rawCalcDetails] : [];
       const reviewReasons = typeof currentScreening.reviewReasons === 'string' ? 
         JSON.parse(currentScreening.reviewReasons) : currentScreening.reviewReasons;
+
+      // Auto-heal impure ratio in cached calculation details if trapped in REVIEW_REQUIRED with null numerator
+      const impureDetail = calculationDetails.find(d => d.key === 'impure_income_ratio');
+      if (impureDetail && impureDetail.numerator === null && typeof impureDetail.denominator === 'number' && impureDetail.denominator > 0) {
+        impureDetail.numerator = 0;
+        impureDetail.result = 0;
+        impureDetail.resultFormatted = '0%';
+        impureDetail.status = 'PASS';
+      }
 
       // Ensure Rule 1 Business Activity check is present in calculation details even for older cached screenings
       const hasBusinessActivity = calculationDetails.some(d => d.key === 'business_activity' || d.type === 'BUSINESS_ACTIVITY');
@@ -326,12 +345,12 @@ export async function GET(request) {
             fiscalPeriod: freshPeriodInfo.fiscalPeriod,
             form: freshPeriodInfo.form,
             filingDate: freshPeriodInfo.filingDate,
-            totalAssets: secFacts.metrics?.totalAssets || null,
-            totalDebt: secFacts.metrics?.totalDebt || null,
-            cashAndSecurities: secFacts.metrics?.cashAndSecurities || null,
-            totalRevenue: secFacts.metrics?.totalRevenue || null,
-            interestIncome: secFacts.metrics?.interestIncome || null,
-            impureIncome: secFacts.metrics?.impureIncome || null,
+            totalAssets: secFacts.metrics?.totalAssets ?? null,
+            totalDebt: secFacts.metrics?.totalDebt ?? null,
+            cashAndSecurities: secFacts.metrics?.cashAndSecurities ?? null,
+            totalRevenue: secFacts.metrics?.totalRevenue ?? null,
+            interestIncome: secFacts.metrics?.interestIncome ?? null,
+            impureIncome: secFacts.metrics?.impureIncome ?? null,
             marketCapAtReport: effectiveMarketCap || null,
             rawXbrlData: {
               ...(secFacts.factsUsed || {}),
