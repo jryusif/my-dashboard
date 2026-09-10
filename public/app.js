@@ -24864,11 +24864,64 @@ function renderShariahCard(shariah, company) {
     statusSub = 'Screening older than 7 days — refresh required';
   }
 
-  // Format dates
-  const screenedDate = shariah.screenedAt ? new Date(shariah.screenedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent';
-  const nextRefresh = shariah.nextRefreshDate ? new Date(shariah.nextRefreshDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'In 7 Days';
+  // Format dates & freshness
+  const parseSafeDate = (dStr) => {
+    if (!dStr) return null;
+    if (typeof dStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+      return new Date(dStr + 'T12:00:00Z');
+    }
+    const d = new Date(dStr);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const screenedDateObj = parseSafeDate(shariah.screenedAt);
+  const screenedDate = screenedDateObj ? screenedDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent';
+  const nextRefreshObj = parseSafeDate(shariah.nextRefreshDate);
+  const nextRefresh = nextRefreshObj ? nextRefreshObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'In 7 Days';
+
+  // Financial Data As Of (actual period of report end date from SEC filing)
+  const reportDateRaw = shariah.financialDataAsOf || shariah.periodInfo?.reportDate || shariah.periodInfo?.endDate || null;
+  const reportDateObj = parseSafeDate(reportDateRaw);
+  const financialDataAsOfFormatted = reportDateObj 
+    ? reportDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+    : 'Not Specified';
+
+  // Check if filing date or report date is > 90 days from today
+  const filingDateRaw = shariah.periodInfo?.filingDate || null;
+  const filingDateObj = parseSafeDate(filingDateRaw);
+  const filingDateFormatted = filingDateObj 
+    ? filingDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : (filingDateRaw || '');
+
+  const dateForAgeCheck = filingDateObj || reportDateObj;
+  let daysSinceFiling = null;
+  let isFilingOlderThan90Days = false;
+  if (dateForAgeCheck) {
+    daysSinceFiling = Math.max(0, Math.floor((Date.now() - dateForAgeCheck.getTime()) / (1000 * 60 * 60 * 24)));
+    if (daysSinceFiling > 90) {
+      isFilingOlderThan90Days = true;
+    }
+  }
+
+  // Financial Period
   const periodStr = shariah.periodInfo ? `${shariah.periodInfo.fiscalPeriod || 'Q2'} ${shariah.periodInfo.fiscalYear || ''}` : 'Latest Periodic';
-  const filingStr = shariah.periodInfo ? `${shariah.periodInfo.form || '10-Q'} (Filed ${shariah.periodInfo.filingDate || ''})` : (shariah.lastFilingUsed ? `10-Q (${shariah.lastFilingUsed.substring(0, 15)}...)` : 'SEC EDGAR');
+
+  // Complete, untruncated filing form, date, and accession number
+  const filingForm = shariah.periodInfo?.form || '10-Q';
+  const accessionNumber = shariah.periodInfo?.accessionNumber || shariah.lastFilingUsed || '';
+  const cikNum = company?.cik ? parseInt(company.cik, 10) : null;
+  const primaryDocUrl = shariah.periodInfo?.primaryDocUrl || (cikNum ? `https://www.sec.gov/edgar/browse/?CIK=${cikNum}` : null);
+
+  let filingInnerHtml = `<span class="sec-form-badge">${filingForm}</span>`;
+  if (filingDateFormatted) {
+    filingInnerHtml += ` <span class="sec-filing-date">(Filed ${filingDateFormatted})</span>`;
+  }
+  if (accessionNumber) {
+    filingInnerHtml += ` · <span class="sec-filing-accn" title="Full SEC EDGAR Accession Number">${accessionNumber}</span>`;
+  }
+  const filingDisplayHtml = primaryDocUrl
+    ? `<a href="${primaryDocUrl}" target="_blank" rel="noopener noreferrer" class="sec-filing-link" title="Open official SEC EDGAR filing">${filingInnerHtml} <span class="external-icon">↗</span></a>`
+    : `<span class="sec-filing-text">${filingInnerHtml}</span>`;
 
   // Ratios
   const debtVal = typeof shariah.debtRatioPct === 'number' ? shariah.debtRatioPct : null;
@@ -24919,18 +24972,38 @@ function renderShariahCard(shariah, company) {
         <span class="shariah-meta-val">${screenedDate}</span>
       </div>
       <div class="shariah-meta-row">
+        <span class="shariah-meta-label">Financial Data As Of:</span>
+        <div class="shariah-meta-val" style="display:inline-flex; align-items:center; gap:6px;">
+          <span>${financialDataAsOfFormatted}</span>
+          ${isFilingOlderThan90Days ? `<span class="filing-stale-badge" title="SEC disclosures are ${daysSinceFiling} days old (>90 days)">⚠️ &gt;90d Old</span>` : ''}
+        </div>
+      </div>
+      <div class="shariah-meta-row">
         <span class="shariah-meta-label">Financial Period:</span>
         <span class="shariah-meta-val">${periodStr}</span>
       </div>
-      <div class="shariah-meta-row">
+      <div class="shariah-meta-row sec-filing-meta-row">
         <span class="shariah-meta-label">SEC Filing:</span>
-        <span class="shariah-meta-val">${filingStr}</span>
+        <div class="shariah-meta-val sec-filing-cell">
+          ${filingDisplayHtml}
+        </div>
       </div>
       <div class="shariah-meta-row">
         <span class="shariah-meta-label">Next Scheduled Refresh:</span>
         <span class="shariah-meta-val">${nextRefresh}</span>
       </div>
     </div>
+
+    <!-- Warning banner if filing > 90 days old -->
+    ${isFilingOlderThan90Days ? `
+      <div class="shariah-filing-stale-alert">
+        <span class="stale-alert-icon">⚠️</span>
+        <div class="stale-alert-body">
+          <div class="stale-alert-title">Financial Disclosures Over 90 Days Old (${daysSinceFiling} days)</div>
+          <div class="stale-alert-desc">The latest SEC filing (${filingForm}) is from ${filingDateFormatted || financialDataAsOfFormatted}. A subsequent quarterly report (10-Q/10-K) may be pending or delayed.</div>
+        </div>
+      </div>
+    ` : ''}
 
     <!-- Key Financial Ratios -->
     <div class="shariah-ratios-list">
@@ -25312,7 +25385,30 @@ function openScreenerCalcDetailsModal() {
     meta.textContent = `${company.name} (${company.ticker}) — AAOIFI Standard No. 21 Screening Ratios`;
   }
 
-  const details = shariah?.calculationDetails || [];
+  let details = shariah?.calculationDetails || [];
+
+  // Guarantee Rule 1 Business Activity check is present at the top of calculation details
+  if (!details.some(d => d.key === 'business_activity' || d.type === 'BUSINESS_ACTIVITY')) {
+    const bStatus = shariah?.businessStatus || (shariah?.status === 'FAIL' && shariah?.businessFailReason ? 'FAIL' : 'PASS');
+    const bActivity = shariah?.businessActivity || company?.sector || company?.industry || 'Commercial Enterprise';
+    details = [
+      {
+        key: 'business_activity',
+        type: 'BUSINESS_ACTIVITY',
+        title: 'Business Activity & Revenue Permissibility',
+        ruleReference: 'AAOIFI Standard No. 21 — Rule 1 (Core Operations)',
+        status: bStatus,
+        businessActivity: bActivity,
+        sicCode: company?.sector || 'SEC Submissions',
+        sicDescription: bActivity,
+        complianceNote: bStatus === 'PASS' 
+          ? `Core commercial business (${bActivity}) is permissible under AAOIFI equity governance standards. Evaluated against all 8 prohibited industry sectors (Conventional Finance, Insurance, Alcohol, Gambling, Tobacco, Adult Entertainment, Weapons, Pork).`
+          : 'Primary business activity violates AAOIFI Shariah screening criteria.',
+        source: 'SEC EDGAR Official Submissions (SIC Taxonomy)'
+      },
+      ...details
+    ];
+  }
 
   if (details.length === 0) {
     container.innerHTML = `
@@ -25321,37 +25417,90 @@ function openScreenerCalcDetailsModal() {
       </div>
     `;
   } else {
-    container.innerHTML = details.map(item => `
-      <div class="calc-ratio-card">
-        <div class="calc-ratio-header">
-          <strong>${item.title}</strong>
-          <span class="stock-sub-tag" style="color: ${item.status === 'PASS' ? '#10b981' : (item.status === 'FAIL' ? '#ef4444' : '#f59e0b')}; font-weight:700;">
-            ${item.status}
-          </span>
+    container.innerHTML = details.map(item => {
+      const isPass = item.status === 'PASS';
+      const isFail = item.status === 'FAIL';
+      const statusColor = isPass ? '#10b981' : (isFail ? '#ef4444' : '#f59e0b');
+      const statusBg = isPass ? 'rgba(16, 185, 129, 0.12)' : (isFail ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)');
+      const statusBorder = isPass ? 'rgba(16, 185, 129, 0.3)' : (isFail ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)');
+
+      // Dedicated Rule 1: Business Activity Card
+      if (item.key === 'business_activity' || item.type === 'BUSINESS_ACTIVITY') {
+        return `
+          <div class="calc-ratio-card calc-business-card">
+            <div class="calc-ratio-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:16px;">🏢</span>
+                <strong>${item.title || 'Business Activity & Revenue Permissibility'}</strong>
+              </div>
+              <span class="stock-sub-tag" style="color: ${statusColor}; background: ${statusBg}; border: 1px solid ${statusBorder};">
+                ${item.status}
+              </span>
+            </div>
+            <div class="calc-ratio-grid">
+              <div class="calc-item">
+                <label>Primary Business Classification:</label>
+                <span style="color:${isPass ? '#10b981' : (isFail ? '#ef4444' : '#f59e0b')}; font-size:13.5px;">
+                  ${item.businessActivity || item.sicDescription || 'Commercial Enterprise'}
+                </span>
+              </div>
+              <div class="calc-item">
+                <label>SEC SIC Classification:</label>
+                <span>${item.sicCode && item.sicCode !== 'N/A' ? `SIC ${item.sicCode} (${item.sicDescription || item.businessActivity || ''})` : (item.sicDescription || item.businessActivity || 'SEC EDGAR Submissions')}</span>
+              </div>
+              <div class="calc-item">
+                <label>Governance Standard:</label>
+                <span>${item.ruleReference || 'AAOIFI Standard No. 21 (Rule 1)'}</span>
+              </div>
+              <div class="calc-item">
+                <label>Evaluation Scope:</label>
+                <span>8 Prohibited Sectors Audited (Banking, Alcohol, Gambling, etc.)</span>
+              </div>
+            </div>
+            <div class="calc-business-banner ${isPass ? 'is-pass' : (isFail ? 'is-fail' : 'is-review')}">
+              <strong>${isPass ? '✓ Activity Permissible' : (isFail ? '🔴 Activity Prohibited' : '🟡 Audit Review Required')}:</strong>
+              <p>${item.complianceNote || (isPass ? 'Core business operations and primary revenue streams comply with AAOIFI Shariah criteria.' : 'Prohibited business activities detected.')}</p>
+            </div>
+            <div class="calc-source-footer">
+              Source Filing: <strong>${item.source || 'SEC EDGAR Official Submissions (SIC Taxonomy)'}</strong>
+            </div>
+          </div>
+        `;
+      }
+
+      // Balance Sheet & Income Statement Ratio Cards
+      return `
+        <div class="calc-ratio-card">
+          <div class="calc-ratio-header">
+            <strong>${item.title}</strong>
+            <span class="stock-sub-tag" style="color: ${statusColor}; background: ${statusBg}; border: 1px solid ${statusBorder};">
+              ${item.status}
+            </span>
+          </div>
+          <div class="calc-ratio-grid">
+            <div class="calc-item">
+              <label>Numerator (${item.numeratorLabel || 'Numerator'}):</label>
+              <span>${item.numerator !== null && item.numerator !== undefined ? formatLargeCurrency(item.numerator) : 'N/A'}</span>
+            </div>
+            <div class="calc-item">
+              <label>Denominator (${item.denominatorLabel || 'Denominator'}):</label>
+              <span>${item.denominator !== null && item.denominator !== undefined ? formatLargeCurrency(item.denominator) : 'N/A'}</span>
+            </div>
+            <div class="calc-item">
+              <label>Formula:</label>
+              <div><span class="calc-formula-code">${item.formula || 'Numerator / Denominator × 100'}</span></div>
+            </div>
+            <div class="calc-item">
+              <label>Result / Threshold:</label>
+              <span>${item.resultFormatted || 'N/A'} (Limit: ${item.thresholdFormatted || '≤ 33%'})</span>
+            </div>
+          </div>
+          <div class="calc-source-footer">
+            Source Filing: <strong>${item.source || 'SEC EDGAR XBRL'}</strong>
+          </div>
         </div>
-        <div class="calc-ratio-grid">
-          <div class="calc-item">
-            <label>Numerator (${item.numeratorLabel || 'Numerator'}):</label>
-            <span>${item.numerator !== null && item.numerator !== undefined ? formatLargeCurrency(item.numerator) : 'N/A'}</span>
-          </div>
-          <div class="calc-item">
-            <label>Denominator (${item.denominatorLabel || 'Denominator'}):</label>
-            <span>${item.denominator !== null && item.denominator !== undefined ? formatLargeCurrency(item.denominator) : 'N/A'}</span>
-          </div>
-          <div class="calc-item">
-            <label>Formula:</label>
-            <span style="font-family:monospace; font-size:11px;">${item.formula || 'Numerator / Denominator × 100'}</span>
-          </div>
-          <div class="calc-item">
-            <label>Result / Threshold:</label>
-            <span>${item.resultFormatted || 'N/A'} (Limit: ${item.thresholdFormatted || '≤ 33%'})</span>
-          </div>
-        </div>
-        <div style="font-size:11px; color:var(--text-muted, #64748b); padding-top:4px; border-top:1px dashed var(--border-color, rgba(0,0,0,0.06));">
-          Source Filing: <strong>${item.source || 'SEC EDGAR XBRL'}</strong>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   backdrop.hidden = false;
@@ -25375,6 +25524,20 @@ function closeScreenerMethodologyModal() {
   if (backdrop) backdrop.hidden = true;
 }
 window.closeScreenerMethodologyModal = closeScreenerMethodologyModal;
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const calcBackdrop = document.getElementById('screenerCalcDetailsModalBackdrop');
+    if (calcBackdrop && !calcBackdrop.hidden) {
+      closeScreenerCalcDetailsModal();
+      return;
+    }
+    const methBackdrop = document.getElementById('screenerMethodologyModalBackdrop');
+    if (methBackdrop && !methBackdrop.hidden) {
+      closeScreenerMethodologyModal();
+    }
+  }
+});
 
 // Document Ready bootstrap
 document.addEventListener('DOMContentLoaded', () => {

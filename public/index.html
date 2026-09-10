@@ -6749,7 +6749,7 @@
   </div>
 
   <!-- Modal: Screener Shariah Calculation Details -->
-  <div class="modal-backdrop" id="screenerCalcDetailsModalBackdrop" hidden>
+  <div class="modal-backdrop" id="screenerCalcDetailsModalBackdrop" onclick="if(event.target === this) closeScreenerCalcDetailsModal()" hidden>
     <div class="modal-window screener-modal-window" role="dialog" aria-labelledby="calcDetailsModalTitle" aria-modal="true" style="max-width: 780px;">
       <div class="modal-header">
         <div>
@@ -6775,7 +6775,7 @@
   </div>
 
   <!-- Modal: Screener Methodology Transparency -->
-  <div class="modal-backdrop" id="screenerMethodologyModalBackdrop" hidden>
+  <div class="modal-backdrop" id="screenerMethodologyModalBackdrop" onclick="if(event.target === this) closeScreenerMethodologyModal()" hidden>
     <div class="modal-window screener-modal-window" role="dialog" aria-labelledby="methodologyModalTitle" aria-modal="true" style="max-width: 720px;">
       <div class="modal-header">
         <div>

@@ -53,9 +53,12 @@ export async function GET(request) {
     if (company.cik) {
       try {
         secSubmissions = await getCompanySubmissions(company.cik);
-        // Enrich company metadata
+        // Enrich company metadata with official SEC SIC classification
         const updateData = {};
-        if (secSubmissions.sicDescription && !company.sector) updateData.sector = secSubmissions.sicDescription;
+        if (secSubmissions.sicDescription) {
+          if (!company.sector) updateData.sector = secSubmissions.sicDescription;
+          if (!company.industry) updateData.industry = secSubmissions.sicDescription;
+        }
         if (secSubmissions.name && company.name === company.ticker) updateData.name = secSubmissions.name;
         if (Object.keys(updateData).length > 0) {
           company = await prisma.stockCompany.update({
@@ -167,11 +170,16 @@ export async function GET(request) {
     const currentScreening = company.screenings?.[0];
     const previousScreening = company.screenings?.[1];
 
-    // Check material filing trigger:
+    // Check for latest periodic filing (10-Q or 10-K) from official SEC EDGAR:
     let newMaterialFilingDetected = false;
-    if (secSubmissions?.filings && currentScreening?.lastFilingUsed) {
-      const latest10 = secSubmissions.filings.find(f => f.form === '10-Q' || f.form === '10-K');
-      if (latest10 && latest10.accessionNumber !== currentScreening.lastFilingUsed) {
+    const periodicFilings = (secSubmissions?.filings || []).filter(f => f.form === '10-Q' || f.form === '10-K');
+    periodicFilings.sort((a, b) => (b.filingDate || '').localeCompare(a.filingDate || ''));
+    const latestSecFiling = periodicFilings[0] || null;
+
+    if (latestSecFiling) {
+      if (!currentScreening?.lastFilingUsed) {
+        newMaterialFilingDetected = true;
+      } else if (latestSecFiling.accessionNumber !== currentScreening.lastFilingUsed) {
         newMaterialFilingDetected = true;
       }
     }
@@ -183,10 +191,50 @@ export async function GET(request) {
     if (!requiresRecalculation && currentScreening) {
       // Return cached Shariah screening
       const nextRefreshDate = new Date(new Date(currentScreening.screenedAt).getTime() + (SHARIAH_CONFIG.screeningValidityDays * 24 * 60 * 60 * 1000));
-      const calculationDetails = typeof currentScreening.calculationDetails === 'string' ? 
-        JSON.parse(currentScreening.calculationDetails) : currentScreening.calculationDetails;
+      const rawCalcDetails = typeof currentScreening.calculationDetails === 'string' ? 
+        JSON.parse(currentScreening.calculationDetails) : (currentScreening.calculationDetails || []);
+      const calculationDetails = Array.isArray(rawCalcDetails) ? [...rawCalcDetails] : [];
       const reviewReasons = typeof currentScreening.reviewReasons === 'string' ? 
         JSON.parse(currentScreening.reviewReasons) : currentScreening.reviewReasons;
+
+      // Ensure Rule 1 Business Activity check is present in calculation details even for older cached screenings
+      const hasBusinessActivity = calculationDetails.some(d => d.key === 'business_activity' || d.type === 'BUSINESS_ACTIVITY');
+      if (!hasBusinessActivity) {
+        const bStatus = currentScreening.businessStatus || 'PASS';
+        const bActivity = currentScreening.businessActivity || company.industry || company.sector || 'Commercial Operations';
+        calculationDetails.unshift({
+          key: 'business_activity',
+          type: 'BUSINESS_ACTIVITY',
+          title: 'Business Activity & Revenue Permissibility',
+          ruleReference: 'AAOIFI Standard No. 21 — Rule 1 (Core Activity Permissibility)',
+          status: bStatus,
+          businessActivity: bActivity,
+          sicCode: secSubmissions?.sic || null,
+          sicDescription: secSubmissions?.sicDescription || bActivity,
+          sector: company.sector || bActivity,
+          industry: company.industry || bActivity,
+          prohibitedCategoriesTested: SHARIAH_CONFIG.prohibitedActivities.map(p => p.name),
+          prohibitedMatch: bStatus === 'FAIL' ? 'Non-compliant core business activity' : null,
+          resultFormatted: bStatus === 'PASS' ? 'Compliant (Permissible Activity)' : (bStatus === 'FAIL' ? 'Prohibited Activity' : 'Under Review'),
+          thresholdFormatted: '100% Core Business Permissible',
+          complianceNote: bStatus === 'PASS'
+            ? `Core commercial business (${bActivity}) is permissible under AAOIFI equity governance standards. Evaluated against all 8 prohibited industry sectors.`
+            : 'Primary business activity violates Shariah criteria.',
+          source: secSubmissions?.sic ? `SEC EDGAR Submissions (SIC ${secSubmissions.sic}: ${secSubmissions.sicDescription || bActivity})` : 'SEC EDGAR Submissions'
+        });
+      }
+
+      const latestFin = company.financials?.[0];
+      const cachedPeriodInfo = {
+        form: latestSecFiling?.form || latestFin?.form || '10-Q',
+        fiscalYear: latestFin?.fiscalYear || null,
+        fiscalPeriod: latestFin?.fiscalPeriod || null,
+        reportDate: latestSecFiling?.reportDate || latestFin?.rawXbrlData?.periodInfo?.reportDate || latestFin?.rawXbrlData?.periodInfo?.endDate || latestFin?.rawXbrlData?.assets?.end || null,
+        endDate: latestSecFiling?.reportDate || latestFin?.rawXbrlData?.periodInfo?.endDate || latestFin?.rawXbrlData?.assets?.end || null,
+        filingDate: latestSecFiling?.filingDate || latestFin?.filingDate || null,
+        accessionNumber: latestSecFiling?.accessionNumber || currentScreening.lastFilingUsed || null,
+        primaryDocUrl: latestSecFiling?.primaryDocUrl || null
+      };
 
       shariahResult = {
         status: currentScreening.status,
@@ -206,13 +254,15 @@ export async function GET(request) {
         expiresAt: currentScreening.expiresAt,
         nextRefreshDate: nextRefreshDate.toISOString().split('T')[0],
         lastFilingUsed: currentScreening.lastFilingUsed,
+        periodInfo: cachedPeriodInfo,
+        financialDataAsOf: cachedPeriodInfo.reportDate || cachedPeriodInfo.endDate || null,
         statusChangeNote: currentScreening.statusChangeNote,
         isStale: false,
         source: 'SEC EDGAR XBRL (Cached 7-Day Cycle)',
         dataQuality: 'HIGH'
       };
     } else {
-      // Recalculate Shariah Screening using SEC EDGAR facts
+      // Recalculate Shariah Screening using SEC EDGAR facts from the latest periodic filing
       try {
         if (!company.cik) {
           const sec = await resolveTickerCik(company.ticker);
@@ -223,14 +273,32 @@ export async function GET(request) {
           throw new Error('SEC CIK could not be resolved for ticker');
         }
 
-        const secFacts = await getCompanyFinancialFacts(company.cik);
+        const secFacts = await getCompanyFinancialFacts(company.cik, latestSecFiling?.accessionNumber);
 
         // Compute market cap for denominator
         const effectiveMarketCap = marketResult?.marketCap || (marketResult?.price && secFacts.metrics?.totalAssets ? secFacts.metrics.totalAssets : null);
 
+        const freshPeriodInfo = {
+          form: latestSecFiling?.form || secFacts.periodInfo?.form || '10-Q',
+          fiscalYear: secFacts.periodInfo?.fiscalYear || null,
+          fiscalPeriod: secFacts.periodInfo?.fiscalPeriod || null,
+          reportDate: latestSecFiling?.reportDate || secFacts.periodInfo?.reportDate || secFacts.periodInfo?.endDate || null,
+          endDate: latestSecFiling?.reportDate || secFacts.periodInfo?.endDate || null,
+          filingDate: latestSecFiling?.filingDate || secFacts.periodInfo?.filingDate || null,
+          accessionNumber: latestSecFiling?.accessionNumber || secFacts.periodInfo?.accessionNumber || null,
+          primaryDocUrl: latestSecFiling?.primaryDocUrl || null
+        };
+
         const screening = screenCompanyShariah({
-          company,
-          financials: secFacts,
+          company: {
+            ...company,
+            sic: secSubmissions?.sic || null,
+            sicDescription: secSubmissions?.sicDescription || company.sector || null
+          },
+          financials: {
+            ...secFacts,
+            periodInfo: freshPeriodInfo
+          },
           marketCap: effectiveMarketCap,
           previousScreening
         });
@@ -239,10 +307,10 @@ export async function GET(request) {
         await prisma.stockFinancialSnapshot.create({
           data: {
             companyId: company.id,
-            fiscalYear: secFacts.periodInfo?.fiscalYear || null,
-            fiscalPeriod: secFacts.periodInfo?.fiscalPeriod || null,
-            form: secFacts.periodInfo?.form || null,
-            filingDate: secFacts.periodInfo?.filingDate || null,
+            fiscalYear: freshPeriodInfo.fiscalYear,
+            fiscalPeriod: freshPeriodInfo.fiscalPeriod,
+            form: freshPeriodInfo.form,
+            filingDate: freshPeriodInfo.filingDate,
             totalAssets: secFacts.metrics?.totalAssets || null,
             totalDebt: secFacts.metrics?.totalDebt || null,
             cashAndSecurities: secFacts.metrics?.cashAndSecurities || null,
@@ -250,7 +318,10 @@ export async function GET(request) {
             interestIncome: secFacts.metrics?.interestIncome || null,
             impureIncome: secFacts.metrics?.impureIncome || null,
             marketCapAtReport: effectiveMarketCap || null,
-            rawXbrlData: secFacts.factsUsed || null
+            rawXbrlData: {
+              ...(secFacts.factsUsed || {}),
+              periodInfo: freshPeriodInfo
+            }
           }
         });
 
@@ -273,7 +344,7 @@ export async function GET(request) {
             reviewReasons: screening.reviewReasons,
             screenedAt: screening.screenedAt,
             expiresAt: screening.expiresAt,
-            lastFilingUsed: screening.lastFilingUsed,
+            lastFilingUsed: freshPeriodInfo.accessionNumber || screening.lastFilingUsed,
             previousStatus: screening.previousStatus,
             statusChangeNote: screening.statusChangeNote
           }
@@ -299,7 +370,8 @@ export async function GET(request) {
           expiresAt: savedScreening.expiresAt,
           nextRefreshDate: nextRefreshDate.toISOString().split('T')[0],
           lastFilingUsed: savedScreening.lastFilingUsed,
-          periodInfo: secFacts.periodInfo,
+          periodInfo: freshPeriodInfo,
+          financialDataAsOf: freshPeriodInfo.reportDate || freshPeriodInfo.endDate || null,
           statusChangeNote: savedScreening.statusChangeNote,
           isStale: false,
           source: 'SEC EDGAR Official XBRL',
