@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSecTickersDirectory, COUNTRY_FLAGS } from '@/lib/sec-provider';
+import { getSecTickersDirectory, COUNTRY_FLAGS, COUNTRY_CODES } from '@/lib/sec-provider';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +35,7 @@ export async function GET(request) {
         exchange: c.exchange || 'US Market',
         sector: c.sector || null,
         country,
+        countryCode: COUNTRY_CODES[country] || 'us',
         countryFlag: COUNTRY_FLAGS[country] || '🌐'
       });
     });

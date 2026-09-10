@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveTickerCik, getCompanySubmissions, getCompanyFinancialFacts, COUNTRY_FLAGS } from '@/lib/sec-provider';
+import { resolveTickerCik, getCompanySubmissions, getCompanyFinancialFacts, COUNTRY_FLAGS, COUNTRY_CODES } from '@/lib/sec-provider';
 import { screenCompanyShariah } from '@/lib/shariah-engine';
 import { getMarketData } from '@/lib/market-provider';
 import { getCompanyNews } from '@/lib/news-provider';
@@ -440,10 +440,11 @@ export async function GET(request) {
         exchange: marketResult?.exchange || company.exchange || 'NASDAQ',
         sector: company.sector || marketResult?.sector || 'Technology',
         industry: company.industry || marketResult?.industry || 'Semiconductors',
-        country: company.country || 'United States',
-        countryFlag: secSubmissions?.countryFlag || COUNTRY_FLAGS[company.country] || '🇺🇸',
-        hqAddress: company.hqAddress || 'California, USA',
-        incCountry: company.incCountry || 'Delaware, USA'
+        country: secSubmissions?.country || company.country || 'N/A',
+        countryCode: secSubmissions?.countryCode || COUNTRY_CODES[company.country] || 'us',
+        countryFlag: secSubmissions?.countryFlag || COUNTRY_FLAGS[company.country] || '🌐',
+        hqAddress: secSubmissions?.hqAddress || company.hqAddress || 'N/A',
+        incCountry: secSubmissions?.incCountry || company.incCountry || 'N/A'
       },
       shariah: shariahResult || { error: shariahError, status: 'REVIEW_REQUIRED', reviewReasons: [shariahError || 'Data unavailable'] },
       market: marketResult || { error: marketError, price: null, dataQuality: 'LOW' },

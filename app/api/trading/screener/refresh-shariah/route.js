@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveTickerCik, getCompanyFinancialFacts, getCompanySubmissions } from '@/lib/sec-provider';
+import { resolveTickerCik, getCompanyFinancialFacts, getCompanySubmissions, COUNTRY_FLAGS, COUNTRY_CODES } from '@/lib/sec-provider';
 import { screenCompanyShariah } from '@/lib/shariah-engine';
 import { getMarketData } from '@/lib/market-provider';
 import { SHARIAH_CONFIG } from '@/lib/shariah-config';
@@ -149,10 +149,11 @@ export async function POST(request) {
         name: company.name,
         sector: company.sector,
         industry: company.industry,
-        country: company.country || 'United States',
-        countryFlag: secSubmissions?.countryFlag || '🇺🇸',
-        hqAddress: company.hqAddress,
-        incCountry: company.incCountry
+        country: secSubmissions?.country || company.country || 'N/A',
+        countryCode: secSubmissions?.countryCode || COUNTRY_CODES[company.country] || 'us',
+        countryFlag: secSubmissions?.countryFlag || COUNTRY_FLAGS[company.country] || '🌐',
+        hqAddress: secSubmissions?.hqAddress || company.hqAddress || 'N/A',
+        incCountry: secSubmissions?.incCountry || company.incCountry || 'N/A'
       },
       shariah: {
         status: saved.status,

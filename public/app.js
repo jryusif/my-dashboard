@@ -24721,7 +24721,9 @@ function renderScreenerAutocomplete(results) {
         <span class="screener-auto-name">${item.name}</span>
       </div>
       <div class="screener-auto-right">
-        <span>${item.exchange || 'US Market'} &bull; ${item.country || 'USA'}</span>
+        <span style="display:inline-flex; align-items:center; gap:5px;">
+          ${item.exchange || 'US Market'} &bull; ${renderCountryFlagHtml(item.countryCode, item.countryFlag, item.country, { width: 16, height: 12 })}
+        </span>
       </div>
     </div>
   `).join('');
@@ -24739,6 +24741,37 @@ function clearScreenerSearch() {
   if (autoList) autoList.style.display = 'none';
 }
 window.clearScreenerSearch = clearScreenerSearch;
+
+function renderCountryFlagHtml(countryCode, countryFlag, countryName, options = {}) {
+  const name = countryName || 'United States';
+  const code = (countryCode || '').toLowerCase().trim();
+  const flagEmoji = countryFlag || '🌐';
+  const imgW = options.width || 18;
+  const imgH = options.height || 14;
+
+  if (code && code !== 'n/a' && code.length === 2) {
+    return `
+      <span class="country-flag-badge" style="display:inline-flex; align-items:center; gap:5px;" title="${name}">
+        <img src="https://flagcdn.com/${imgW}x${imgH}/${code}.png"
+             srcset="https://flagcdn.com/${imgW * 2}x${imgH * 2}/${code}.png 2x"
+             width="${imgW}" height="${imgH}"
+             alt="${name}"
+             style="vertical-align:middle; border-radius:2px; box-shadow:0 0 1px rgba(0,0,0,0.5); object-fit:cover; display:inline-block;"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';" />
+        <span style="display:none; vertical-align:middle;">${flagEmoji}</span>
+        <span>${name}</span>
+      </span>
+    `;
+  }
+
+  return `
+    <span class="country-flag-badge" style="display:inline-flex; align-items:center; gap:5px;" title="${name}">
+      <span style="vertical-align:middle;">${flagEmoji}</span>
+      <span>${name}</span>
+    </span>
+  `;
+}
+window.renderCountryFlagHtml = renderCountryFlagHtml;
 
 async function selectScreenerTicker(ticker) {
   if (!ticker) return;
@@ -24809,7 +24842,7 @@ function renderScreenerSelectedBar(company) {
   if (tBadge) tBadge.textContent = company.ticker || activeScreenerTicker;
   if (cName) cName.textContent = company.name || activeScreenerTicker;
   if (exTag) exTag.textContent = company.exchange || 'NASDAQ';
-  if (coTag) coTag.textContent = `${company.countryFlag || '🌐'} ${company.country || 'United States'}`;
+  if (coTag) coTag.innerHTML = renderCountryFlagHtml(company.countryCode, company.countryFlag, company.country, { width: 20, height: 15 });
   if (secTag) secTag.textContent = company.sector || 'Technology';
 
   bar.style.display = 'flex';
@@ -25263,9 +25296,9 @@ function renderTradingDataCard(market, company) {
     <!-- Structured Data Priority Ordering -->
     <div class="trading-metrics-table">
       <!-- 0. Country & Domicile (Top Priority) -->
-      <div class="metric-data-row" style="background: rgba(59,130,246,0.06); padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(59,130,246,0.15); margin-bottom: 6px;">
-        <span class="metric-data-label" style="font-weight: 700; color: var(--text-primary, #e2e8f0);">Country / Domicile:</span>
-        <span class="metric-data-val" style="font-weight: 700; font-size: 13px;">${company.countryFlag || '🌐'} ${company.country || 'United States'}</span>
+      <div class="metric-data-row" style="background: rgba(59,130,246,0.08); padding: 7px 10px; border-radius: 6px; border: 1px solid rgba(59,130,246,0.2); margin-bottom: 8px;">
+        <span class="metric-data-label" style="font-weight: 700; color: var(--text-primary, #f8fafc); display: inline-flex; align-items: center; gap: 4px;">Country / Domicile:</span>
+        <span class="metric-data-val" style="font-weight: 700; font-size: 13.5px;">${renderCountryFlagHtml(company.countryCode, company.countryFlag, company.country, { width: 22, height: 16 })}</span>
       </div>
 
       <!-- 1. Volume & RVOL -->
@@ -25312,15 +25345,15 @@ function renderTradingDataCard(market, company) {
       <!-- 4. Country & Corporate Jurisdiction -->
       <div class="metric-data-row">
         <span class="metric-data-label">Headquarters:</span>
-        <span class="metric-data-val">${company.hqAddress || (company.country || 'United States')}</span>
+        <span class="metric-data-val">${company.hqAddress || 'N/A'}</span>
       </div>
       <div class="metric-data-row">
         <span class="metric-data-label">Incorporation State:</span>
-        <span class="metric-data-val">${company.incCountry || 'Delaware, USA'}</span>
+        <span class="metric-data-val">${company.incCountry || 'N/A'}</span>
       </div>
       <div class="metric-data-row">
         <span class="metric-data-label">Exchange / Sector:</span>
-        <span class="metric-data-val">${company.exchange || 'NASDAQ'} &bull; ${company.sector || 'Tech'}</span>
+        <span class="metric-data-val">${company.exchange || 'NASDAQ'} &bull; ${company.sector || 'N/A'}</span>
       </div>
     </div>
 
