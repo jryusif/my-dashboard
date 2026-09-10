@@ -28031,6 +28031,106 @@ body[data-theme="kristin-light"] .category-quick-form select {
   color: #60a5fa;
 }
 
+/* Dual Business Activity & Revenue Screen (AAOIFI SS21) */
+.dual-business-screen-row {
+  background: var(--bg-surface, rgba(0, 0, 0, 0.025));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+[data-theme="kristin-dark"] .dual-business-screen-row,
+[data-theme="dark"] .dual-business-screen-row {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dual-sector-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  border-bottom: 1px dashed var(--border-color, rgba(0, 0, 0, 0.08));
+  padding-bottom: 6px;
+}
+
+[data-theme="kristin-dark"] .dual-sector-line,
+[data-theme="dark"] .dual-sector-line {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.dual-sector-label {
+  color: var(--text-muted, #475569);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+}
+
+[data-theme="kristin-dark"] .dual-sector-label,
+[data-theme="dark"] .dual-sector-label {
+  color: #94a3b8;
+}
+
+.dual-sector-val {
+  color: var(--text-primary, #0f172a);
+  font-weight: 700;
+}
+
+[data-theme="kristin-dark"] .dual-sector-val,
+[data-theme="dark"] .dual-sector-val {
+  color: #f1f5f9;
+}
+
+.dual-revenue-title {
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  font-size: 12.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+[data-theme="kristin-dark"] .dual-revenue-title,
+[data-theme="dark"] .dual-revenue-title {
+  color: #f8fafc;
+}
+
+.dual-revenue-note {
+  font-size: 11px;
+  color: var(--text-muted, #475569);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+[data-theme="kristin-dark"] .dual-revenue-note,
+[data-theme="dark"] .dual-revenue-note {
+  color: #94a3b8;
+}
+
+.metric-domicile-row {
+  background: rgba(59, 130, 246, 0.06);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  margin-bottom: 6px;
+}
+
+.metric-domicile-label {
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-theme="kristin-dark"] .metric-domicile-label,
+[data-theme="dark"] .metric-domicile-label {
+  color: #f1f5f9;
+}
+
 /* Card 2: Trading Data Grid */
 .trading-data-hero {
   display: flex;
@@ -28626,6 +28726,88 @@ body[data-theme="kristin-light"] .shariah-modal-disclaimer strong,
 
 .shariah-modal-disclaimer p {
   margin: 0;
+}
+
+/* Disaggregated Revenue Streams Table (Modal) */
+.calc-segments-table-wrap {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+body[data-theme="kristin-light"] .calc-segments-table-wrap,
+[data-theme="kristin-light"] .calc-segments-table-wrap {
+  border-color: #e2e8f0;
+}
+
+.calc-segments-header {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.03em;
+}
+
+body[data-theme="kristin-light"] .calc-segments-header,
+[data-theme="kristin-light"] .calc-segments-header {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.calc-segments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  text-align: left;
+}
+
+.calc-segments-table th {
+  padding: 8px 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body[data-theme="kristin-light"] .calc-segments-table th,
+[data-theme="kristin-light"] .calc-segments-table th {
+  color: #64748b;
+  border-bottom-color: #e2e8f0;
+}
+
+.calc-segments-table td {
+  padding: 8px 12px;
+  color: #f1f5f9;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+body[data-theme="kristin-light"] .calc-segments-table td,
+[data-theme="kristin-light"] .calc-segments-table td {
+  color: #0f172a;
+  border-bottom-color: #f1f5f9;
+}
+
+.calc-seg-name {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+body[data-theme="kristin-light"] .calc-seg-name,
+[data-theme="kristin-light"] .calc-seg-name {
+  color: #0f172a;
+}
+
+.calc-seg-subtext {
+  font-size: 10.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+body[data-theme="kristin-light"] .calc-seg-subtext,
+[data-theme="kristin-light"] .calc-seg-subtext {
+  color: #64748b;
 }
 
 /* Modal Actions Footer */

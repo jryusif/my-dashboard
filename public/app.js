@@ -25081,11 +25081,11 @@ function renderShariahCard(shariah, company) {
     <!-- Key Financial Ratios -->
     <div class="shariah-ratios-list">
       <!-- 1. Dual Business Activity & Revenue Permissibility Screen (AAOIFI SS21) -->
-      <div class="ratio-item-row dual-business-screen-row" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color, rgba(255,255,255,0.08)); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;">
+      <div class="ratio-item-row dual-business-screen-row">
         <!-- Dual Row 1: Sector Classification (Informational) -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11.5px; border-bottom: 1px dashed rgba(255,255,255,0.08); padding-bottom: 6px;">
-          <span style="color: var(--text-muted, #94a3b8); display: inline-flex; align-items: center; gap: 5px;">
-            <span>🏢</span> Sector Classification: <strong style="color: var(--text-primary, #e2e8f0); font-weight: 600;">${shariah.businessActivity || company.sector || 'General Commercial'}</strong>
+        <div class="dual-sector-line">
+          <span class="dual-sector-label">
+            <span>🏢</span> Sector Classification: <strong class="dual-sector-val">${shariah.businessActivity || company.sector || 'General Commercial'}</strong>
           </span>
           <span class="stock-sub-tag" style="font-size: 10px; padding: 2px 6px; color: ${sectorPass ? '#10b981' : '#ef4444'}; background: ${sectorPass ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; border: 1px solid ${sectorPass ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'};" title="Informational general industry classification">
             ${sectorPass ? 'Permissible Sector ℹ️' : 'Prohibited Sector 🔴'}
@@ -25093,8 +25093,8 @@ function renderShariahCard(shariah, company) {
         </div>
 
         <!-- Dual Row 2: Actual Revenue Permissibility Screen (Stock-based AAOIFI SS21) -->
-        <div class="ratio-top-line" style="display: flex; justify-content: space-between; align-items: center;">
-          <span class="ratio-name" style="font-weight: 700; color: var(--text-primary, #f8fafc); font-size: 12.5px; display: inline-flex; align-items: center; gap: 4px;">
+        <div class="ratio-top-line">
+          <span class="ratio-name dual-revenue-title">
             <span>🔬</span> Revenue Permissibility Screen
           </span>
           <span class="ratio-values">
@@ -25110,7 +25110,7 @@ function renderShariahCard(shariah, company) {
           <div class="ratio-bar-fill ${revenueReview ? 'is-review' : (revenuePass ? 'is-pass' : 'is-fail')}" style="width: ${revenueReview ? '0' : Math.min(100, (revenueImpureRatio || 0) * 20)}%;"></div>
         </div>
 
-        <div style="font-size: 10.5px; color: var(--text-muted, #94a3b8); margin-top: 5px; line-height: 1.35;">
+        <div class="dual-revenue-note">
           ${revenueReview
             ? '⚠️ Revenue breakdown is unitemized or ambiguous (developmental licensing/pre-revenue). Manual audit required under AAOIFI SS21.'
             : (revenuePass && revenueImpureRatio > 0
@@ -25294,8 +25294,8 @@ function renderTradingDataCard(market, company) {
     <!-- Structured Data Priority Ordering -->
     <div class="trading-metrics-table">
       <!-- 0. Country & Domicile (Top Priority) -->
-      <div class="metric-data-row" style="background: rgba(59,130,246,0.08); padding: 7px 10px; border-radius: 6px; border: 1px solid rgba(59,130,246,0.2); margin-bottom: 8px;">
-        <span class="metric-data-label" style="font-weight: 700; color: var(--text-primary, #f8fafc); display: inline-flex; align-items: center; gap: 4px;">Country / Domicile:</span>
+      <div class="metric-data-row metric-domicile-row">
+        <span class="metric-data-label metric-domicile-label">Country / Domicile:</span>
         <span class="metric-data-val" style="font-weight: 700; font-size: 13.5px;">${renderCountryFlagHtml(company.countryCode, company.countryFlag, company.country, { width: 22, height: 16 })}</span>
       </div>
 
@@ -25549,17 +25549,17 @@ function openScreenerCalcDetailsModal() {
         let segmentsTableHtml = '';
         if (segments.length > 0) {
           segmentsTableHtml = `
-            <div style="margin-top:12px; border:1px solid rgba(255,255,255,0.08); border-radius:6px; overflow:hidden;">
-              <div style="background:rgba(255,255,255,0.04); padding:6px 10px; font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted, #94a3b8);">
+            <div class="calc-segments-table-wrap">
+              <div class="calc-segments-header">
                 Disaggregated Revenue Streams (10-Q/10-K Notes)
               </div>
-              <table style="width:100%; border-collapse:collapse; font-size:11.5px; text-align:left;">
+              <table class="calc-segments-table">
                 <thead>
-                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06); color:var(--text-muted, #64748b);">
-                    <th style="padding:6px 10px;">Segment / Income Stream</th>
-                    <th style="padding:6px 10px; text-align:right;">Amount</th>
-                    <th style="padding:6px 10px; text-align:right;">% Revenue</th>
-                    <th style="padding:6px 10px; text-align:center;">AAOIFI Status</th>
+                  <tr>
+                    <th>Segment / Income Stream</th>
+                    <th style="text-align:right;">Amount</th>
+                    <th style="text-align:right;">% Revenue</th>
+                    <th style="text-align:center;">AAOIFI Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -25570,14 +25570,14 @@ function openScreenerCalcDetailsModal() {
                     const tagBg = isPerm ? 'rgba(16,185,129,0.1)' : (isNonPerm ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)');
                     const tagLabel = isPerm ? 'Permissible' : (isNonPerm ? 'Non-Permissible' : 'Ambiguous / Review');
                     return `
-                      <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                        <td style="padding:6px 10px;">
-                          <div style="font-weight:600;">${s.name}</div>
-                          <div style="font-size:10px; color:var(--text-muted, #64748b);">${s.note || s.concept}</div>
+                      <tr>
+                        <td>
+                          <div class="calc-seg-name">${s.name}</div>
+                          <div class="calc-seg-subtext">${s.note || s.concept}</div>
                         </td>
-                        <td style="padding:6px 10px; text-align:right; font-family:monospace;">${formatLargeCurrency(s.amount)}</td>
-                        <td style="padding:6px 10px; text-align:right; font-family:monospace;">${s.percentageOfRevenue !== null ? `${s.percentageOfRevenue}%` : 'N/A'}</td>
-                        <td style="padding:6px 10px; text-align:center;">
+                        <td style="text-align:right; font-family:monospace;">${formatLargeCurrency(s.amount)}</td>
+                        <td style="text-align:right; font-family:monospace;">${s.percentageOfRevenue !== null ? `${s.percentageOfRevenue}%` : 'N/A'}</td>
+                        <td style="text-align:center;">
                           <span style="font-size:9.5px; padding:2px 6px; border-radius:4px; font-weight:700; color:${tagCol}; background:${tagBg};">
                             ${tagLabel}
                           </span>
