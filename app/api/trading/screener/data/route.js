@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolveTickerCik, getCompanySubmissions, getCompanyFinancialFacts } from '@/lib/sec-provider';
+import { resolveTickerCik, getCompanySubmissions, getCompanyFinancialFacts, COUNTRY_FLAGS } from '@/lib/sec-provider';
 import { screenCompanyShariah } from '@/lib/shariah-engine';
 import { getMarketData } from '@/lib/market-provider';
 import { getCompanyNews } from '@/lib/news-provider';
@@ -54,22 +54,29 @@ export async function GET(request) {
       try {
         secSubmissions = await getCompanySubmissions(company.cik);
         // Enrich company metadata with official SEC SIC classification
-        const updateData = {};
-        if (secSubmissions.sicDescription) {
-          if (!company.sector) updateData.sector = secSubmissions.sicDescription;
-          if (!company.industry) updateData.industry = secSubmissions.sicDescription;
-        }
-        if (secSubmissions.name && company.name === company.ticker) updateData.name = secSubmissions.name;
-        if (Object.keys(updateData).length > 0) {
-          company = await prisma.stockCompany.update({
-            where: { id: company.id },
-            data: updateData,
-            include: {
-              screenings: { orderBy: { screenedAt: 'desc' }, take: 2 },
-              marketSnapshots: { orderBy: { updatedAt: 'desc' }, take: 1 },
-              financials: { orderBy: { createdAt: 'desc' }, take: 1 }
-            }
-          });
+        if (secSubmissions) {
+          const updateData = {};
+          if (secSubmissions.sicDescription) {
+            if (!company.sector) updateData.sector = secSubmissions.sicDescription;
+            if (!company.industry) updateData.industry = secSubmissions.sicDescription;
+          }
+          if (secSubmissions.country && company.country !== secSubmissions.country) {
+            updateData.country = secSubmissions.country;
+          }
+          if (secSubmissions.hqAddress) updateData.hqAddress = secSubmissions.hqAddress;
+          if (secSubmissions.incCountry) updateData.incCountry = secSubmissions.incCountry;
+          if (secSubmissions.name && company.name === company.ticker) updateData.name = secSubmissions.name;
+          if (Object.keys(updateData).length > 0) {
+            company = await prisma.stockCompany.update({
+              where: { id: company.id },
+              data: updateData,
+              include: {
+                screenings: { orderBy: { screenedAt: 'desc' }, take: 2 },
+                marketSnapshots: { orderBy: { updatedAt: 'desc' }, take: 1 },
+                financials: { orderBy: { createdAt: 'desc' }, take: 1 }
+              }
+            });
+          }
         }
       } catch (secSubErr) {
         console.warn(`Could not load SEC submissions for ${tickerParam}:`, secSubErr.message);
@@ -281,7 +288,7 @@ export async function GET(request) {
           throw new Error('SEC CIK could not be resolved for ticker');
         }
 
-        const secFacts = await getCompanyFinancialFacts(company.cik, latestSecFiling?.accessionNumber);
+        const secFacts = await getCompanyFinancialFacts(company.cik, latestSecFiling?.accessionNumber, company.ticker);
 
         // Compute market cap for denominator
         const effectiveMarketCap = marketResult?.marketCap || (marketResult?.price && secFacts.metrics?.totalAssets ? secFacts.metrics.totalAssets : null);
@@ -365,6 +372,10 @@ export async function GET(request) {
           methodology: savedScreening.methodology,
           businessActivity: savedScreening.businessActivity,
           businessStatus: savedScreening.businessStatus,
+          sectorStatus: screening.sectorStatus,
+          revenueStatus: screening.revenueStatus,
+          revenueImpureRatioPct: screening.revenueImpureRatioPct,
+          revenueBreakdown: screening.revenueBreakdown,
           debtRatioPct: savedScreening.debtRatioPct,
           debtThresholdPct: savedScreening.debtThresholdPct,
           cashRatioPct: savedScreening.cashRatioPct,
@@ -430,6 +441,7 @@ export async function GET(request) {
         sector: company.sector || marketResult?.sector || 'Technology',
         industry: company.industry || marketResult?.industry || 'Semiconductors',
         country: company.country || 'United States',
+        countryFlag: secSubmissions?.countryFlag || COUNTRY_FLAGS[company.country] || '🇺🇸',
         hqAddress: company.hqAddress || 'California, USA',
         incCountry: company.incCountry || 'Delaware, USA'
       },

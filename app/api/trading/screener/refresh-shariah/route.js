@@ -54,12 +54,19 @@ export async function POST(request) {
     if (company.cik) {
       try {
         secSubmissions = await getCompanySubmissions(company.cik);
-        if (secSubmissions?.sicDescription) {
+        if (secSubmissions) {
           const updateData = {};
-          if (!company.sector) updateData.sector = secSubmissions.sicDescription;
-          if (!company.industry) updateData.industry = secSubmissions.sicDescription;
+          if (secSubmissions.sicDescription) {
+            if (!company.sector) updateData.sector = secSubmissions.sicDescription;
+            if (!company.industry) updateData.industry = secSubmissions.sicDescription;
+          }
+          if (secSubmissions.country && company.country !== secSubmissions.country) {
+            updateData.country = secSubmissions.country;
+          }
+          if (secSubmissions.hqAddress) updateData.hqAddress = secSubmissions.hqAddress;
+          if (secSubmissions.incCountry) updateData.incCountry = secSubmissions.incCountry;
           if (Object.keys(updateData).length > 0) {
-            await prisma.stockCompany.update({
+            company = await prisma.stockCompany.update({
               where: { id: company.id },
               data: updateData
             });
@@ -137,11 +144,25 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
+      company: {
+        ticker: company.ticker,
+        name: company.name,
+        sector: company.sector,
+        industry: company.industry,
+        country: company.country || 'United States',
+        countryFlag: secSubmissions?.countryFlag || '🇺🇸',
+        hqAddress: company.hqAddress,
+        incCountry: company.incCountry
+      },
       shariah: {
         status: saved.status,
         methodology: saved.methodology,
         businessActivity: saved.businessActivity,
         businessStatus: saved.businessStatus,
+        sectorStatus: screening.sectorStatus,
+        revenueStatus: screening.revenueStatus,
+        revenueImpureRatioPct: screening.revenueImpureRatioPct,
+        revenueBreakdown: screening.revenueBreakdown,
         debtRatioPct: saved.debtRatioPct,
         debtThresholdPct: saved.debtThresholdPct,
         cashRatioPct: saved.cashRatioPct,

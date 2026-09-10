@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSecTickersDirectory } from '@/lib/sec-provider';
+import { getSecTickersDirectory, COUNTRY_FLAGS } from '@/lib/sec-provider';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,12 +28,14 @@ export async function GET(request) {
 
     const resultsMap = new Map();
     dbCompanies.forEach(c => {
+      const country = c.country || 'United States';
       resultsMap.set(c.ticker, {
         ticker: c.ticker,
         name: c.name,
         exchange: c.exchange || 'US Market',
         sector: c.sector || null,
-        country: c.country || 'United States'
+        country,
+        countryFlag: COUNTRY_FLAGS[country] || '🌐'
       });
     });
 

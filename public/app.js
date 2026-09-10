@@ -24809,7 +24809,7 @@ function renderScreenerSelectedBar(company) {
   if (tBadge) tBadge.textContent = company.ticker || activeScreenerTicker;
   if (cName) cName.textContent = company.name || activeScreenerTicker;
   if (exTag) exTag.textContent = company.exchange || 'NASDAQ';
-  if (coTag) coTag.textContent = `🇺🇸 ${company.country || 'United States'}`;
+  if (coTag) coTag.textContent = `${company.countryFlag || '🌐'} ${company.country || 'United States'}`;
   if (secTag) secTag.textContent = company.sector || 'Technology';
 
   bar.style.display = 'flex';
@@ -24946,6 +24946,14 @@ function renderShariahCard(shariah, company) {
   const debtPass = debtVal !== null && !debtIsError && debtVal <= 33.0;
   const cashPass = cashVal !== null && !cashIsError && cashVal <= 33.0;
   const impurePass = impureVal !== null && !impureIsError && impureVal <= 5.0;
+
+  // Dual Business Activity & Revenue Screen (AAOIFI Standard No. 21 Rule 1 & 2)
+  const sectorPass = shariah.sectorStatus ? shariah.sectorStatus === 'PASS' : (shariah.businessStatus === 'PASS');
+  const revenueStatus = shariah.revenueStatus || (shariah.businessStatus === 'FAIL' ? 'FAIL' : (shariah.businessStatus === 'REVIEW_REQUIRED' ? 'REVIEW_REQUIRED' : 'PASS'));
+  const revenuePass = revenueStatus === 'PASS';
+  const revenueReview = revenueStatus === 'REVIEW_REQUIRED';
+  const revenueFail = revenueStatus === 'FAIL';
+  const revenueImpureRatio = typeof shariah.revenueImpureRatioPct === 'number' ? shariah.revenueImpureRatioPct : null;
   const businessPass = shariah.businessStatus === 'PASS';
 
   card.innerHTML = `
@@ -25041,13 +25049,42 @@ function renderShariahCard(shariah, company) {
 
     <!-- Key Financial Ratios -->
     <div class="shariah-ratios-list">
-      <!-- 1. Business Activity -->
-      <div class="ratio-item-row">
-        <div class="ratio-top-line">
-          <span class="ratio-name">Business Activity (${shariah.businessActivity || company.sector || 'Technology'})</span>
-          <span class="ratio-values">
-            <span class="ratio-actual" style="color: ${businessPass ? '#10b981' : '#ef4444'}">${businessPass ? '✓ PASS' : '✕ FAIL'}</span>
+      <!-- 1. Dual Business Activity & Revenue Permissibility Screen (AAOIFI SS21) -->
+      <div class="ratio-item-row dual-business-screen-row" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color, rgba(255,255,255,0.08)); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;">
+        <!-- Dual Row 1: Sector Classification (Informational) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11.5px; border-bottom: 1px dashed rgba(255,255,255,0.08); padding-bottom: 6px;">
+          <span style="color: var(--text-muted, #94a3b8); display: inline-flex; align-items: center; gap: 5px;">
+            <span>🏢</span> Sector Classification: <strong style="color: var(--text-primary, #e2e8f0); font-weight: 600;">${shariah.businessActivity || company.sector || 'General Commercial'}</strong>
           </span>
+          <span class="stock-sub-tag" style="font-size: 10px; padding: 2px 6px; color: ${sectorPass ? '#10b981' : '#ef4444'}; background: ${sectorPass ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; border: 1px solid ${sectorPass ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'};" title="Informational general industry classification">
+            ${sectorPass ? 'Permissible Sector ℹ️' : 'Prohibited Sector 🔴'}
+          </span>
+        </div>
+
+        <!-- Dual Row 2: Actual Revenue Permissibility Screen (Stock-based AAOIFI SS21) -->
+        <div class="ratio-top-line" style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="ratio-name" style="font-weight: 700; color: var(--text-primary, #f8fafc); font-size: 12.5px; display: inline-flex; align-items: center; gap: 4px;">
+            <span>🔬</span> Revenue Permissibility Screen
+          </span>
+          <span class="ratio-values">
+            <span class="ratio-actual" style="color: ${revenuePass ? '#10b981' : (revenueReview ? '#f59e0b' : '#ef4444')}; font-weight: 700;">
+              ${revenuePass ? `✓ PASS ${revenueImpureRatio !== null && revenueImpureRatio > 0 ? `(${revenueImpureRatio}%)` : '(0%)'}` : (revenueReview ? '🟡 REVIEW' : `✕ FAIL (${revenueImpureRatio !== null ? `${revenueImpureRatio}%` : '>5%'})`)}
+            </span>
+            <span class="ratio-limit">(Limit: 5%)</span>
+            <span>${revenuePass ? '✓' : (revenueReview ? '🟡' : '✕')}</span>
+          </span>
+        </div>
+
+        <div class="ratio-bar-track" style="margin-top: 6px;">
+          <div class="ratio-bar-fill ${revenueReview ? 'is-review' : (revenuePass ? 'is-pass' : 'is-fail')}" style="width: ${revenueReview ? '0' : Math.min(100, (revenueImpureRatio || 0) * 20)}%;"></div>
+        </div>
+
+        <div style="font-size: 10.5px; color: var(--text-muted, #94a3b8); margin-top: 5px; line-height: 1.35;">
+          ${revenueReview
+            ? '⚠️ Revenue breakdown is unitemized or ambiguous (developmental licensing/pre-revenue). Manual audit required under AAOIFI SS21.'
+            : (revenuePass && revenueImpureRatio > 0
+              ? `Impure revenue is ${revenueImpureRatio}% (≤5% tolerance limit). Requires dividend purification.`
+              : (revenuePass ? '100% permissible commercial revenue under AAOIFI SS21.' : `Impure revenue (${revenueImpureRatio}%) exceeds AAOIFI 5% tolerance threshold.`))}
         </div>
       </div>
 
@@ -25140,8 +25177,15 @@ async function refreshScreenerShariah() {
     const data = await res.json();
     if (activeScreenerPayload) {
       activeScreenerPayload.shariah = data.shariah;
+      if (data.company) {
+        activeScreenerPayload.company = { ...activeScreenerPayload.company, ...data.company };
+        renderScreenerSelectedBar(activeScreenerPayload.company);
+        if (activeScreenerPayload.market) {
+          renderTradingDataCard(activeScreenerPayload.market, activeScreenerPayload.company);
+        }
+      }
     }
-    renderShariahCard(data.shariah, activeScreenerPayload?.company || {});
+    renderShariahCard(data.shariah, activeScreenerPayload?.company || data.company || {});
   } catch (err) {
     alert('Shariah refresh failed: ' + err.message);
   } finally {
@@ -25218,6 +25262,12 @@ function renderTradingDataCard(market, company) {
 
     <!-- Structured Data Priority Ordering -->
     <div class="trading-metrics-table">
+      <!-- 0. Country & Domicile (Top Priority) -->
+      <div class="metric-data-row" style="background: rgba(59,130,246,0.06); padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(59,130,246,0.15); margin-bottom: 6px;">
+        <span class="metric-data-label" style="font-weight: 700; color: var(--text-primary, #e2e8f0);">Country / Domicile:</span>
+        <span class="metric-data-val" style="font-weight: 700; font-size: 13px;">${company.countryFlag || '🌐'} ${company.country || 'United States'}</span>
+      </div>
+
       <!-- 1. Volume & RVOL -->
       <div class="metric-data-row">
         <span class="metric-data-label">Day Volume:</span>
@@ -25261,12 +25311,8 @@ function renderTradingDataCard(market, company) {
 
       <!-- 4. Country & Corporate Jurisdiction -->
       <div class="metric-data-row">
-        <span class="metric-data-label">Country:</span>
-        <span class="metric-data-val">🇺🇸 ${company.country || 'United States'}</span>
-      </div>
-      <div class="metric-data-row">
         <span class="metric-data-label">Headquarters:</span>
-        <span class="metric-data-val">${company.hqAddress || 'California, USA'}</span>
+        <span class="metric-data-val">${company.hqAddress || (company.country || 'United States')}</span>
       </div>
       <div class="metric-data-row">
         <span class="metric-data-label">Incorporation State:</span>
@@ -25461,8 +25507,59 @@ function openScreenerCalcDetailsModal() {
       const statusBg = isPass ? 'rgba(16, 185, 129, 0.12)' : (isFail ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)');
       const statusBorder = isPass ? 'rgba(16, 185, 129, 0.3)' : (isFail ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)');
 
-      // Dedicated Rule 1: Business Activity Card
+      // Dedicated Rule 1: Business Activity & Revenue Permissibility Card (Dual Screen)
       if (item.key === 'business_activity' || item.type === 'BUSINESS_ACTIVITY') {
+        const sectorPass = item.sectorStatus ? item.sectorStatus === 'PASS' : isPass;
+        const revStatus = item.revenueStatus || item.status;
+        const revPass = revStatus === 'PASS';
+        const revReview = revStatus === 'REVIEW_REQUIRED';
+        const segments = Array.isArray(item.revenueBreakdown) ? item.revenueBreakdown : [];
+
+        let segmentsTableHtml = '';
+        if (segments.length > 0) {
+          segmentsTableHtml = `
+            <div style="margin-top:12px; border:1px solid rgba(255,255,255,0.08); border-radius:6px; overflow:hidden;">
+              <div style="background:rgba(255,255,255,0.04); padding:6px 10px; font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted, #94a3b8);">
+                Disaggregated Revenue Streams (10-Q/10-K Notes)
+              </div>
+              <table style="width:100%; border-collapse:collapse; font-size:11.5px; text-align:left;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06); color:var(--text-muted, #64748b);">
+                    <th style="padding:6px 10px;">Segment / Income Stream</th>
+                    <th style="padding:6px 10px; text-align:right;">Amount</th>
+                    <th style="padding:6px 10px; text-align:right;">% Revenue</th>
+                    <th style="padding:6px 10px; text-align:center;">AAOIFI Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${segments.map(s => {
+                    const isPerm = s.isPermissible === true;
+                    const isNonPerm = s.isPermissible === false;
+                    const tagCol = isPerm ? '#10b981' : (isNonPerm ? '#ef4444' : '#f59e0b');
+                    const tagBg = isPerm ? 'rgba(16,185,129,0.1)' : (isNonPerm ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)');
+                    const tagLabel = isPerm ? 'Permissible' : (isNonPerm ? 'Non-Permissible' : 'Ambiguous / Review');
+                    return `
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                        <td style="padding:6px 10px;">
+                          <div style="font-weight:600;">${s.name}</div>
+                          <div style="font-size:10px; color:var(--text-muted, #64748b);">${s.note || s.concept}</div>
+                        </td>
+                        <td style="padding:6px 10px; text-align:right; font-family:monospace;">${formatLargeCurrency(s.amount)}</td>
+                        <td style="padding:6px 10px; text-align:right; font-family:monospace;">${s.percentageOfRevenue !== null ? `${s.percentageOfRevenue}%` : 'N/A'}</td>
+                        <td style="padding:6px 10px; text-align:center;">
+                          <span style="font-size:9.5px; padding:2px 6px; border-radius:4px; font-weight:700; color:${tagCol}; background:${tagBg};">
+                            ${tagLabel}
+                          </span>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+
         return `
           <div class="calc-ratio-card calc-business-card">
             <div class="calc-ratio-header">
@@ -25476,9 +25573,10 @@ function openScreenerCalcDetailsModal() {
             </div>
             <div class="calc-ratio-grid">
               <div class="calc-item">
-                <label>Primary Business Classification:</label>
-                <span style="color:${isPass ? '#10b981' : (isFail ? '#ef4444' : '#f59e0b')}; font-size:13.5px;">
+                <label>Primary Sector Classification (Informational):</label>
+                <span style="color:${sectorPass ? '#10b981' : '#ef4444'}; font-size:13px; font-weight:600;">
                   ${item.businessActivity || item.sicDescription || 'Commercial Enterprise'}
+                  <small style="margin-left:4px; font-size:10px; opacity:0.8;">(${sectorPass ? 'Permissible' : 'Prohibited'})</small>
                 </span>
               </div>
               <div class="calc-item">
@@ -25486,20 +25584,25 @@ function openScreenerCalcDetailsModal() {
                 <span>${item.sicCode && item.sicCode !== 'N/A' ? `SIC ${item.sicCode} (${item.sicDescription || item.businessActivity || ''})` : (item.sicDescription || item.businessActivity || 'SEC EDGAR Submissions')}</span>
               </div>
               <div class="calc-item">
-                <label>Governance Standard:</label>
-                <span>${item.ruleReference || 'AAOIFI Standard No. 21 (Rule 1)'}</span>
+                <label>Revenue Permissibility Test:</label>
+                <span style="color:${revPass ? '#10b981' : (revReview ? '#f59e0b' : '#ef4444')}; font-weight:700;">
+                  ${revPass ? `PASS (${item.revenueImpureRatioPct || 0}% impure)` : (revReview ? 'REVIEW REQUIRED' : `FAIL (${item.revenueImpureRatioPct || '>5%'}%)`)}
+                </span>
               </div>
               <div class="calc-item">
-                <label>Evaluation Scope:</label>
-                <span>8 Prohibited Sectors Audited (Banking, Alcohol, Gambling, etc.)</span>
+                <label>AAOIFI Rule Limit:</label>
+                <span>Max 5.0% Non-Permissible Revenue (SS21)</span>
               </div>
             </div>
-            <div class="calc-business-banner ${isPass ? 'is-pass' : (isFail ? 'is-fail' : 'is-review')}">
+
+            ${segmentsTableHtml}
+
+            <div class="calc-business-banner ${isPass ? 'is-pass' : (isFail ? 'is-fail' : 'is-review')}" style="margin-top:12px;">
               <strong>${isPass ? '✓ Activity Permissible' : (isFail ? '🔴 Activity Prohibited' : '🟡 Audit Review Required')}:</strong>
               <p>${item.complianceNote || (isPass ? 'Core business operations and primary revenue streams comply with AAOIFI Shariah criteria.' : 'Prohibited business activities detected.')}</p>
             </div>
             <div class="calc-source-footer">
-              Source Filing: <strong>${item.source || 'SEC EDGAR Official Submissions (SIC Taxonomy)'}</strong>
+              Source Disclosures: <strong>${item.source || 'SEC EDGAR 10-Q/10-K Notes & Financial Statements'}</strong>
             </div>
           </div>
         `;
