@@ -1268,11 +1268,15 @@
                     <span class="scanner-live-label">LIVE RADAR</span>
                     <span class="scanner-range-tag">$1.00 — $20.00</span>
                   </span>
+                  <span class="scanner-session-badge" id="scannerSessionBadge">
+                    <span class="session-dot"></span>
+                    <span id="scannerSessionBadgeText">جلسة السوق الحية 🟢</span>
+                  </span>
                   <span class="scanner-last-sync" id="scannerLastSyncText">لم يتم الفحص بعد</span>
                 </div>
-                <h3 class="scanner-headline">رادار واقتناص الفرص السعرية اللحظية</h3>
+                <h3 class="scanner-headline">رادار واقتناص الفرص السعرية اللحظية (Pre-Market / Regular / After-Hours)</h3>
                 <p class="scanner-subtext">
-                  مراقبة فورية لأخبار المحفزات الكبرى (<bdi>FDA, Earnings, Contracts, M&A</bdi>) عند اقترانها بارتفاع غير طبيعي في الفوليوم النسبي (<bdi class="hl-tag">RVOL &ge; 3.0x</bdi>) وزخم صاعد (<bdi class="hl-tag">&ge; +5%</bdi>) مع الفحص الشريعي الآلي المعتمد (<bdi>AAOIFI</bdi>).
+                  اكتشاف استباقي لأي سهم يشهد <b>أخباراً ومحفزات حديثة</b> <bdi class="hl-tag">أو</bdi> <b>ارتفاعاً غير طبيعي في الفوليوم والزخم السعري</b> لمراقبته قبل الجميع، مدعوماً بالتدقيق الشرعي اللحظي (<bdi>AAOIFI</bdi>).
                 </p>
               </div>
 
@@ -1351,6 +1355,12 @@
                 </button>
                 <button type="button" class="scanner-pill pill-fail" data-filter="fail" onclick="setScannerFilter('fail')">
                   <span>❌</span> غير متوافق
+                </button>
+                <button type="button" class="scanner-pill pill-news" data-filter="news" onclick="setScannerFilter('news')">
+                  <span>⚡</span> أخبار ومحفزات
+                </button>
+                <button type="button" class="scanner-pill pill-momentum" data-filter="momentum" onclick="setScannerFilter('momentum')">
+                  <span>🚀</span> فوليوم وزخم
                 </button>
                 <button type="button" class="scanner-pill pill-unclass" data-filter="unclassified" onclick="setScannerFilter('unclassified')">
                   <span>⚪</span> غير مصنّف

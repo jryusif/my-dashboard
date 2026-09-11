@@ -24,7 +24,8 @@ async function loop() {
   try {
     const result = await runScannerCycle();
     if (result.success) {
-      console.log(`[${timeStr} ET] ✅ Evaluated ${result.evaluatedNewsCount} news items, ${result.matchingNewsCount} matched catalysts.`);
+      const sessionName = result.marketSession?.badge || 'Live Market';
+      console.log(`[${timeStr} ET] ✅ [${sessionName}] Evaluated ${result.evaluatedCandidatesCount || 0} candidates.`);
       if (result.discoveredCount > 0) {
         console.log(`🔥 Discovered ${result.discoveredCount} NEW opportunities:`);
         for (const opp of result.opportunities) {

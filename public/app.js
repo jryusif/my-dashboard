@@ -5766,6 +5766,7 @@ async function openTradingPage(view = 'journal') {
   if (tradeSec) tradeSec.hidden = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (typeof initStockScreener === 'function') initStockScreener();
+  if (typeof initStockScanner === 'function') initStockScanner();
   switchTradingView(view);
   renderTradingSuite();
 }
@@ -25853,16 +25854,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // =============================================================================
 
 let scannerUiState = {
-  activeFilter: 'all', // 'all' | 'pass' | 'fail' | 'unclassified' | 'archived'
+  activeFilter: 'all', // 'all' | 'pass' | 'fail' | 'news' | 'momentum' | 'unclassified' | 'archived'
   searchTerm: '',
   pollIntervalSec: 60,
   pollTimer: null,
   searchTimer: null,
   isScanning: false,
+  hasTriggeredAutoScan: false,
   opportunities: []
 };
 
 function initStockScanner() {
+  renderScannerOpportunities(true);
   startScannerPolling(scannerUiState.pollIntervalSec);
 }
 
@@ -25924,6 +25927,7 @@ async function renderScannerOpportunities(isSilent = false) {
 
   let shariahParam = 'all';
   let statusParam = 'active';
+  let typeParam = 'all';
 
   if (scannerUiState.activeFilter === 'archived') {
     statusParam = 'archived';
@@ -25933,12 +25937,17 @@ async function renderScannerOpportunities(isSilent = false) {
     shariahParam = 'fail';
   } else if (scannerUiState.activeFilter === 'unclassified') {
     shariahParam = 'unclassified';
+  } else if (scannerUiState.activeFilter === 'news') {
+    typeParam = 'news';
+  } else if (scannerUiState.activeFilter === 'momentum') {
+    typeParam = 'momentum';
   }
 
   try {
     const query = new URLSearchParams({
       shariah: shariahParam,
       status: statusParam,
+      type: typeParam,
       search: scannerUiState.searchTerm,
       limit: '50'
     });
@@ -25960,6 +25969,12 @@ async function renderScannerOpportunities(isSilent = false) {
     if (elFail) elFail.textContent = stats.failCount ?? 0;
     if (elUnclass) elUnclass.textContent = stats.unclassifiedCount ?? 0;
 
+    // Update session badge
+    const sessionBadgeText = document.getElementById('scannerSessionBadgeText');
+    if (sessionBadgeText && stats.marketSession?.badge) {
+      sessionBadgeText.textContent = stats.marketSession.badge;
+    }
+
     // Update last sync time
     const syncText = document.getElementById('scannerLastSyncText');
     if (syncText) {
@@ -25969,6 +25984,12 @@ async function renderScannerOpportunities(isSilent = false) {
     }
 
     if (loadingBox) loadingBox.style.display = 'none';
+
+    // Auto-trigger background scan if zero opportunities found on initial load
+    if (stats.totalActive === 0 && !scannerUiState.hasTriggeredAutoScan && !scannerUiState.isScanning) {
+      scannerUiState.hasTriggeredAutoScan = true;
+      triggerManualScannerRun();
+    }
 
     if (scannerUiState.opportunities.length === 0) {
       tableBody.innerHTML = '';
