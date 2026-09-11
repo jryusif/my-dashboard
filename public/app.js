@@ -25972,7 +25972,7 @@ async function renderScannerOpportunities(isSilent = false) {
 
     if (scannerUiState.opportunities.length === 0) {
       tableBody.innerHTML = '';
-      if (emptyBox) emptyBox.style.display = 'block';
+      if (emptyBox) emptyBox.style.display = 'flex';
       return;
     }
 

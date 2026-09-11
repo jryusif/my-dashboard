@@ -1261,20 +1261,26 @@
           <div class="scanner-container">
             <!-- Header bar with scanner stats & controls -->
             <div class="scanner-control-bar">
-              <div class="scanner-meta-info">
+              <div class="scanner-meta-info" dir="rtl">
                 <div class="scanner-title-row">
-                  <span class="scanner-live-badge"><span class="pulse-ring"></span> Live Scanner ($1 - $20)</span>
+                  <span class="scanner-live-badge">
+                    <span class="pulse-ring"></span>
+                    <span class="scanner-live-label">LIVE RADAR</span>
+                    <span class="scanner-range-tag">$1.00 — $20.00</span>
+                  </span>
                   <span class="scanner-last-sync" id="scannerLastSyncText">لم يتم الفحص بعد</span>
                 </div>
+                <h3 class="scanner-headline">رادار واقتناص الفرص السعرية اللحظية</h3>
                 <p class="scanner-subtext">
-                  مراقبة فورية لأخبار المحفزات (Earnings, FDA, Contracts, M&A) مع الارتفاع غير الطبيعي في الفوليوم (RVOL &ge; 3x) والزخم (&ge; +5%) والتكامل مع فحص الشريعة الآلي.
+                  مراقبة فورية لأخبار المحفزات الكبرى (<bdi>FDA, Earnings, Contracts, M&A</bdi>) عند اقترانها بارتفاع غير طبيعي في الفوليوم النسبي (<bdi class="hl-tag">RVOL &ge; 3.0x</bdi>) وزخم صاعد (<bdi class="hl-tag">&ge; +5%</bdi>) مع الفحص الشريعي الآلي المعتمد (<bdi>AAOIFI</bdi>).
                 </p>
               </div>
 
               <div class="scanner-actions-cluster">
                 <!-- Live Polling Toggle -->
-                <div class="scanner-poll-toggle" title="تحديث تلقائي لحظي للجدول">
-                  <label for="scannerAutoPollSelect">تحديث لايف:</label>
+                <div class="scanner-poll-toggle">
+                  <span class="poll-icon">📡</span>
+                  <label for="scannerAutoPollSelect">التحديث التلقائي:</label>
                   <select id="scannerAutoPollSelect" class="scanner-select-sm" onchange="handleScannerPollChange(this.value)">
                     <option value="30">كل 30 ثانية</option>
                     <option value="60" selected>كل دقيقة</option>
@@ -1285,7 +1291,7 @@
                 <!-- Scan Now Trigger Button -->
                 <button type="button" class="btn-primary btn-scanner-run" id="btnRunScannerNow" onclick="triggerManualScannerRun()">
                   <span class="btn-spinner" id="scannerRunSpinner" style="display:none;">⏳</span>
-                  <span id="scannerRunIcon">⚡</span>
+                  <span class="run-icon" id="scannerRunIcon">⚡</span>
                   <span id="scannerRunText">تشغيل الفحص الآن</span>
                 </button>
               </div>
@@ -1293,41 +1299,70 @@
 
             <!-- Scanner KPI / Stats Row -->
             <div class="scanner-kpi-row">
-              <div class="scanner-kpi-card">
-                <div class="kpi-label">إجمالي الفرص النشطة</div>
+              <div class="scanner-kpi-card kpi-card-total">
+                <div class="kpi-card-top">
+                  <span class="kpi-card-icon">🎯</span>
+                  <span class="kpi-card-badge badge-active-pulse">Live Scanner</span>
+                </div>
                 <div class="kpi-val" id="scannerStatTotalActive">0</div>
-                <div class="kpi-note">أسهم متوافقة مع الفلاتر</div>
+                <div class="kpi-label">إجمالي الفرص النشطة</div>
+                <div class="kpi-note">أسهم متوافقة مع شروط الفلترة</div>
               </div>
-              <div class="scanner-kpi-card shariah-pass-card">
-                <div class="kpi-label">متوافق شرعيًا ✅</div>
+
+              <div class="scanner-kpi-card kpi-card-pass">
+                <div class="kpi-card-top">
+                  <span class="kpi-card-icon">✅</span>
+                  <span class="kpi-card-badge badge-shariah-halal">AAOIFI Compliant</span>
+                </div>
                 <div class="kpi-val text-emerald" id="scannerStatPassCount">0</div>
-                <div class="kpi-note">معايير الأيوفي (AAOIFI)</div>
+                <div class="kpi-label">متوافق شرعيًا</div>
+                <div class="kpi-note">اجتياز معايير الديون والسيولة</div>
               </div>
-              <div class="scanner-kpi-card shariah-fail-card">
-                <div class="kpi-label">غير متوافق ❌</div>
+
+              <div class="scanner-kpi-card kpi-card-fail">
+                <div class="kpi-card-top">
+                  <span class="kpi-card-icon">❌</span>
+                  <span class="kpi-card-badge badge-shariah-non">Non-Compliant</span>
+                </div>
                 <div class="kpi-val text-rose" id="scannerStatFailCount">0</div>
-                <div class="kpi-note">تجاوز نسب الديون أو الفائدة</div>
+                <div class="kpi-label">غير متوافق</div>
+                <div class="kpi-note">تجاوز نسب الديون أو الفوائد</div>
               </div>
-              <div class="scanner-kpi-card">
-                <div class="kpi-label">قيد المراجعة / غير مصنّف ⚪</div>
+
+              <div class="scanner-kpi-card kpi-card-unclass">
+                <div class="kpi-card-top">
+                  <span class="kpi-card-icon">🔍</span>
+                  <span class="kpi-card-badge badge-shariah-pending">Pending SEC</span>
+                </div>
                 <div class="kpi-val text-amber" id="scannerStatUnclassifiedCount">0</div>
-                <div class="kpi-note">فحص فوري بنقرة واحدة</div>
+                <div class="kpi-label">قيد المراجعة / غير مصنّف</div>
+                <div class="kpi-note">فحص فوري بنقرة واحدة من SEC</div>
               </div>
             </div>
 
             <!-- Filter Toolbar & Search -->
             <div class="scanner-filter-toolbar">
               <div class="scanner-filter-pills" id="scannerFilterPills">
-                <button type="button" class="scanner-pill active" data-filter="all" onclick="setScannerFilter('all')">الكل</button>
-                <button type="button" class="scanner-pill" data-filter="pass" onclick="setScannerFilter('pass')">متوافق فقط ✅</button>
-                <button type="button" class="scanner-pill" data-filter="fail" onclick="setScannerFilter('fail')">غير متوافق ❌</button>
-                <button type="button" class="scanner-pill" data-filter="unclassified" onclick="setScannerFilter('unclassified')">غير مصنّف ⚪</button>
-                <button type="button" class="scanner-pill" data-filter="archived" onclick="setScannerFilter('archived')">المؤرشفة 🗄️</button>
+                <button type="button" class="scanner-pill active" data-filter="all" onclick="setScannerFilter('all')">
+                  <span class="pill-dot"></span> الكل
+                </button>
+                <button type="button" class="scanner-pill pill-pass" data-filter="pass" onclick="setScannerFilter('pass')">
+                  <span>✅</span> متوافق فقط
+                </button>
+                <button type="button" class="scanner-pill pill-fail" data-filter="fail" onclick="setScannerFilter('fail')">
+                  <span>❌</span> غير متوافق
+                </button>
+                <button type="button" class="scanner-pill pill-unclass" data-filter="unclassified" onclick="setScannerFilter('unclassified')">
+                  <span>⚪</span> غير مصنّف
+                </button>
+                <button type="button" class="scanner-pill pill-archived" data-filter="archived" onclick="setScannerFilter('archived')">
+                  <span>🗄️</span> المؤرشفة
+                </button>
               </div>
 
               <div class="scanner-search-box">
                 <span class="search-ico">🔍</span>
-                <input type="text" id="scannerSearchInput" placeholder="بحث بالرمز أو المحفز..." oninput="debounceScannerSearch()" />
+                <input type="text" id="scannerSearchInput" placeholder="بحث بالرمز أو المحفز أو اسم الشركة..." oninput="debounceScannerSearch()" />
               </div>
             </div>
 
@@ -1336,14 +1371,14 @@
               <table class="trading-table scanner-table" id="scannerOpportunitiesTable">
                 <thead>
                   <tr>
-                    <th style="width: 130px;">Ticker / الشركة</th>
-                    <th style="width: 85px;">السعر</th>
-                    <th style="width: 95px;">% التغيّر</th>
-                    <th style="width: 105px;">Relative Vol</th>
-                    <th>الخبر والمحفز (Catalyst)</th>
-                    <th style="width: 135px;">التوافق الشرعي</th>
+                    <th style="width: 135px;">Ticker / الشركة</th>
+                    <th style="width: 90px;">السعر</th>
+                    <th style="width: 100px;">% التغيّر / الزخم</th>
+                    <th style="width: 115px;">Relative Volume</th>
+                    <th>الخبر والمحفز (Catalyst Intelligence)</th>
+                    <th style="width: 145px;">التوافق الشرعي</th>
                     <th style="width: 110px;">وقت الاكتشاف</th>
-                    <th style="width: 130px; text-align: center;">الإجراءات</th>
+                    <th style="width: 135px; text-align: center;">الإجراءات السريعة</th>
                   </tr>
                 </thead>
                 <tbody id="scannerTableBody">
@@ -1355,12 +1390,26 @@
             <!-- Table Loading and Empty States -->
             <div id="scannerTableLoading" class="scanner-loading-placeholder" style="display:none;">
               <div class="screener-spinner"></div>
-              <span>جاري فحص وتحديث قائمة الفرص...</span>
+              <span>جاري مسح الأسواق وتدقيق الأخبار المالية...</span>
             </div>
+
             <div id="scannerTableEmpty" class="scanner-empty-state" style="display:none;">
-              <div class="empty-icon">📡</div>
-              <h4>لا توجد فرص مطابقة حالياً</h4>
-              <p>يتم رصد الأخبار والفوليوم دورياً. اضغط "تشغيل الفحص الآن" لجلب أحدث الأخبار وتطبيق فلاتر الأسهم ($1 - $20).</p>
+              <div class="scanner-radar-viz">
+                <div class="radar-circle circle-1"></div>
+                <div class="radar-circle circle-2"></div>
+                <div class="radar-circle circle-3"></div>
+                <div class="radar-sweep"></div>
+                <div class="radar-center-blip"></div>
+              </div>
+              <h4 class="scanner-empty-title">رادار السوق الأمريكي في وضع المراقبة الحية</h4>
+              <p class="scanner-empty-desc">
+                يراقب المحرك الأخبار اللحظية، وعند رصد سهم بين <bdi class="accent-tag">$1.00 - $20.00</bdi> مصحوباً بارتفاع فوليوم غير طبيعي (<bdi class="accent-tag">RVOL &ge; 3.0x</bdi>) أو انفجار سعري (<bdi class="accent-tag">&ge; +5%</bdi>)، يظهر هنا فوراً مع تصنيفه الشرعي.
+              </p>
+              <div class="scanner-empty-actions">
+                <button type="button" class="btn-scanner-action-cta" onclick="triggerManualScannerRun()">
+                  <span>⚡</span> تشغيل دورة فحص فورية الآن
+                </button>
+              </div>
             </div>
           </div>
         </div>
