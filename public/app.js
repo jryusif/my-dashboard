@@ -25941,6 +25941,10 @@ async function renderScannerOpportunities(isSilent = false) {
     typeParam = 'news';
   } else if (scannerUiState.activeFilter === 'momentum') {
     typeParam = 'momentum';
+  } else if (scannerUiState.activeFilter === 'low_float') {
+    typeParam = 'low_float';
+  } else if (scannerUiState.activeFilter === 'gainer_momentum') {
+    typeParam = 'gainer_momentum';
   }
 
   try {
@@ -25957,17 +25961,21 @@ async function renderScannerOpportunities(isSilent = false) {
     const data = await res.json();
 
     scannerUiState.opportunities = data.opportunities || [];
-    const stats = data.stats || { totalActive: 0, passCount: 0, failCount: 0, unclassifiedCount: 0 };
+    const stats = data.stats || { totalActive: 0, passCount: 0, failCount: 0, unclassifiedCount: 0, lowFloatCount: 0, gainerCount: 0 };
 
     // Update KPI counters
     const elTotal = document.getElementById('scannerStatTotalActive');
     const elPass = document.getElementById('scannerStatPassCount');
     const elFail = document.getElementById('scannerStatFailCount');
     const elUnclass = document.getElementById('scannerStatUnclassifiedCount');
+    const elGainers = document.getElementById('scannerStatGainersCount');
+    const elFloat = document.getElementById('scannerStatLowFloatCount');
     if (elTotal) elTotal.textContent = stats.totalActive ?? 0;
     if (elPass) elPass.textContent = stats.passCount ?? 0;
     if (elFail) elFail.textContent = stats.failCount ?? 0;
     if (elUnclass) elUnclass.textContent = stats.unclassifiedCount ?? 0;
+    if (elGainers) elGainers.textContent = stats.gainerCount ?? 0;
+    if (elFloat) elFloat.textContent = stats.lowFloatCount ?? 0;
 
     // Update session badge
     const sessionBadgeText = document.getElementById('scannerSessionBadgeText');
@@ -26028,6 +26036,9 @@ async function renderScannerOpportunities(isSilent = false) {
         ? `<a href="${escapeHtml(opp.newsUrl)}" target="_blank" rel="noopener noreferrer" class="scanner-news-link" title="فتح مصدر الخبر الكامل">${escapeHtml(opp.headline)} ↗</a>`
         : `<span class="scanner-news-text">${escapeHtml(opp.headline)}</span>`;
 
+      // Low Float check (< 20M shares)
+      const isLowFloat = Boolean(opp.sharesFloat && opp.sharesFloat > 0 && opp.sharesFloat <= 20000000);
+
       return `
         <tr class="scanner-row ${opp.isArchived ? 'is-archived-row' : ''}">
           <!-- Ticker & Company -->
@@ -26057,6 +26068,18 @@ async function renderScannerOpportunities(isSilent = false) {
               ${opp.rvol ? Number(opp.rvol).toFixed(1) + 'x RVOL' : '1.0x'}
             </span>
             ${opp.volume ? `<div class="scanner-vol-sub">${formatCompactNumber(opp.volume)} سهم</div>` : ''}
+          </td>
+
+          <!-- Float / Shares -->
+          <td>
+            <div class="scanner-float-cell">
+              ${opp.sharesFloat ? `
+                <span class="scanner-float-badge ${isLowFloat ? 'is-low-float' : ''}">
+                  ${isLowFloat ? '⚡ ' : ''}${formatCompactNumber(opp.sharesFloat)}
+                </span>
+                ${isLowFloat ? '<span class="sub-float-badge">Low Float</span>' : ''}
+              ` : '<span class="text-muted-xs">—</span>'}
+            </div>
           </td>
 
           <!-- Catalyst & News -->

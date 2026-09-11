@@ -1313,6 +1313,26 @@
                 <div class="kpi-note">أسهم متوافقة مع شروط الفلترة</div>
               </div>
 
+              <div class="scanner-kpi-card kpi-card-gainers">
+                <div class="kpi-card-top">
+                  <span class="kpi-card-icon">🔥</span>
+                  <span class="kpi-card-badge badge-gainers-pulse">Top Gainers</span>
+                </div>
+                <div class="kpi-val text-amber" id="scannerStatGainersCount">0</div>
+                <div class="kpi-label">أعلى الرابحين والزخم</div>
+                <div class="kpi-note">أسهم في حالة صعود نشط الآن</div>
+              </div>
+
+              <div class="scanner-kpi-card kpi-card-float">
+                <div class="kpi-card-top">
+                  <span class="kpi-card-icon">🎈</span>
+                  <span class="kpi-card-badge badge-float-pulse">&lt; 20M Float</span>
+                </div>
+                <div class="kpi-val text-cyan" id="scannerStatLowFloatCount">0</div>
+                <div class="kpi-label">فلوت خفيف (&lt; 20M)</div>
+                <div class="kpi-note">أسهم خفيفة الحركة وسريعة الاشتعال</div>
+              </div>
+
               <div class="scanner-kpi-card kpi-card-pass">
                 <div class="kpi-card-top">
                   <span class="kpi-card-icon">✅</span>
@@ -1350,17 +1370,23 @@
                 <button type="button" class="scanner-pill active" data-filter="all" onclick="setScannerFilter('all')">
                   <span class="pill-dot"></span> الكل
                 </button>
-                <button type="button" class="scanner-pill pill-pass" data-filter="pass" onclick="setScannerFilter('pass')">
-                  <span>✅</span> متوافق فقط
+                <button type="button" class="scanner-pill pill-gainers" data-filter="gainer_momentum" onclick="setScannerFilter('gainer_momentum')">
+                  <span>🔥</span> أعلى الرابحين والزخم
                 </button>
-                <button type="button" class="scanner-pill pill-fail" data-filter="fail" onclick="setScannerFilter('fail')">
-                  <span>❌</span> غير متوافق
+                <button type="button" class="scanner-pill pill-float" data-filter="low_float" onclick="setScannerFilter('low_float')">
+                  <span>🎈</span> فلوت خفيف &lt; 20M
                 </button>
                 <button type="button" class="scanner-pill pill-news" data-filter="news" onclick="setScannerFilter('news')">
                   <span>⚡</span> أخبار ومحفزات
                 </button>
                 <button type="button" class="scanner-pill pill-momentum" data-filter="momentum" onclick="setScannerFilter('momentum')">
                   <span>🚀</span> فوليوم وزخم
+                </button>
+                <button type="button" class="scanner-pill pill-pass" data-filter="pass" onclick="setScannerFilter('pass')">
+                  <span>✅</span> متوافق فقط
+                </button>
+                <button type="button" class="scanner-pill pill-fail" data-filter="fail" onclick="setScannerFilter('fail')">
+                  <span>❌</span> غير متوافق
                 </button>
                 <button type="button" class="scanner-pill pill-unclass" data-filter="unclassified" onclick="setScannerFilter('unclassified')">
                   <span>⚪</span> غير مصنّف
@@ -1382,12 +1408,13 @@
                 <thead>
                   <tr>
                     <th style="width: 135px;">Ticker / الشركة</th>
-                    <th style="width: 90px;">السعر</th>
+                    <th style="width: 85px;">السعر</th>
                     <th style="width: 100px;">% التغيّر / الزخم</th>
-                    <th style="width: 115px;">Relative Volume</th>
+                    <th style="width: 110px;">Relative Volume</th>
+                    <th style="width: 115px;">الأسهم الحرة (Float)</th>
                     <th>الخبر والمحفز (Catalyst Intelligence)</th>
-                    <th style="width: 145px;">التوافق الشرعي</th>
-                    <th style="width: 110px;">وقت الاكتشاف</th>
+                    <th style="width: 140px;">التوافق الشرعي</th>
+                    <th style="width: 105px;">وقت الاكتشاف</th>
                     <th style="width: 135px; text-align: center;">الإجراءات السريعة</th>
                   </tr>
                 </thead>

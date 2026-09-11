@@ -9,6 +9,7 @@ export async function GET(request) {
     const shariah = searchParams.get('shariah') || 'all';
     const status = searchParams.get('status') || 'active';
     const type = searchParams.get('type') || 'all';
+    const floatMax = searchParams.get('floatMax') ? parseInt(searchParams.get('floatMax'), 10) : null;
     const search = searchParams.get('search') || '';
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -17,6 +18,7 @@ export async function GET(request) {
       shariah,
       status,
       type,
+      floatMax,
       search,
       limit,
       page

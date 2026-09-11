@@ -514,6 +514,8 @@ model StockScannerOpportunity {
   avgVolume       Float?    @map("avg_volume")
   rvol            Float?
   momentum5m      Float?    @map("momentum_5m")
+  sharesFloat     Float?    @map("shares_float")
+  marketCap       Float?    @map("market_cap")
   headline        String
   summary         String?   @db.Text
   newsUrl         String?   @map("news_url")
