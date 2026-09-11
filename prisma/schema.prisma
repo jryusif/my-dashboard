@@ -504,3 +504,44 @@ model StockNewsArticle {
   @@map("stock_news_articles")
 }
 
+model StockScannerOpportunity {
+  id              String    @id @default(cuid())
+  ticker          String
+  companyName     String?   @map("company_name")
+  price           Float
+  changePct       Float     @map("change_pct")
+  volume          Float?
+  avgVolume       Float?    @map("avg_volume")
+  rvol            Float?
+  momentum5m      Float?    @map("momentum_5m")
+  headline        String
+  summary         String?   @db.Text
+  newsUrl         String?   @map("news_url")
+  newsSource      String?   @map("news_source")
+  newsPublishedAt DateTime  @map("news_published_at")
+  catalyst        String?   // 'Earnings', 'FDA Approval', 'Contract', 'Upgrade/Downgrade', 'M&A', etc.
+  shariahStatus   String    @default("UNCLASSIFIED") @map("shariah_status") // 'PASS' | 'FAIL' | 'REVIEW_REQUIRED' | 'UNCLASSIFIED'
+  statusBadge     String    @default("غير مصنّف") @map("status_badge") // "متوافق ✅" | "غير متوافق ❌" | "قيد المراجعة ⚠️" | "غير مصنّف"
+  isArchived      Boolean   @default(false) @map("is_archived")
+  matchedRule     String?   @map("matched_rule")
+  rawMetrics      Json?     @map("raw_metrics")
+  discoveredAt    DateTime  @default(now()) @map("discovered_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([ticker])
+  @@index([isArchived, discoveredAt])
+  @@map("stock_scanner_opportunities")
+}
+
+model StockProcessedNews {
+  id          String   @id @default(cuid())
+  newsId      String   @unique @map("news_id") // Finnhub ID or SHA/MD5 hash
+  ticker      String?
+  headline    String
+  publishedAt DateTime @map("published_at")
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@index([ticker])
+  @@map("stock_processed_news")
+}
+

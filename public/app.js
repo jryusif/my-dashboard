@@ -5788,7 +5788,8 @@ function switchTradingView(viewName) {
     risk: document.getElementById('tradeRiskViewWrap'),
     weekly: document.getElementById('tradeWeeklyViewWrap'),
     lessons: document.getElementById('tradeLessonsViewWrap'),
-    watchlist: document.getElementById('tradeWatchlistViewWrap')
+    watchlist: document.getElementById('tradeWatchlistViewWrap'),
+    scanner: document.getElementById('tradeScannerViewWrap')
   };
 
   Object.entries(panes).forEach(([k, el]) => {
@@ -5800,6 +5801,7 @@ function switchTradingView(viewName) {
   if (viewName === 'weekly') renderWeeklyReview();
   if (viewName === 'lessons') renderLessonsKnowledgeBase();
   if (viewName === 'watchlist') renderTradingWatchlist();
+  if (viewName === 'scanner') renderScannerOpportunities();
 }
 window.switchTradingView = switchTradingView;
 
@@ -5813,6 +5815,7 @@ function renderTradingSuite() {
   else if (activeTradingView === 'weekly') renderWeeklyReview();
   else if (activeTradingView === 'lessons') renderLessonsKnowledgeBase();
   else if (activeTradingView === 'watchlist') renderTradingWatchlist();
+  else if (activeTradingView === 'scanner') renderScannerOpportunities();
 }
 
 function checkTradingRiskAlertBanner() {
@@ -25842,4 +25845,409 @@ window.addEventListener('keydown', (e) => {
 // Document Ready bootstrap
 document.addEventListener('DOMContentLoaded', () => {
   initStockScreener();
+  initStockScanner();
 });
+
+// =============================================================================
+// STOCK SCANNER OPPORTUNITIES MODULE (الفرص الجديدة)
+// =============================================================================
+
+let scannerUiState = {
+  activeFilter: 'all', // 'all' | 'pass' | 'fail' | 'unclassified' | 'archived'
+  searchTerm: '',
+  pollIntervalSec: 60,
+  pollTimer: null,
+  searchTimer: null,
+  isScanning: false,
+  opportunities: []
+};
+
+function initStockScanner() {
+  startScannerPolling(scannerUiState.pollIntervalSec);
+}
+
+function startScannerPolling(seconds) {
+  if (scannerUiState.pollTimer) {
+    clearInterval(scannerUiState.pollTimer);
+    scannerUiState.pollTimer = null;
+  }
+  scannerUiState.pollIntervalSec = Number(seconds);
+  if (scannerUiState.pollIntervalSec > 0) {
+    scannerUiState.pollTimer = setInterval(() => {
+      // Only poll if trading section is visible and scanner tab is active
+      const tradingSection = document.getElementById('tradingSection');
+      if (tradingSection && !tradingSection.hidden && activeTradingView === 'scanner') {
+        renderScannerOpportunities(true); // silent refresh
+      }
+    }, scannerUiState.pollIntervalSec * 1000);
+  }
+}
+window.startScannerPolling = startScannerPolling;
+
+function handleScannerPollChange(val) {
+  startScannerPolling(Number(val));
+  showToast(`تم ضبط التحديث التلقائي: ${val > 0 ? 'كل ' + val + ' ثانية' : 'يدوي فقط'}`);
+}
+window.handleScannerPollChange = handleScannerPollChange;
+
+function setScannerFilter(filterName) {
+  scannerUiState.activeFilter = filterName;
+
+  // Update pills UI
+  const pills = document.querySelectorAll('#scannerFilterPills .scanner-pill');
+  pills.forEach(p => p.classList.toggle('active', p.dataset.filter === filterName));
+
+  renderScannerOpportunities();
+}
+window.setScannerFilter = setScannerFilter;
+
+function debounceScannerSearch() {
+  clearTimeout(scannerUiState.searchTimer);
+  scannerUiState.searchTimer = setTimeout(() => {
+    const input = document.getElementById('scannerSearchInput');
+    scannerUiState.searchTerm = input ? input.value.trim() : '';
+    renderScannerOpportunities();
+  }, 250);
+}
+window.debounceScannerSearch = debounceScannerSearch;
+
+async function renderScannerOpportunities(isSilent = false) {
+  const tableBody = document.getElementById('scannerTableBody');
+  const emptyBox = document.getElementById('scannerTableEmpty');
+  const loadingBox = document.getElementById('scannerTableLoading');
+  if (!tableBody) return;
+
+  if (!isSilent) {
+    if (loadingBox) loadingBox.style.display = 'flex';
+    if (emptyBox) emptyBox.style.display = 'none';
+  }
+
+  let shariahParam = 'all';
+  let statusParam = 'active';
+
+  if (scannerUiState.activeFilter === 'archived') {
+    statusParam = 'archived';
+  } else if (scannerUiState.activeFilter === 'pass') {
+    shariahParam = 'pass';
+  } else if (scannerUiState.activeFilter === 'fail') {
+    shariahParam = 'fail';
+  } else if (scannerUiState.activeFilter === 'unclassified') {
+    shariahParam = 'unclassified';
+  }
+
+  try {
+    const query = new URLSearchParams({
+      shariah: shariahParam,
+      status: statusParam,
+      search: scannerUiState.searchTerm,
+      limit: '50'
+    });
+
+    const res = await fetch(`/api/trading/scanner/opportunities?${query.toString()}`);
+    if (!res.ok) throw new Error('Network error loading opportunities');
+    const data = await res.json();
+
+    scannerUiState.opportunities = data.opportunities || [];
+    const stats = data.stats || { totalActive: 0, passCount: 0, failCount: 0, unclassifiedCount: 0 };
+
+    // Update KPI counters
+    const elTotal = document.getElementById('scannerStatTotalActive');
+    const elPass = document.getElementById('scannerStatPassCount');
+    const elFail = document.getElementById('scannerStatFailCount');
+    const elUnclass = document.getElementById('scannerStatUnclassifiedCount');
+    if (elTotal) elTotal.textContent = stats.totalActive ?? 0;
+    if (elPass) elPass.textContent = stats.passCount ?? 0;
+    if (elFail) elFail.textContent = stats.failCount ?? 0;
+    if (elUnclass) elUnclass.textContent = stats.unclassifiedCount ?? 0;
+
+    // Update last sync time
+    const syncText = document.getElementById('scannerLastSyncText');
+    if (syncText) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      syncText.textContent = `آخر تحديث: ${timeStr}`;
+    }
+
+    if (loadingBox) loadingBox.style.display = 'none';
+
+    if (scannerUiState.opportunities.length === 0) {
+      tableBody.innerHTML = '';
+      if (emptyBox) emptyBox.style.display = 'block';
+      return;
+    }
+
+    if (emptyBox) emptyBox.style.display = 'none';
+
+    // Render Table Rows
+    tableBody.innerHTML = scannerUiState.opportunities.map(opp => {
+      const isPositive = opp.changePct >= 0;
+      const changeClass = isPositive ? 'text-emerald' : 'text-rose';
+      const changeSign = isPositive ? '+' : '';
+      const momentumIcon = (opp.momentum5m && opp.momentum5m >= 5) ? ' 🚀' : '';
+
+      // Shariah badge styling
+      let shariahBadgeClass = 'badge-unclassified';
+      if (opp.shariahStatus === 'PASS') shariahBadgeClass = 'badge-pass';
+      else if (opp.shariahStatus === 'FAIL') shariahBadgeClass = 'badge-fail';
+      else if (opp.shariahStatus === 'REVIEW_REQUIRED') shariahBadgeClass = 'badge-review';
+
+      // Relative volume styling
+      const isHighRvol = (opp.rvol && opp.rvol >= 3.0);
+      const rvolClass = isHighRvol ? 'rvol-high' : 'rvol-normal';
+
+      // Discovery Time
+      const discDate = new Date(opp.discoveredAt);
+      const relativeTime = getScannerRelativeTime(discDate);
+
+      // Catalyst badge
+      const catalystBadge = opp.catalyst ? `<span class="catalyst-pill">${escapeHtml(opp.catalyst)}</span>` : '';
+
+      // Headline link
+      const headlineHtml = opp.newsUrl 
+        ? `<a href="${escapeHtml(opp.newsUrl)}" target="_blank" rel="noopener noreferrer" class="scanner-news-link" title="فتح مصدر الخبر الكامل">${escapeHtml(opp.headline)} ↗</a>`
+        : `<span class="scanner-news-text">${escapeHtml(opp.headline)}</span>`;
+
+      return `
+        <tr class="scanner-row ${opp.isArchived ? 'is-archived-row' : ''}">
+          <!-- Ticker & Company -->
+          <td>
+            <div class="scanner-ticker-cell">
+              <span class="scanner-ticker-sym" onclick="inspectOpportunityInScreener('${escapeHtml(opp.ticker)}')">${escapeHtml(opp.ticker)}</span>
+              <span class="scanner-company-sub" title="${escapeHtml(opp.companyName || '')}">${escapeHtml(opp.companyName || opp.ticker)}</span>
+            </div>
+          </td>
+
+          <!-- Price -->
+          <td>
+            <span class="scanner-price-tag">$${Number(opp.price).toFixed(2)}</span>
+          </td>
+
+          <!-- Change Pct -->
+          <td>
+            <span class="scanner-change-tag ${changeClass}">
+              ${changeSign}${Number(opp.changePct).toFixed(2)}%${momentumIcon}
+            </span>
+            ${opp.momentum5m ? `<div class="scanner-momentum-sub">5m: ${opp.momentum5m > 0 ? '+' : ''}${opp.momentum5m}%</div>` : ''}
+          </td>
+
+          <!-- Relative Volume -->
+          <td>
+            <span class="scanner-rvol-tag ${rvolClass}">
+              ${opp.rvol ? Number(opp.rvol).toFixed(1) + 'x RVOL' : '1.0x'}
+            </span>
+            ${opp.volume ? `<div class="scanner-vol-sub">${formatCompactNumber(opp.volume)} سهم</div>` : ''}
+          </td>
+
+          <!-- Catalyst & News -->
+          <td>
+            <div class="scanner-catalyst-cell">
+              <div class="scanner-catalyst-head">
+                ${catalystBadge}
+                <span class="scanner-news-source">${escapeHtml(opp.newsSource || 'Financial Feed')}</span>
+              </div>
+              <div class="scanner-news-title">
+                ${headlineHtml}
+              </div>
+              ${opp.matchedRule ? `<div class="scanner-matched-rule" title="الشرط المطابق">${escapeHtml(opp.matchedRule)}</div>` : ''}
+            </div>
+          </td>
+
+          <!-- Shariah Status -->
+          <td>
+            <div class="scanner-shariah-cell">
+              <span class="shariah-status-badge ${shariahBadgeClass}">
+                ${escapeHtml(opp.statusBadge || 'غير مصنّف')}
+              </span>
+              ${opp.shariahStatus === 'UNCLASSIFIED' ? `
+                <button type="button" class="btn-check-shariah-sm" title="فحص بيانات الشركة من الـ SEC الآن" onclick="inspectOpportunityInScreener('${escapeHtml(opp.ticker)}')">
+                  فحص الآن 🔍
+                </button>
+              ` : ''}
+            </div>
+          </td>
+
+          <!-- Discovered At -->
+          <td>
+            <span class="scanner-time-tag" title="${discDate.toLocaleString()}">${relativeTime}</span>
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="scanner-action-buttons">
+              <button type="button" class="btn-action-icon" title="فحص تفصيلي في Screener" onclick="inspectOpportunityInScreener('${escapeHtml(opp.ticker)}')">
+                🔍
+              </button>
+              <button type="button" class="btn-action-icon" title="إضافة إلى مهام التداول" onclick="addOpportunityToWatchlistTask('${escapeHtml(opp.ticker)}', '${escapeHtml(opp.headline)}')">
+                ➕
+              </button>
+              <button type="button" class="btn-action-icon ${opp.isArchived ? 'active-archive' : ''}" title="${opp.isArchived ? 'استرجاع من الأرشيف' : 'أرشفة السهم'}" onclick="toggleArchiveScannerItem('${opp.id}', ${!opp.isArchived})">
+                🗄️
+              </button>
+              <button type="button" class="btn-action-icon text-rose" title="حذف من القائمة" onclick="deleteScannerItem('${opp.id}')">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('[Scanner UI] Render error:', err);
+    if (loadingBox) loadingBox.style.display = 'none';
+    if (emptyBox) {
+      emptyBox.style.display = 'block';
+      emptyBox.innerHTML = `
+        <div class="empty-icon">⚠️</div>
+        <h4>تعذر تحميل الفرص حالياً</h4>
+        <p>${escapeHtml(err.message)}</p>
+      `;
+    }
+  }
+}
+window.renderScannerOpportunities = renderScannerOpportunities;
+
+async function triggerManualScannerRun() {
+  if (scannerUiState.isScanning) return;
+  scannerUiState.isScanning = true;
+
+  const btn = document.getElementById('btnRunScannerNow');
+  const spinner = document.getElementById('scannerRunSpinner');
+  const icon = document.getElementById('scannerRunIcon');
+  const text = document.getElementById('scannerRunText');
+
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.style.display = 'inline-block';
+  if (icon) icon.style.display = 'none';
+  if (text) text.textContent = 'جاري الفحص...';
+
+  try {
+    const res = await fetch('/api/trading/scanner/scan', { method: 'POST' });
+    const result = await res.json();
+
+    if (result.success) {
+      const count = result.discoveredCount || 0;
+      if (count > 0) {
+        showToast(`🎉 تم اكتشاف ${count} فرصة جديدة مطابقة!`);
+      } else {
+        showToast(`✅ تم فحص ${result.evaluatedNewsCount || 0} خبر؛ لا توجد فرص جديدة حالياً.`);
+      }
+      await renderScannerOpportunities(true);
+    } else {
+      showToast(`تنبيه الفحص: ${result.message || result.error || 'حدث خطأ'}`);
+    }
+  } catch (err) {
+    showToast(`فشل تشغيل الفحص: ${err.message}`);
+  } finally {
+    scannerUiState.isScanning = false;
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.style.display = 'none';
+    if (icon) icon.style.display = 'inline-block';
+    if (text) text.textContent = 'تشغيل الفحص الآن';
+  }
+}
+window.triggerManualScannerRun = triggerManualScannerRun;
+
+async function toggleArchiveScannerItem(id, isArchived) {
+  try {
+    const res = await fetch('/api/trading/scanner/archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, isArchived })
+    });
+    if (res.ok) {
+      showToast(isArchived ? 'تمت أرشفة الفرصة 🗄️' : 'تمت استعادة الفرصة إلى القائمة النشطة');
+      renderScannerOpportunities(true);
+    } else {
+      showToast('تعذر تحديث حالة الأرشفة.');
+    }
+  } catch (err) {
+    showToast('خطأ في الاتصال.');
+  }
+}
+window.toggleArchiveScannerItem = toggleArchiveScannerItem;
+
+async function deleteScannerItem(id) {
+  if (!confirm('هل أنت متأكد من حذف هذه الفرصة من القائمة؟')) return;
+
+  try {
+    const res = await fetch('/api/trading/scanner/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    if (res.ok) {
+      showToast('تم حذف الفرصة.');
+      renderScannerOpportunities(true);
+    } else {
+      showToast('تعذر حذف الفرصة.');
+    }
+  } catch (err) {
+    showToast('خطأ في الاتصال.');
+  }
+}
+window.deleteScannerItem = deleteScannerItem;
+
+function inspectOpportunityInScreener(ticker) {
+  if (!ticker) return;
+  // Scroll to screener search input and select ticker
+  const screenerInput = document.getElementById('screenerSearchInput');
+  if (screenerInput) {
+    screenerInput.value = ticker;
+    screenerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  if (typeof window.selectScreenerTicker === 'function') {
+    window.selectScreenerTicker(ticker);
+  }
+  showToast(`جاري الفحص المالي والشريعي لـ ${ticker}... 🔍`);
+}
+window.inspectOpportunityInScreener = inspectOpportunityInScreener;
+
+async function addOpportunityToWatchlistTask(ticker, headline) {
+  try {
+    const today = toISODate(new Date());
+    const title = `Watch ${ticker}: ${headline.slice(0, 80)}`;
+
+    const res = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task: title,
+        category: 'Us stocks trading',
+        dueDate: today,
+        priority: 'High'
+      })
+    });
+
+    if (res.ok) {
+      showToast(`تمت إضافة ${ticker} إلى مهام التداول بنجاح! 📈`);
+      if (typeof loadCardBadges === 'function') loadCardBadges();
+    } else {
+      showToast('تعذر إضافة المهمة.');
+    }
+  } catch (err) {
+    showToast('خطأ في إضافة المهمة.');
+  }
+}
+window.addOpportunityToWatchlistTask = addOpportunityToWatchlistTask;
+
+function getScannerRelativeTime(date) {
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (60 * 1000));
+  const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+
+  if (diffMinutes < 1) return 'الآن';
+  if (diffMinutes < 60) return `منذ ${diffMinutes} د`;
+  if (diffHours < 24) return `منذ ${diffHours} س`;
+  if (diffDays === 1) return 'أمس';
+  return `منذ ${diffDays} يوم`;
+}
+
+function formatCompactNumber(num) {
+  if (!num || isNaN(num)) return '0';
+  if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(1) + 'B';
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
+  if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
+  return num.toLocaleString();
+}

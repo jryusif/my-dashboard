@@ -1082,6 +1082,9 @@
           <button type="button" class="cat-view-tab" data-view="watchlist" id="tabTradeWatchlist" onclick="switchTradingView('watchlist')">
             <span>📋</span> Setups &amp; Tasks
           </button>
+          <button type="button" class="cat-view-tab" data-view="scanner" id="tabTradeScanner" onclick="switchTradingView('scanner')">
+            <span class="scanner-live-dot">⚡</span> الفرص الجديدة (Scanner)
+          </button>
         </div>
 
         <!-- View 1: Trade Journal & History -->
@@ -1250,6 +1253,115 @@
               </form>
             </div>
             <div id="tradingWatchlistBoard" class="board" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <!-- View 6: US Stock Scanner Opportunities (الفرص الجديدة) -->
+        <div class="trading-view-pane" id="tradeScannerViewWrap" hidden>
+          <div class="scanner-container">
+            <!-- Header bar with scanner stats & controls -->
+            <div class="scanner-control-bar">
+              <div class="scanner-meta-info">
+                <div class="scanner-title-row">
+                  <span class="scanner-live-badge"><span class="pulse-ring"></span> Live Scanner ($1 - $20)</span>
+                  <span class="scanner-last-sync" id="scannerLastSyncText">لم يتم الفحص بعد</span>
+                </div>
+                <p class="scanner-subtext">
+                  مراقبة فورية لأخبار المحفزات (Earnings, FDA, Contracts, M&A) مع الارتفاع غير الطبيعي في الفوليوم (RVOL &ge; 3x) والزخم (&ge; +5%) والتكامل مع فحص الشريعة الآلي.
+                </p>
+              </div>
+
+              <div class="scanner-actions-cluster">
+                <!-- Live Polling Toggle -->
+                <div class="scanner-poll-toggle" title="تحديث تلقائي لحظي للجدول">
+                  <label for="scannerAutoPollSelect">تحديث لايف:</label>
+                  <select id="scannerAutoPollSelect" class="scanner-select-sm" onchange="handleScannerPollChange(this.value)">
+                    <option value="30">كل 30 ثانية</option>
+                    <option value="60" selected>كل دقيقة</option>
+                    <option value="0">يدوي فقط</option>
+                  </select>
+                </div>
+
+                <!-- Scan Now Trigger Button -->
+                <button type="button" class="btn-primary btn-scanner-run" id="btnRunScannerNow" onclick="triggerManualScannerRun()">
+                  <span class="btn-spinner" id="scannerRunSpinner" style="display:none;">⏳</span>
+                  <span id="scannerRunIcon">⚡</span>
+                  <span id="scannerRunText">تشغيل الفحص الآن</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Scanner KPI / Stats Row -->
+            <div class="scanner-kpi-row">
+              <div class="scanner-kpi-card">
+                <div class="kpi-label">إجمالي الفرص النشطة</div>
+                <div class="kpi-val" id="scannerStatTotalActive">0</div>
+                <div class="kpi-note">أسهم متوافقة مع الفلاتر</div>
+              </div>
+              <div class="scanner-kpi-card shariah-pass-card">
+                <div class="kpi-label">متوافق شرعيًا ✅</div>
+                <div class="kpi-val text-emerald" id="scannerStatPassCount">0</div>
+                <div class="kpi-note">معايير الأيوفي (AAOIFI)</div>
+              </div>
+              <div class="scanner-kpi-card shariah-fail-card">
+                <div class="kpi-label">غير متوافق ❌</div>
+                <div class="kpi-val text-rose" id="scannerStatFailCount">0</div>
+                <div class="kpi-note">تجاوز نسب الديون أو الفائدة</div>
+              </div>
+              <div class="scanner-kpi-card">
+                <div class="kpi-label">قيد المراجعة / غير مصنّف ⚪</div>
+                <div class="kpi-val text-amber" id="scannerStatUnclassifiedCount">0</div>
+                <div class="kpi-note">فحص فوري بنقرة واحدة</div>
+              </div>
+            </div>
+
+            <!-- Filter Toolbar & Search -->
+            <div class="scanner-filter-toolbar">
+              <div class="scanner-filter-pills" id="scannerFilterPills">
+                <button type="button" class="scanner-pill active" data-filter="all" onclick="setScannerFilter('all')">الكل</button>
+                <button type="button" class="scanner-pill" data-filter="pass" onclick="setScannerFilter('pass')">متوافق فقط ✅</button>
+                <button type="button" class="scanner-pill" data-filter="fail" onclick="setScannerFilter('fail')">غير متوافق ❌</button>
+                <button type="button" class="scanner-pill" data-filter="unclassified" onclick="setScannerFilter('unclassified')">غير مصنّف ⚪</button>
+                <button type="button" class="scanner-pill" data-filter="archived" onclick="setScannerFilter('archived')">المؤرشفة 🗄️</button>
+              </div>
+
+              <div class="scanner-search-box">
+                <span class="search-ico">🔍</span>
+                <input type="text" id="scannerSearchInput" placeholder="بحث بالرمز أو المحفز..." oninput="debounceScannerSearch()" />
+              </div>
+            </div>
+
+            <!-- Scanner Opportunities Table -->
+            <div class="scanner-table-wrap">
+              <table class="trading-table scanner-table" id="scannerOpportunitiesTable">
+                <thead>
+                  <tr>
+                    <th style="width: 130px;">Ticker / الشركة</th>
+                    <th style="width: 85px;">السعر</th>
+                    <th style="width: 95px;">% التغيّر</th>
+                    <th style="width: 105px;">Relative Vol</th>
+                    <th>الخبر والمحفز (Catalyst)</th>
+                    <th style="width: 135px;">التوافق الشرعي</th>
+                    <th style="width: 110px;">وقت الاكتشاف</th>
+                    <th style="width: 130px; text-align: center;">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="scannerTableBody">
+                  <!-- Rendered dynamically by app.js -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Table Loading and Empty States -->
+            <div id="scannerTableLoading" class="scanner-loading-placeholder" style="display:none;">
+              <div class="screener-spinner"></div>
+              <span>جاري فحص وتحديث قائمة الفرص...</span>
+            </div>
+            <div id="scannerTableEmpty" class="scanner-empty-state" style="display:none;">
+              <div class="empty-icon">📡</div>
+              <h4>لا توجد فرص مطابقة حالياً</h4>
+              <p>يتم رصد الأخبار والفوليوم دورياً. اضغط "تشغيل الفحص الآن" لجلب أحدث الأخبار وتطبيق فلاتر الأسهم ($1 - $20).</p>
+            </div>
           </div>
         </div>
       </section>
