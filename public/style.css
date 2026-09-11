@@ -5096,6 +5096,339 @@ body[data-theme="kristin-light"] .btn-sidebar-toggle .toggle-bar {
   gap: 24px;
 }
 
+/* =====================================================================
+   DRIBBLE NAVIGATION MENU UI & WORKOUT CARD (Piqo Studio / Iconly Pro)
+   Adapted for Ultra-Luxury Dark-Glass Dashboard
+   ===================================================================== */
+.dribbble-workout-card-wrapper {
+  background: linear-gradient(145deg, rgba(20, 27, 44, 0.72) 0%, rgba(10, 15, 24, 0.88) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 28px;
+  padding: 26px 30px 22px;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.dribbble-workout-card-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 209, 165, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Top Spotlight Section */
+.dribbble-hero-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.dribbble-hero-info {
+  flex: 1;
+  min-width: 260px;
+}
+
+.dribbble-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dribbble-eyebrow .badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--workouts);
+  box-shadow: 0 0 8px var(--workouts);
+}
+
+.dribbble-title {
+  font-family: var(--font-body);
+  font-size: 25px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 8px;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.dribbble-desc {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin: 0 0 20px;
+  max-width: 520px;
+}
+
+.dribbble-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 10px 24px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+  outline: none;
+}
+
+.dribbble-start-btn:hover {
+  background: #121820;
+  border-color: rgba(79, 209, 165, 0.5);
+  box-shadow: 0 8px 24px rgba(79, 209, 165, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1.5px);
+}
+
+.dribbble-start-btn:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+.dribbble-start-btn.is-running {
+  background: var(--workouts);
+  color: #0A1A12;
+  border-color: var(--workouts);
+  box-shadow: 0 0 20px rgba(79, 209, 165, 0.45);
+}
+
+/* 3D Fitness Dial Visual */
+.dribbble-dial-container {
+  width: 136px;
+  height: 136px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, rgba(5, 8, 14, 0.7) 100%);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dribbble-dial-container svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+.dribbble-meter-bg {
+  stroke: rgba(255, 255, 255, 0.07);
+  fill: none;
+}
+
+.dribbble-meter-arc {
+  stroke: var(--workouts);
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 0 6px rgba(79, 209, 165, 0.6));
+}
+
+.dribbble-ball-img {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.65), 0 0 16px rgba(79, 209, 165, 0.25);
+  animation: dribbbleBallPulse 4s ease-in-out infinite alternate;
+  z-index: 2;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+@keyframes dribbbleBallPulse {
+  0% { transform: translateY(0) scale(1); filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5)); }
+  100% { transform: translateY(-3px) scale(1.03); filter: drop-shadow(0 10px 18px rgba(79,209,165,0.3)); }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   DRIBBLE NAVIGATION MENU UI DOCK (The Main Element)
+   ───────────────────────────────────────────────────────────────────── */
+.dribbble-nav-dock {
+  margin-top: 24px;
+  padding: 10px 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 999px;
+  background: rgba(8, 12, 20, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: relative;
+  z-index: 2;
+}
+
+.dribbble-nav-cluster {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+  padding-left: 12px;
+  padding-bottom: 6px;
+}
+
+.dribbble-nav-tab {
+  background: transparent;
+  border: none;
+  padding: 6px 10px 4px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  outline: none;
+  border-radius: 8px;
+}
+
+.dribbble-nav-tab svg {
+  display: block;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+}
+
+.dribbble-nav-tab:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dribbble-nav-tab:hover svg {
+  transform: translateY(-2px) scale(1.08);
+  filter: drop-shadow(0 2px 8px rgba(79, 209, 165, 0.35));
+}
+
+.dribbble-nav-tab.is-active {
+  color: #ffffff;
+}
+
+.dribbble-nav-tab.is-active svg {
+  color: #ffffff;
+  filter: drop-shadow(0 2px 10px rgba(255, 255, 255, 0.4));
+}
+
+.dribbble-nav-tab:active svg {
+  transform: scale(0.92);
+}
+
+/* The Signature Vertical Indicator Pill */
+.dribbble-indicator-pill {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 3px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--workouts);
+  box-shadow: 0 0 10px rgba(79, 209, 165, 0.85), 0 0 2px #ffffff;
+  pointer-events: none;
+  transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+
+/* Tactile "+ New Workout" Pill Button */
+.dribbble-new-workout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  outline: none;
+}
+
+.dribbble-new-workout-btn .plus-icon {
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.85);
+  transition: transform 0.2s ease;
+}
+
+.dribbble-new-workout-btn:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, rgba(79, 209, 165, 0.12) 100%);
+  border-color: rgba(79, 209, 165, 0.45);
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(79, 209, 165, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.dribbble-new-workout-btn:hover .plus-icon {
+  transform: rotate(90deg) scale(1.1);
+  color: var(--workouts);
+}
+
+.dribbble-new-workout-btn:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .dribbble-workout-card-wrapper {
+    padding: 20px 18px 16px;
+    border-radius: 22px;
+  }
+  .dribbble-hero-section {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+  }
+  .dribbble-dial-container {
+    width: 90px;
+    height: 90px;
+  }
+  .dribbble-ball-img {
+    width: 56px;
+    height: 56px;
+  }
+  .dribbble-nav-dock {
+    flex-wrap: wrap;
+    border-radius: 20px;
+    padding: 10px 12px;
+  }
+  .dribbble-new-workout-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* â”€â”€ Day Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .workout-days-nav {
   display: flex;

@@ -33,3 +33,5 @@ logs
 *.db
 *.db-journal
 .neon
+scratch/
+

@@ -2859,6 +2859,13 @@ let selectedWorkoutDayId = null;
 let workoutViewTab = 'program'; // 'program' | 'tasks'
 let workoutDbTasks = [];
 
+// Active Session Stopwatch & Workout UI State
+let workoutStopwatchInterval = null;
+let workoutStopwatchSeconds = 0;
+let isWorkoutStopwatchRunning = false;
+let isSoundAlertsEnabled = true;
+let activeMuscleFilter = 'ALL';
+
 function getClientTodayDayId() {
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   return dayNames[new Date().getDay()];
@@ -2998,35 +3005,162 @@ function renderWorkoutsView() {
     catProgPctEl.style.color = 'var(--workouts)';
   }
 
-  // Top Switcher & Action Bar
+  // Dynamic Hero Card metrics based on selected/today day
+  const displayDay = currentDay || todayDay;
+  const isRest = displayDay.isRestDay || (!displayDay.exercises || displayDay.exercises.length === 0 && (!displayDay.title || displayDay.title.toLowerCase().includes('rest')));
+  const heroDayName = getDayDisplayName(displayDay);
+  const heroTitle = isRest ? 'Active Rest & Recovery' : (displayDay.title || `${heroDayName} Routine`);
+  const estMins = isRest ? '30 mins' : `${Math.max(25, (displayDay.exercises ? displayDay.exercises.length : 3) * 12)} mins`;
+  const heroDesc = isRest 
+    ? 'Allow your muscles to repair and regenerate. Focus on mobility, hydration, and high protein.' 
+    : (displayDay.targetMuscles && displayDay.targetMuscles.length 
+        ? `Targeting ${displayDay.targetMuscles.join(', ')} to maximize cardiovascular health, hypertrophy, and strength.` 
+        : 'Improve cardiovascular health, muscular strength, and overall athletic fitness.');
+  
+  const heroPct = todayExCount > 0 ? Math.round((todayDoneCount / todayExCount) * 100) : (isRest ? 100 : 0);
+  const circleRadius = 56;
+  const circleCircum = Math.round(2 * Math.PI * circleRadius);
+  const strokeOffset = Math.round(circleCircum - (circleCircum * (heroPct / 100)));
+
+  const startBtnText = isWorkoutStopwatchRunning 
+    ? `⏸ Pause (${formatStopwatchTime(workoutStopwatchSeconds)})` 
+    : (workoutStopwatchSeconds > 0 ? `▶ Resume (${formatStopwatchTime(workoutStopwatchSeconds)})` : 'Start Now');
+
+  // Top Switcher & Action Bar (Dribbble Navigation Menu UI & Hero Card)
   categoryTaskArea.innerHTML = `
-    <!-- Mode Switcher & Quick Actions -->
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
-      <div class="portfolio-filter-bar" style="margin:0;">
-        <button type="button" class="portfolio-filter-btn ${workoutViewTab === 'program' ? 'is-active' : ''}" id="wTabProgram">🏋️ Training Program</button>
-        <button type="button" class="portfolio-filter-btn ${workoutViewTab === 'tasks' ? 'is-active' : ''}" id="wTabTasks">📋 Tasks &amp; Reminders (${workoutDbTasks.length})</button>
+    <!-- Dribbble Navigation Menu UI & Hero Card Container -->
+    <div class="dribbble-workout-card-wrapper">
+      <!-- Top Hero Section -->
+      <div class="dribbble-hero-section">
+        <div class="dribbble-hero-info">
+          <div class="dribbble-eyebrow">
+            <span class="badge-dot"></span>
+            <span>30 DAYS EXPERIMENT &middot; ${heroDayName.toUpperCase()}</span>
+          </div>
+          <h2 class="dribbble-title">${escapeHtml(heroTitle)} &middot; <span style="font-weight:600;opacity:0.8;font-size:20px;">${estMins}</span></h2>
+          <p class="dribbble-desc">${escapeHtml(heroDesc)}</p>
+          <button type="button" class="dribbble-start-btn ${isWorkoutStopwatchRunning ? 'is-running' : ''}" id="dribbbleStartNowBtn">
+            ${startBtnText}
+          </button>
+        </div>
+
+        <!-- 3D Dial Progress Ring -->
+        <div class="dribbble-dial-container" title="${heroPct}% Completed Today">
+          <svg viewBox="0 0 136 136">
+            <circle class="dribbble-meter-bg" cx="68" cy="68" r="${circleRadius}" stroke-width="6"/>
+            <circle class="dribbble-meter-arc" cx="68" cy="68" r="${circleRadius}" stroke-width="6" 
+              stroke-dasharray="${circleCircum}" stroke-dashoffset="${strokeOffset}"/>
+          </svg>
+          <img src="/tennis_ball_3d.jpg" alt="Fitness" class="dribbble-ball-img" onerror="this.style.display='none'" />
+        </div>
       </div>
 
-      <div style="display:flex;gap:8px;">
-        <button type="button" class="asset-action-btn" id="btnOpenTemplateModal" style="font-size:12px;">
-          ⚙️ Customize Routine / Split
+      <!-- Navigation Menu UI Dock (The Main Dribbble Element) -->
+      <nav class="dribbble-nav-dock" aria-label="Workout Navigation">
+        <div class="dribbble-nav-cluster" id="dribbbleNavCluster">
+          <!-- Home / Training Program Tab -->
+          <button type="button" class="dribbble-nav-tab ${workoutViewTab === 'program' ? 'is-active' : ''}" id="dribbbleTabProgram" title="Training Program">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2.5L2 10.5V20.5C2 21.05 2.45 21.5 3 21.5H9.5V15.5C9.5 14.95 9.95 14.5 10.5 14.5H13.5C14.05 14.5 14.5 14.95 14.5 15.5V21.5H21C21.55 21.5 22 21.05 22 20.5V10.5L12 2.5Z"/>
+            </svg>
+          </button>
+
+          <!-- Clock / Tasks, Logs & History Tab -->
+          <button type="button" class="dribbble-nav-tab ${workoutViewTab === 'tasks' ? 'is-active' : ''}" id="dribbbleTabTasks" title="Tasks & Reminders (${workoutDbTasks.length})">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <polyline points="12 7 12 12 15.5 12"/>
+            </svg>
+          </button>
+
+          <!-- Split / Routine Customizer Tab -->
+          <button type="button" class="dribbble-nav-tab" id="dribbbleTabRoutine" title="Customize Routine Split">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="3"/>
+              <line x1="9" y1="4" x2="9" y2="20"/>
+              <line x1="15" y1="4" x2="15" y2="20"/>
+            </svg>
+          </button>
+
+          <!-- The Signature Sliding Vertical Indicator Pill -->
+          <span class="dribbble-indicator-pill" id="dribbbleIndicatorPill"></span>
+        </div>
+
+        <!-- Right Action: Tactile "+ New Workout" Pill Button -->
+        <button type="button" class="dribbble-new-workout-btn" id="dribbbleNewWorkoutBtn" title="Add Exercise or Routine">
+          <span class="plus-icon">+</span>
+          <span>New Workout</span>
         </button>
-      </div>
+      </nav>
     </div>
 
     <div id="workoutViewContainer"></div>
   `;
 
-  document.getElementById('wTabProgram').addEventListener('click', () => {
+  // Align the signature indicator pill with the active tab
+  const syncDribbbleIndicator = () => {
+    const activeTab = workoutViewTab === 'program' 
+      ? document.getElementById('dribbbleTabProgram') 
+      : document.getElementById('dribbbleTabTasks');
+    const indicator = document.getElementById('dribbbleIndicatorPill');
+    const cluster = document.getElementById('dribbbleNavCluster');
+    if (activeTab && indicator && cluster) {
+      const clusterRect = cluster.getBoundingClientRect();
+      const tabRect = activeTab.getBoundingClientRect();
+      if (tabRect.width > 0) {
+        const center = (tabRect.left - clusterRect.left) + (tabRect.width / 2) - 1.75;
+        indicator.style.transform = `translateX(${center}px)`;
+        indicator.style.opacity = '1';
+      }
+    }
+  };
+  requestAnimationFrame(syncDribbbleIndicator);
+  setTimeout(syncDribbbleIndicator, 60);
+
+  document.getElementById('dribbbleTabProgram')?.addEventListener('click', () => {
     workoutViewTab = 'program';
     renderWorkoutsView();
   });
-  document.getElementById('wTabTasks').addEventListener('click', () => {
+  document.getElementById('dribbbleTabTasks')?.addEventListener('click', () => {
     workoutViewTab = 'tasks';
     renderWorkoutsView();
   });
-  document.getElementById('btnOpenTemplateModal').addEventListener('click', () => {
+  document.getElementById('dribbbleTabRoutine')?.addEventListener('click', () => {
     openRoutineCustomizerModal();
+  });
+  document.getElementById('dribbbleNewWorkoutBtn')?.addEventListener('click', () => {
+    openExerciseModal(null, currentDay.id);
+  });
+  document.getElementById('dribbbleStartNowBtn')?.addEventListener('click', () => {
+    const btnToggle = document.getElementById('btnToggleStopwatch');
+    if (btnToggle) {
+      btnToggle.click();
+      const btn = document.getElementById('dribbbleStartNowBtn');
+      if (btn) {
+        btn.classList.toggle('is-running', isWorkoutStopwatchRunning);
+        btn.textContent = isWorkoutStopwatchRunning 
+          ? `⏸ Pause (${formatStopwatchTime(workoutStopwatchSeconds)})` 
+          : (workoutStopwatchSeconds > 0 ? `▶ Resume (${formatStopwatchTime(workoutStopwatchSeconds)})` : 'Start Now');
+      }
+    } else {
+      if (isWorkoutStopwatchRunning) {
+        clearInterval(workoutStopwatchInterval);
+        workoutStopwatchInterval = null;
+        isWorkoutStopwatchRunning = false;
+      } else {
+        isWorkoutStopwatchRunning = true;
+        workoutStopwatchInterval = setInterval(() => {
+          workoutStopwatchSeconds++;
+          const d = document.getElementById('sessionStopwatchDisplay');
+          if (d) d.textContent = formatStopwatchTime(workoutStopwatchSeconds);
+          const btn = document.getElementById('dribbbleStartNowBtn');
+          if (btn && isWorkoutStopwatchRunning) {
+            btn.textContent = `⏸ Pause (${formatStopwatchTime(workoutStopwatchSeconds)})`;
+          }
+        }, 1000);
+      }
+      renderWorkoutsView();
+    }
   });
 
   const container = document.getElementById('workoutViewContainer');
@@ -3046,12 +3180,7 @@ function getDayDisplayName(d) {
 }
 
 
-// Active Session Stopwatch State
-let workoutStopwatchInterval = null;
-let workoutStopwatchSeconds = 0;
-let isWorkoutStopwatchRunning = false;
-let isSoundAlertsEnabled = true;
-let activeMuscleFilter = 'ALL';
+// Active Session Stopwatch helper beep
 
 function playGymBeep() {
   if (!isSoundAlertsEnabled) return;
