@@ -25853,9 +25853,31 @@ document.addEventListener('DOMContentLoaded', () => {
 // STOCK SCANNER OPPORTUNITIES MODULE (الفرص الجديدة)
 // =============================================================================
 
+const SCANNER_KNOWN_OPPS_KEY = 'scanner_known_opportunity_ids';
+
+function getStoredKnownOpportunityIds() {
+  try {
+    const raw = localStorage.getItem(SCANNER_KNOWN_OPPS_KEY);
+    if (!raw) return new Set();
+    const list = JSON.parse(raw);
+    return new Set(Array.isArray(list) ? list : []);
+  } catch (_) {
+    return new Set();
+  }
+}
+
+function persistKnownOpportunityIds(idSet) {
+  try {
+    const arr = Array.from(idSet).slice(-500); // keep last 500 IDs bounded
+    localStorage.setItem(SCANNER_KNOWN_OPPS_KEY, JSON.stringify(arr));
+  } catch (_) {}
+}
+
 let scannerVoiceState = {
   enabled: localStorage.getItem('scanner_voice_enabled') !== 'false', // default ON
   audioCtx: null,
+  baselineInitialized: false, // Prevents calling out existing stocks on page reload / sign-in
+  knownOppIds: getStoredKnownOpportunityIds(),
   announcedTickers: new Map(), // ticker -> { announcedAt: timestamp, price: number, changePct: number }
   speechQueue: [],
   isSpeaking: false,
@@ -26022,16 +26044,48 @@ function evaluateVoiceAlertsForOpportunities(opportunities) {
   if (!scannerVoiceState.enabled || !opportunities || !opportunities.length) return;
 
   const now = Date.now();
-  const qualifyingTickers = [];
+
+  // 1. SILENT BASELINE ON FIRST LOAD / SIGN-IN / RELOAD
+  // When page first loads or user signs in, record all existing opportunities as baseline so they are NEVER shouted out!
+  if (!scannerVoiceState.baselineInitialized) {
+    scannerVoiceState.baselineInitialized = true;
+    for (const opp of opportunities) {
+      if (opp.id) scannerVoiceState.knownOppIds.add(String(opp.id));
+    }
+    persistKnownOpportunityIds(scannerVoiceState.knownOppIds);
+    return; // Silent: do NOT announce anything on reload or sign-in!
+  }
+
+  // 2. FOR SUBSEQUENT SCANS / POLLS: Find ONLY newly discovered opportunities
+  const newlyFoundTickers = [];
 
   for (const opp of opportunities) {
     const ticker = (opp.ticker || '').trim().toUpperCase();
     if (!ticker) continue;
+    const oppId = opp.id ? String(opp.id) : null;
+
+    // Skip if already in known/announced list
+    if (oppId && scannerVoiceState.knownOppIds.has(oppId)) {
+      continue;
+    }
+
+    // Check freshness: Must have been discovered within the last 10 minutes
+    if (opp.discoveredAt) {
+      const discTime = new Date(opp.discoveredAt).getTime();
+      const ageMinutes = (now - discTime) / (60 * 1000);
+      if (ageMinutes > 10) {
+        if (oppId) scannerVoiceState.knownOppIds.add(oppId);
+        continue;
+      }
+    }
 
     // MANDATORY RULE: Free Float MUST be lower than 20M shares
     const rawFloat = opp.sharesFloat;
     const isLowFloat = Boolean(rawFloat && rawFloat > 0 && rawFloat <= 20000000);
-    if (!isLowFloat) continue;
+    if (!isLowFloat) {
+      if (oppId) scannerVoiceState.knownOppIds.add(oppId);
+      continue;
+    }
 
     // Condition A: Got positive news (Earnings, FDA, Contract, M&A, Analyst Upgrade, or News Headline with positive change)
     const technicalOnlyBadges = ['RVOL Spike', 'Momentum Surge', 'Volume Surge', 'Overnight Gainer'];
@@ -26052,7 +26106,10 @@ function evaluateVoiceAlertsForOpportunities(opportunities) {
       technicalOnlyBadges.includes(opp.catalyst) && opp.changePct >= 3.0
     );
 
-    if (!isPositiveNews && !hasMomentumAndVolume) continue;
+    if (!isPositiveNews && !hasMomentumAndVolume) {
+      if (oppId) scannerVoiceState.knownOppIds.add(oppId);
+      continue;
+    }
 
     // Anti-spam Cooldown: skip if already announced within 15 minutes unless further surged +5%
     const prev = scannerVoiceState.announcedTickers.get(ticker);
@@ -26060,11 +26117,15 @@ function evaluateVoiceAlertsForOpportunities(opportunities) {
       const elapsed = now - prev.announcedAt;
       const surgeDelta = (opp.changePct || 0) - (prev.changePct || 0);
       if (elapsed < scannerVoiceState.cooldownMs && surgeDelta < 5.0) {
+        if (oppId) scannerVoiceState.knownOppIds.add(oppId);
         continue;
       }
     }
 
-    qualifyingTickers.push({
+    // Mark as known immediately so it will not trigger again
+    if (oppId) scannerVoiceState.knownOppIds.add(oppId);
+
+    newlyFoundTickers.push({
       opp,
       ticker,
       isPositiveNews,
@@ -26073,13 +26134,16 @@ function evaluateVoiceAlertsForOpportunities(opportunities) {
     });
   }
 
-  if (qualifyingTickers.length === 0) return;
+  // Persist updated known IDs
+  persistKnownOpportunityIds(scannerVoiceState.knownOppIds);
 
-  // Play chime for incoming alerts
+  if (newlyFoundTickers.length === 0) return;
+
+  // Play chime for incoming newly found alerts
   playScannerRadarChime();
 
-  // Announce each qualifying ticker - ONLY ticker name and what happened to it
-  for (const item of qualifyingTickers) {
+  // Announce each newly found ticker - ONLY ticker name and what happened to it
+  for (const item of newlyFoundTickers) {
     const { opp, ticker, isPositiveNews, hasMomentumAndVolume, rawFloat } = item;
 
     // Record in cooldown map
@@ -26117,7 +26181,7 @@ function evaluateVoiceAlertsForOpportunities(opportunities) {
 
     speakScannerAnnouncement(fullSpeech);
 
-    showToast(`📢 نطق صوتي: ${ticker} - ${toastReason} (Float: ${(rawFloat / 1_000_000).toFixed(1)}M)`);
+    showToast(`📢 فرصة جديدة مُكتشفة: ${ticker} - ${toastReason} (Float: ${(rawFloat / 1_000_000).toFixed(1)}M)`);
   }
 }
 
