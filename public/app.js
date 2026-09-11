@@ -26012,9 +26012,9 @@ function testScannerVoiceAlert() {
   getAudioContext(); // unlock audio on click
   playScannerRadarChime();
 
-  const testAnnouncement = 'Alert! Low float ticker C R M T, CRMT. Up 14.5 percent with Positive Earnings Beat. Free float 4.2 million shares. Scanner voice system is fully operational.';
+  const testAnnouncement = 'C R M T. Breaking news, up 24 percent.';
   speakScannerAnnouncement(testAnnouncement, true);
-  showToast('📢 جاري اختبار التنبيه الصوتي... تأكد من رفع مستوى صوت الجهاز 🔊');
+  showToast('📢 اختبار التنبيه الصوتي: CRMT - Breaking news, up 24% 🔊');
 }
 window.testScannerVoiceAlert = testScannerVoiceAlert;
 
@@ -26078,7 +26078,7 @@ function evaluateVoiceAlertsForOpportunities(opportunities) {
   // Play chime for incoming alerts
   playScannerRadarChime();
 
-  // Announce each qualifying ticker
+  // Announce each qualifying ticker - ONLY ticker name and what happened to it
   for (const item of qualifyingTickers) {
     const { opp, ticker, isPositiveNews, hasMomentumAndVolume, rawFloat } = item;
 
@@ -26089,31 +26089,35 @@ function evaluateVoiceAlertsForOpportunities(opportunities) {
       changePct: opp.changePct
     });
 
-    const spelledTicker = ticker.split('').join(' ');
-    const floatStr = (rawFloat / 1_000_000).toFixed(1) + ' million';
-    const changeAbs = Math.abs(opp.changePct || 0).toFixed(1);
-    const direction = (opp.changePct || 0) >= 0 ? 'Up' : 'Down';
+    const changeAbs = Math.round(Math.abs(opp.changePct || 0));
+    const direction = (opp.changePct || 0) >= 0 ? 'up' : 'down';
 
-    let reasonSpeech = '';
+    // Describe precisely what happened to it
+    let whatHappened = '';
     let toastReason = '';
 
     if (isPositiveNews && opp.catalyst) {
-      reasonSpeech = `Positive news catalyst: ${opp.catalyst}`;
-      toastReason = `خبر إيجابي: ${opp.catalyst}`;
+      whatHappened = `${opp.catalyst}, ${direction} ${changeAbs} percent`;
+      toastReason = `${opp.catalyst} (${direction} ${changeAbs}%)`;
     } else if (isPositiveNews) {
-      reasonSpeech = `Breaking positive news`;
-      toastReason = `أخبار إيجابية حديثة`;
+      whatHappened = `Breaking news, ${direction} ${changeAbs} percent`;
+      toastReason = `أخبار إيجابية (${direction} ${changeAbs}%)`;
     } else if (hasMomentumAndVolume) {
-      const rvolStr = opp.rvol ? `${Number(opp.rvol).toFixed(1)} times relative volume` : 'heavy volume';
-      reasonSpeech = `High momentum and volume surge, ${rvolStr}`;
-      toastReason = `زخم وفوليوم مرتفع (${opp.rvol ? opp.rvol.toFixed(1) + 'x RVOL' : ''})`;
+      const volText = opp.rvol ? `${Number(opp.rvol).toFixed(1)} times volume surge` : 'Heavy volume surge';
+      whatHappened = `${volText}, ${direction} ${changeAbs} percent`;
+      toastReason = `${volText} (${direction} ${changeAbs}%)`;
+    } else {
+      whatHappened = `${direction} ${changeAbs} percent`;
+      toastReason = `${direction} ${changeAbs}%`;
     }
 
-    const fullSpeech = `Alert! Low float ticker ${spelledTicker}, ${ticker}. ${direction} ${changeAbs} percent. ${reasonSpeech}. Free float ${floatStr} shares.`;
+    // ONLY read ticker name and what happened to it
+    const spelledTicker = ticker.split('').join(' ');
+    const fullSpeech = `${spelledTicker}. ${whatHappened}.`;
 
     speakScannerAnnouncement(fullSpeech);
 
-    showToast(`📢 تنبيه صوتي: سهم ${ticker} (فلوت: ${(rawFloat / 1_000_000).toFixed(1)}M) - ${toastReason} 🚀`);
+    showToast(`📢 نطق صوتي: ${ticker} - ${toastReason} (Float: ${(rawFloat / 1_000_000).toFixed(1)}M)`);
   }
 }
 
