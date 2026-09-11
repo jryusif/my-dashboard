@@ -1281,6 +1281,18 @@
               </div>
 
               <div class="scanner-actions-cluster">
+                <!-- Voice Callout Alert Toggle -->
+                <div class="scanner-voice-toggle">
+                  <button type="button" class="btn-scanner-voice active" id="btnScannerVoiceToggle" onclick="toggleScannerVoiceAlerts()" title="تشغيل / إيقاف نطق الأسهم الصوتي تلقائياً">
+                    <span class="voice-icon" id="scannerVoiceIcon">🔊</span>
+                    <span class="voice-label" id="scannerVoiceLabel">Voice Alert: ON</span>
+                    <span class="voice-ping-dot"></span>
+                  </button>
+                  <button type="button" class="btn-voice-test" id="btnScannerVoiceTest" onclick="testScannerVoiceAlert()" title="اختبار نطق الصوت الآن">
+                    <span>📢 Test</span>
+                  </button>
+                </div>
+
                 <!-- Live Polling Toggle -->
                 <div class="scanner-poll-toggle">
                   <span class="poll-icon">📡</span>

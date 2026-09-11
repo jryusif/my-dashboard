@@ -25853,8 +25853,272 @@ document.addEventListener('DOMContentLoaded', () => {
 // STOCK SCANNER OPPORTUNITIES MODULE (الفرص الجديدة)
 // =============================================================================
 
+let scannerVoiceState = {
+  enabled: localStorage.getItem('scanner_voice_enabled') !== 'false', // default ON
+  audioCtx: null,
+  announcedTickers: new Map(), // ticker -> { announcedAt: timestamp, price: number, changePct: number }
+  speechQueue: [],
+  isSpeaking: false,
+  cooldownMs: 15 * 60 * 1000 // 15-minute cooldown per ticker to prevent spam
+};
+
+function getAudioContext() {
+  if (!scannerVoiceState.audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      scannerVoiceState.audioCtx = new AudioContextClass();
+    }
+  }
+  if (scannerVoiceState.audioCtx && scannerVoiceState.audioCtx.state === 'suspended') {
+    scannerVoiceState.audioCtx.resume().catch(() => {});
+  }
+  return scannerVoiceState.audioCtx;
+}
+
+// Crisp dual-tone futuristic radar chime (880Hz -> 1318Hz, E6 harmonic)
+function playScannerRadarChime() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Tone 1 (A5 880Hz)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, now);
+    gain1.gain.setValueAtTime(0.2, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.26);
+
+    // Tone 2 (E6 1318.5Hz - harmonic fifth)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1318.5, now + 0.12);
+    gain2.gain.setValueAtTime(0.25, now + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.12);
+    osc2.stop(now + 0.46);
+  } catch (e) {
+    console.warn('[Scanner Audio] Chime error:', e);
+  }
+}
+
+function speakScannerAnnouncement(text, priority = false) {
+  if (!('speechSynthesis' in window)) {
+    console.warn('[Scanner Voice] SpeechSynthesis not supported in this browser.');
+    return;
+  }
+
+  if (priority) {
+    window.speechSynthesis.cancel();
+    scannerVoiceState.speechQueue = [];
+    scannerVoiceState.isSpeaking = false;
+  }
+
+  scannerVoiceState.speechQueue.push(text);
+  processNextSpeechInQueue();
+}
+
+function processNextSpeechInQueue() {
+  if (scannerVoiceState.isSpeaking || scannerVoiceState.speechQueue.length === 0) return;
+  if (!('speechSynthesis' in window)) return;
+
+  scannerVoiceState.isSpeaking = true;
+  const nextText = scannerVoiceState.speechQueue.shift();
+
+  try {
+    const utterance = new SpeechSynthesisUtterance(nextText);
+    utterance.rate = 1.05; // brisk, clear delivery
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    // Select natural English voice if available
+    const voices = window.speechSynthesis.getVoices();
+    if (voices && voices.length > 0) {
+      const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Daniel') || v.name.includes('David') || v.name.includes('Zira'))) 
+        || voices.find(v => v.lang.startsWith('en')) 
+        || voices[0];
+      if (preferredVoice) utterance.voice = preferredVoice;
+    }
+
+    utterance.onend = () => {
+      setTimeout(() => {
+        scannerVoiceState.isSpeaking = false;
+        processNextSpeechInQueue();
+      }, 350);
+    };
+
+    utterance.onerror = () => {
+      scannerVoiceState.isSpeaking = false;
+      processNextSpeechInQueue();
+    };
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn('[Scanner Voice] Utterance error:', err);
+    scannerVoiceState.isSpeaking = false;
+    processNextSpeechInQueue();
+  }
+}
+
+function toggleScannerVoiceAlerts() {
+  scannerVoiceState.enabled = !scannerVoiceState.enabled;
+  localStorage.setItem('scanner_voice_enabled', scannerVoiceState.enabled ? 'true' : 'false');
+  updateScannerVoiceUi();
+
+  if (scannerVoiceState.enabled) {
+    getAudioContext(); // Unlock audio context on user click
+    playScannerRadarChime();
+    showToast('🔊 تم تفعيل النطق الصوتي للأسهم ذات الفلوت الأقل من 20 مليون بنجاح');
+  } else {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    scannerVoiceState.speechQueue = [];
+    scannerVoiceState.isSpeaking = false;
+    showToast('🔇 تم كتم النطق الصوتي مؤقتاً');
+  }
+}
+window.toggleScannerVoiceAlerts = toggleScannerVoiceAlerts;
+
+function updateScannerVoiceUi() {
+  const btn = document.getElementById('btnScannerVoiceToggle');
+  const icon = document.getElementById('scannerVoiceIcon');
+  const label = document.getElementById('scannerVoiceLabel');
+  if (!btn) return;
+
+  if (scannerVoiceState.enabled) {
+    btn.classList.add('active');
+    btn.classList.remove('muted');
+    if (icon) icon.textContent = '🔊';
+    if (label) label.textContent = 'Voice Alert: ON';
+  } else {
+    btn.classList.remove('active');
+    btn.classList.add('muted');
+    if (icon) icon.textContent = '🔇';
+    if (label) label.textContent = 'Voice Alert: OFF';
+  }
+}
+window.updateScannerVoiceUi = updateScannerVoiceUi;
+
+function testScannerVoiceAlert() {
+  getAudioContext(); // unlock audio on click
+  playScannerRadarChime();
+
+  const testAnnouncement = 'Alert! Low float ticker C R M T, CRMT. Up 14.5 percent with Positive Earnings Beat. Free float 4.2 million shares. Scanner voice system is fully operational.';
+  speakScannerAnnouncement(testAnnouncement, true);
+  showToast('📢 جاري اختبار التنبيه الصوتي... تأكد من رفع مستوى صوت الجهاز 🔊');
+}
+window.testScannerVoiceAlert = testScannerVoiceAlert;
+
+function evaluateVoiceAlertsForOpportunities(opportunities) {
+  if (!scannerVoiceState.enabled || !opportunities || !opportunities.length) return;
+
+  const now = Date.now();
+  const qualifyingTickers = [];
+
+  for (const opp of opportunities) {
+    const ticker = (opp.ticker || '').trim().toUpperCase();
+    if (!ticker) continue;
+
+    // MANDATORY RULE: Free Float MUST be lower than 20M shares
+    const rawFloat = opp.sharesFloat;
+    const isLowFloat = Boolean(rawFloat && rawFloat > 0 && rawFloat <= 20000000);
+    if (!isLowFloat) continue;
+
+    // Condition A: Got positive news (Earnings, FDA, Contract, M&A, Analyst Upgrade, or News Headline with positive change)
+    const technicalOnlyBadges = ['RVOL Spike', 'Momentum Surge', 'Volume Surge', 'Overnight Gainer'];
+    const hasNewsCatalyst = Boolean(
+      opp.catalyst && !technicalOnlyBadges.includes(opp.catalyst)
+    ) || (
+      opp.headline && 
+      !opp.headline.includes('Unusual volume surge') && 
+      !opp.headline.includes('RVOL spike detected')
+    );
+    const isPositiveNews = hasNewsCatalyst && opp.changePct >= 0;
+
+    // Condition B: Got momentum and volume (RVOL >= 1.8x AND (change >= 3% or 5m momentum >= 2.5%))
+    const hasMomentumAndVolume = (
+      (opp.rvol && opp.rvol >= 1.8) && 
+      (opp.changePct >= 3.0 || (opp.momentum5m && opp.momentum5m >= 2.5))
+    ) || (
+      technicalOnlyBadges.includes(opp.catalyst) && opp.changePct >= 3.0
+    );
+
+    if (!isPositiveNews && !hasMomentumAndVolume) continue;
+
+    // Anti-spam Cooldown: skip if already announced within 15 minutes unless further surged +5%
+    const prev = scannerVoiceState.announcedTickers.get(ticker);
+    if (prev) {
+      const elapsed = now - prev.announcedAt;
+      const surgeDelta = (opp.changePct || 0) - (prev.changePct || 0);
+      if (elapsed < scannerVoiceState.cooldownMs && surgeDelta < 5.0) {
+        continue;
+      }
+    }
+
+    qualifyingTickers.push({
+      opp,
+      ticker,
+      isPositiveNews,
+      hasMomentumAndVolume,
+      rawFloat
+    });
+  }
+
+  if (qualifyingTickers.length === 0) return;
+
+  // Play chime for incoming alerts
+  playScannerRadarChime();
+
+  // Announce each qualifying ticker
+  for (const item of qualifyingTickers) {
+    const { opp, ticker, isPositiveNews, hasMomentumAndVolume, rawFloat } = item;
+
+    // Record in cooldown map
+    scannerVoiceState.announcedTickers.set(ticker, {
+      announcedAt: now,
+      price: opp.price,
+      changePct: opp.changePct
+    });
+
+    const spelledTicker = ticker.split('').join(' ');
+    const floatStr = (rawFloat / 1_000_000).toFixed(1) + ' million';
+    const changeAbs = Math.abs(opp.changePct || 0).toFixed(1);
+    const direction = (opp.changePct || 0) >= 0 ? 'Up' : 'Down';
+
+    let reasonSpeech = '';
+    let toastReason = '';
+
+    if (isPositiveNews && opp.catalyst) {
+      reasonSpeech = `Positive news catalyst: ${opp.catalyst}`;
+      toastReason = `خبر إيجابي: ${opp.catalyst}`;
+    } else if (isPositiveNews) {
+      reasonSpeech = `Breaking positive news`;
+      toastReason = `أخبار إيجابية حديثة`;
+    } else if (hasMomentumAndVolume) {
+      const rvolStr = opp.rvol ? `${Number(opp.rvol).toFixed(1)} times relative volume` : 'heavy volume';
+      reasonSpeech = `High momentum and volume surge, ${rvolStr}`;
+      toastReason = `زخم وفوليوم مرتفع (${opp.rvol ? opp.rvol.toFixed(1) + 'x RVOL' : ''})`;
+    }
+
+    const fullSpeech = `Alert! Low float ticker ${spelledTicker}, ${ticker}. ${direction} ${changeAbs} percent. ${reasonSpeech}. Free float ${floatStr} shares.`;
+
+    speakScannerAnnouncement(fullSpeech);
+
+    showToast(`📢 تنبيه صوتي: سهم ${ticker} (فلوت: ${(rawFloat / 1_000_000).toFixed(1)}M) - ${toastReason} 🚀`);
+  }
+}
+
 let scannerUiState = {
-  activeFilter: 'all', // 'all' | 'pass' | 'fail' | 'news' | 'momentum' | 'unclassified' | 'archived'
+  activeFilter: 'all', // 'all' | 'pass' | 'fail' | 'news' | 'momentum' | 'low_float' | 'gainer_momentum' | 'unclassified' | 'archived'
   searchTerm: '',
   pollIntervalSec: 60,
   pollTimer: null,
@@ -25865,6 +26129,7 @@ let scannerUiState = {
 };
 
 function initStockScanner() {
+  updateScannerVoiceUi();
   renderScannerOpportunities(true);
   startScannerPolling(scannerUiState.pollIntervalSec);
 }
@@ -25962,6 +26227,9 @@ async function renderScannerOpportunities(isSilent = false) {
 
     scannerUiState.opportunities = data.opportunities || [];
     const stats = data.stats || { totalActive: 0, passCount: 0, failCount: 0, unclassifiedCount: 0, lowFloatCount: 0, gainerCount: 0 };
+
+    // Trigger Voice Callouts for qualified low float (<20M) runners & news catalysts
+    evaluateVoiceAlertsForOpportunities(scannerUiState.opportunities);
 
     // Update KPI counters
     const elTotal = document.getElementById('scannerStatTotalActive');
