@@ -24645,9 +24645,8 @@ function applyMapLocationData(data, flyTo) {
         doubleClickZoom: true
       });
 
-      // CartoDB Voyager tiles (rich green terrain and roads matching reference image)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd',
+      // Esri World Topo Map tiles (rich green terrain, elevation, and roads without watermarks or API keys required)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19
       }).addTo(kristinMapInstance);
 
