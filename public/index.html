@@ -902,7 +902,7 @@
 
         <header class="study-header">
           <div class="study-header-text">
-            <p class="eyebrow" style="color: #a78bfa; font-weight: 700; text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.08em; margin: 0 0 4px;">Academic &amp; Knowledge Operating System</p>
+            <p class="eyebrow">Academic &amp; Knowledge Operating System</p>
             <h1>Study Hub &amp; Academic Workspace</h1>
             <p class="subtitle" id="studyHeaderDesc">Semester 1 &bull; Dental Faculty &bull; Chapters, weekly timetable &amp; progress</p>
           </div>
@@ -7149,31 +7149,31 @@
   </div>
 
   <!-- Study Mode Switcher Modal -->
-  <div class="modal-overlay" id="studyModeModal" style="display:none; z-index:10001;">
+  <div class="study-modal-overlay modal-overlay" id="studyModeModal" style="display:none;" onclick="if(event.target===this) StudyHub.closeModal('studyModeModal')">
     <div class="study-modal-dialog">
       <h3>Choose Your Learner Profile</h3>
-      <p style="font-size:13.5px; color:rgba(255,255,255,0.7); margin-bottom:20px;">
+      <p style="font-size:13.5px; color:var(--study-text-secondary); margin-bottom:20px;">
         Adapt the Study Hub to match your current academic or professional journey.
       </p>
 
       <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:24px;">
-        <div style="padding:16px; background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.3); border-radius:14px; cursor:pointer;" onclick="StudyHub.selectStudyMode('STUDENT')">
-          <strong style="color:#c4b5fd; font-size:16px; display:block; margin-bottom:4px;">🎓 Student Mode</strong>
-          <span style="font-size:12.5px; color:rgba(255,255,255,0.7); line-height:1.4; display:block;">
+        <div class="learner-choice-card choice-student" onclick="StudyHub.selectStudyMode('STUDENT')">
+          <strong style="font-size:16px; display:block; margin-bottom:4px;">🎓 Student Mode</strong>
+          <span style="font-size:12.5px; color:var(--study-text-secondary); line-height:1.4; display:block;">
             Configured for University / College: Semesters (Semester 1 &amp; 2), Subjects, Chapters, Weekly Recurring Timetable, and Exams.
           </span>
         </div>
 
-        <div style="padding:16px; background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.3); border-radius:14px; cursor:pointer;" onclick="StudyHub.selectStudyMode('PROFESSIONAL')">
-          <strong style="color:#fed7aa; font-size:16px; display:block; margin-bottom:4px;">💼 Professional / Practitioner</strong>
-          <span style="font-size:12.5px; color:rgba(255,255,255,0.7); line-height:1.4; display:block;">
+        <div class="learner-choice-card choice-prof" onclick="StudyHub.selectStudyMode('PROFESSIONAL')">
+          <strong style="font-size:16px; display:block; margin-bottom:4px;">💼 Professional / Practitioner</strong>
+          <span style="font-size:12.5px; color:var(--study-text-secondary); line-height:1.4; display:block;">
             Tailored for Doctors, Specialists &amp; Engineers: Clinical Resources, CME Courses, Books, Topics &amp; Practice Sessions.
           </span>
         </div>
 
-        <div style="padding:16px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:14px; cursor:pointer;" onclick="StudyHub.selectStudyMode('GENERAL')">
-          <strong style="color:#a7f3d0; font-size:16px; display:block; margin-bottom:4px;">📚 General Learner</strong>
-          <span style="font-size:12.5px; color:rgba(255,255,255,0.7); line-height:1.4; display:block;">
+        <div class="learner-choice-card choice-general" onclick="StudyHub.selectStudyMode('GENERAL')">
+          <strong style="font-size:16px; display:block; margin-bottom:4px;">📚 General Learner</strong>
+          <span style="font-size:12.5px; color:var(--study-text-secondary); line-height:1.4; display:block;">
             Broad continuous education: Reading lists, Online Courses, Skill goals, and Focus Sessions.
           </span>
         </div>
@@ -7186,7 +7186,7 @@
   </div>
 
   <!-- Add Subject Modal -->
-  <div class="modal-overlay" id="addSubjectModal" style="display:none; z-index:10001;">
+  <div class="study-modal-overlay modal-overlay" id="addSubjectModal" style="display:none;" onclick="if(event.target===this) StudyHub.closeModal('addSubjectModal')">
     <div class="study-modal-dialog">
       <h3>Add New Subject</h3>
       <form onsubmit="StudyHub.handleCreateSubjectSubmit(event)">
@@ -7236,10 +7236,10 @@
   </div>
 
   <!-- Add Timetable Slot Modal -->
-  <div class="modal-overlay" id="addTimetableModal" style="display:none; z-index:10001;">
+  <div class="study-modal-overlay modal-overlay" id="addTimetableModal" style="display:none;" onclick="if(event.target===this) StudyHub.closeModal('addTimetableModal')">
     <div class="study-modal-dialog">
       <h3>Add Recurring Weekly Class</h3>
-      <p style="font-size:13px; color:rgba(255,255,255,0.65); margin-bottom:16px;">This class will automatically recur every week during the active semester.</p>
+      <p style="font-size:13px; color:var(--study-text-secondary); margin-bottom:16px;">This class will automatically recur every week during the active semester.</p>
       <form onsubmit="StudyHub.handleCreateTimetableSubmit(event)">
         <div class="study-form-group">
           <label>Class Title *</label>
@@ -7309,7 +7309,7 @@
   </div>
 
   <!-- Add Course Modal -->
-  <div class="modal-overlay" id="addCourseModal" style="display:none; z-index:10001;">
+  <div class="study-modal-overlay modal-overlay" id="addCourseModal" style="display:none;" onclick="if(event.target===this) StudyHub.closeModal('addCourseModal')">
     <div class="study-modal-dialog">
       <h3>Add New Course</h3>
       <form onsubmit="StudyHub.handleCreateCourseSubmit(event)">
@@ -7352,7 +7352,7 @@
   </div>
 
   <!-- Add Book / Resource Modal -->
-  <div class="modal-overlay" id="addResourceModal" style="display:none; z-index:10001;">
+  <div class="study-modal-overlay modal-overlay" id="addResourceModal" style="display:none;" onclick="if(event.target===this) StudyHub.closeModal('addResourceModal')">
     <div class="study-modal-dialog">
       <h3>Add Book / Study Resource</h3>
       <form onsubmit="StudyHub.handleCreateResourceSubmit(event)">
@@ -7390,7 +7390,7 @@
   </div>
 
   <!-- Add Semester Modal -->
-  <div class="modal-overlay" id="addSemesterModal" style="display:none; z-index:10001;">
+  <div class="study-modal-overlay modal-overlay" id="addSemesterModal" style="display:none;" onclick="if(event.target===this) StudyHub.closeModal('addSemesterModal')">
     <div class="study-modal-dialog">
       <h3>Add Academic Semester</h3>
       <form onsubmit="StudyHub.handleCreateSemesterSubmit(event)">
@@ -7410,7 +7410,7 @@
         </div>
         <div style="display:flex; align-items:center; gap:8px; margin: 12px 0;">
           <input type="checkbox" id="semFormCurrent" checked />
-          <label for="semFormCurrent" style="margin:0; font-size:13.5px; text-transform:none; color:#fff; cursor:pointer;">Set as currently active semester</label>
+          <label for="semFormCurrent" style="margin:0; font-size:13.5px; text-transform:none; color:var(--study-text-primary); cursor:pointer;">Set as currently active semester</label>
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
           <button type="button" class="btn-secondary" onclick="StudyHub.closeModal('addSemesterModal')">Cancel</button>
@@ -7421,7 +7421,7 @@
   </div>
 
   <!-- Log Session Modal -->
-  <div class="modal-overlay" id="logSessionModal" style="display:none; z-index:10001;">
+  <div class="study-modal-overlay modal-overlay" id="logSessionModal" style="display:none;" onclick="if(event.target===this) StudyHub.closeModal('logSessionModal')">
     <div class="study-modal-dialog">
       <h3>Log Study Session</h3>
       <form onsubmit="StudyHub.handleLogSessionSubmit(event)">

@@ -350,7 +350,7 @@
         <div class="study-hero-progress-box">
           <div class="study-box-head">
             <h3>Overall Study Progress</h3>
-            <span style="font-size: 12px; font-weight: 700; color: #a78bfa;">${StudyState.mode === 'STUDENT' ? 'Current Academic Progress' : 'Learning Completion'}</span>
+            <span class="study-accent-subhead">${StudyState.mode === 'STUDENT' ? 'Current Academic Progress' : 'Learning Completion'}</span>
           </div>
 
           <div class="study-progress-ring-wrap">
@@ -367,8 +367,8 @@
                       stroke-dashoffset="${strokeOffset}" />
             </svg>
             <div>
-              <div style="font-size: 34px; font-weight: 800; color: #fff; line-height: 1;">${overallProgress}%</div>
-              <div style="font-size: 12.5px; color: rgba(255,255,255,0.65); margin-top: 4px;">${completedChapters} of ${totalChapters} chapters done</div>
+              <div class="study-overview-pct">${overallProgress}%</div>
+              <div class="study-overview-sub">${completedChapters} of ${totalChapters} chapters done</div>
             </div>
           </div>
 
@@ -417,7 +417,7 @@
 
       <!-- Quick Action Floating Bar -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin: 28px 0 16px;">
-        <h2 style="font-family:'Fraunces',serif; font-size:22px; margin:0; color:#fff;">Active Subjects &amp; Courses</h2>
+        <h2 class="study-section-title">Active Subjects &amp; Courses</h2>
         <div style="display:flex; gap:10px;">
           <button type="button" class="btn-secondary" style="font-size:12.5px; border-radius:999px; padding:6px 14px;" onclick="StudyHub.openAddSubjectModal()">+ Add Subject</button>
           <button type="button" class="btn-secondary" style="font-size:12.5px; border-radius:999px; padding:6px 14px;" onclick="StudyHub.openAddCourseModal()">+ Add Course</button>
@@ -426,10 +426,10 @@
 
       <!-- Colorful Cards Grid (Inspired by Reference Design) -->
       ${StudyState.subjects.length === 0 && StudyState.courses.length === 0 ? `
-        <div class="study-empty-state" style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15); border-radius: 20px; padding: 50px 20px;">
+        <div class="study-empty-state" style="background: var(--study-box-bg); border: 1px dashed var(--study-box-border); border-radius: 20px; padding: 50px 20px;">
           <span class="empty-icon">📚</span>
-          <h3 style="color:#fff; font-size:18px; margin: 8px 0;">Your Study Workspace is Fresh &amp; Ready</h3>
-          <p style="max-width:480px; margin:0 auto 20px; line-height:1.5;">Get started by loading a starter pack or adding your university subjects, chapters, and weekly schedule.</p>
+          <h3 style="color:var(--study-text-primary); font-size:18px; margin: 8px 0;">Your Study Workspace is Fresh &amp; Ready</h3>
+          <p style="max-width:480px; margin:0 auto 20px; line-height:1.5; color:var(--study-text-secondary);">Get started by loading a starter pack or adding your university subjects, chapters, and weekly schedule.</p>
           <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
             <button type="button" class="btn-primary" style="border-radius:999px; padding:10px 22px;" onclick="StudyHub.seedStarterPack('dental')">
               ⚡ Load Dental Student Starter Pack
@@ -497,7 +497,7 @@
       <div class="study-timetable-controls">
         <!-- Semester Switcher Tabs (Semester 1, Semester 2) -->
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <span style="font-size:12.5px; font-weight:700; color:rgba(255,255,255,0.6); text-transform:uppercase; margin-right:4px;">Academic Semester:</span>
+          <span style="font-size:12.5px; font-weight:700; color:var(--study-text-muted); text-transform:uppercase; margin-right:4px;">Academic Semester:</span>
           ${StudyState.semesters.map(sem => `
             <button type="button" class="study-tab-btn ${sem.id === StudyState.activeSemesterId ? 'active' : ''}"
                     onclick="StudyHub.selectSemester('${sem.id}')">
@@ -516,9 +516,9 @@
 
       <!-- Semester Date Bar if dates exist -->
       ${activeSem && activeSem.startDate && activeSem.endDate ? `
-        <div style="padding:10px 18px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:20px; font-size:13px; color:rgba(255,255,255,0.7); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div class="study-sem-banner">
           <span>📅 <strong>${activeSem.name}</strong> Period: ${activeSem.startDate} to ${activeSem.endDate}</span>
-          ${activeSem.examStartDate ? `<span style="color:#fcd34d;">⚠️ Exams Period: ${activeSem.examStartDate} to ${activeSem.examEndDate || ''}</span>` : ''}
+          ${activeSem.examStartDate ? `<span class="study-exam-badge">⚠️ Exams Period: ${activeSem.examStartDate} to ${activeSem.examEndDate || ''}</span>` : ''}
         </div>
       ` : ''}
 
@@ -542,8 +542,8 @@
     container.innerHTML = `
       <div class="study-timetable-controls">
         <div>
-          <h2 style="font-family:'Fraunces',serif; font-size:22px; color:#fff; margin:0 0 4px;">Weekly Academic Schedule</h2>
-          <p style="font-size:13.5px; color:rgba(255,255,255,0.65); margin:0;">Automated recurring classes. Classes populate every week automatically without manual recreation.</p>
+          <h2 class="study-section-title">Weekly Academic Schedule</h2>
+          <p class="study-section-desc">Automated recurring classes. Classes populate every week automatically without manual recreation.</p>
         </div>
 
         <button type="button" class="study-quick-add-btn" onclick="StudyHub.openAddTimetableModal()">
@@ -566,7 +566,7 @@
 
               <div class="study-timetable-cards">
                 ${daySlots.length === 0 ? `
-                  <div style="text-align:center; padding:30px 6px; color:rgba(255,255,255,0.3); font-size:12px;">
+                  <div style="text-align:center; padding:30px 6px; color:var(--study-text-muted); font-size:12px;">
                     No classes
                   </div>
                 ` : daySlots.map(slot => `
@@ -595,8 +595,8 @@
     container.innerHTML = `
       <div class="study-timetable-controls">
         <div>
-          <h2 style="font-family:'Fraunces',serif; font-size:22px; color:#fff; margin:0 0 4px;">Courses &amp; Clinical Certifications</h2>
-          <p style="font-size:13.5px; color:rgba(255,255,255,0.65); margin:0;">Track modules, lessons, and completion certificates.</p>
+          <h2 class="study-section-title">Courses &amp; Clinical Certifications</h2>
+          <p class="study-section-desc">Track modules, lessons, and completion certificates.</p>
         </div>
 
         <button type="button" class="study-quick-add-btn" onclick="StudyHub.openAddCourseModal()">
@@ -605,9 +605,9 @@
       </div>
 
       ${StudyState.courses.length === 0 ? `
-        <div class="study-empty-state" style="background:rgba(255,255,255,0.02); border-radius:20px; padding:50px 20px;">
+        <div class="study-empty-state" style="background:var(--study-box-bg); border: 1px dashed var(--study-box-border); border-radius:20px; padding:50px 20px;">
           <span class="empty-icon">💻</span>
-          <h3 style="color:#fff; margin:10px 0;">No courses logged yet</h3>
+          <h3 style="color:var(--study-text-primary); margin:10px 0;">No courses logged yet</h3>
           <button type="button" class="btn-primary" style="border-radius:999px; padding:10px 22px; margin-top:10px;" onclick="StudyHub.openAddCourseModal()">
             + Add Your First Course
           </button>
@@ -666,8 +666,8 @@
     container.innerHTML = `
       <div class="study-timetable-controls">
         <div>
-          <h2 style="font-family:'Fraunces',serif; font-size:22px; color:#fff; margin:0 0 4px;">Books, Articles &amp; Clinical Resources</h2>
-          <p style="font-size:13.5px; color:rgba(255,255,255,0.65); margin:0;">Reading list with live page counters and progress tracking.</p>
+          <h2 class="study-section-title">Books, Articles &amp; Clinical Resources</h2>
+          <p class="study-section-desc">Reading list with live page counters and progress tracking.</p>
         </div>
 
         <button type="button" class="study-quick-add-btn" onclick="StudyHub.openAddResourceModal()">
@@ -676,9 +676,9 @@
       </div>
 
       ${StudyState.resources.length === 0 ? `
-        <div class="study-empty-state" style="background:rgba(255,255,255,0.02); border-radius:20px; padding:50px 20px;">
+        <div class="study-empty-state" style="background:var(--study-box-bg); border: 1px dashed var(--study-box-border); border-radius:20px; padding:50px 20px;">
           <span class="empty-icon">📖</span>
-          <h3 style="color:#fff; margin:10px 0;">No books or resources added yet</h3>
+          <h3 style="color:var(--study-text-primary); margin:10px 0;">No books or resources added yet</h3>
           <button type="button" class="btn-primary" style="border-radius:999px; padding:10px 22px; margin-top:10px;" onclick="StudyHub.openAddResourceModal()">
             + Add Book or PDF
           </button>
@@ -745,24 +745,24 @@
         <div class="session-stat-card">
           <div class="session-stat-icon">⏱️</div>
           <div>
-            <strong style="font-size:24px; color:#fff; display:block;">${analytics.totalHours || '0.0'} Hours</strong>
-            <span style="font-size:12px; color:rgba(255,255,255,0.6); text-transform:uppercase;">Total Study Time Logged</span>
+            <strong style="font-size:24px; color:var(--study-text-primary); display:block;">${analytics.totalHours || '0.0'} Hours</strong>
+            <span style="font-size:12px; color:var(--study-text-muted); text-transform:uppercase; font-weight:700;">Total Study Time Logged</span>
           </div>
         </div>
 
         <div class="session-stat-card">
           <div class="session-stat-icon">📅</div>
           <div>
-            <strong style="font-size:24px; color:#fff; display:block;">${analytics.weekHours || '0.0'} Hours</strong>
-            <span style="font-size:12px; color:rgba(255,255,255,0.6); text-transform:uppercase;">This Week</span>
+            <strong style="font-size:24px; color:var(--study-text-primary); display:block;">${analytics.weekHours || '0.0'} Hours</strong>
+            <span style="font-size:12px; color:var(--study-text-muted); text-transform:uppercase; font-weight:700;">This Week</span>
           </div>
         </div>
 
         <div class="session-stat-card">
           <div class="session-stat-icon">🔥</div>
           <div>
-            <strong style="font-size:24px; color:#fbbf24; display:block;">${analytics.streak || 0} Days</strong>
-            <span style="font-size:12px; color:rgba(255,255,255,0.6); text-transform:uppercase;">Current Streak</span>
+            <strong style="font-size:24px; color:#d97706; display:block;">${analytics.streak || 0} Days</strong>
+            <span style="font-size:12px; color:var(--study-text-muted); text-transform:uppercase; font-weight:700;">Current Streak</span>
           </div>
         </div>
 
@@ -771,19 +771,19 @@
         </button>
       </div>
 
-      <h3 style="font-size:18px; color:#fff; margin-bottom:14px;">Recent Study Logs</h3>
+      <h3 style="font-size:18px; color:var(--study-text-primary); margin-bottom:14px;">Recent Study Logs</h3>
       <div style="display:flex; flex-direction:column; gap:10px;">
         ${sessions.length === 0 ? `
           <div class="study-empty-state">No study sessions logged yet. Log your first study sprint!</div>
         ` : sessions.map(s => `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 20px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 20px; background:var(--study-box-bg); border:1px solid var(--study-box-border); border-radius:12px; box-shadow:var(--study-box-shadow);">
             <div>
-              <strong style="color:#fff; font-size:15px; display:block;">${escapeHtml(s.subject?.name || 'General Revision')}</strong>
-              <span style="font-size:12.5px; color:rgba(255,255,255,0.6);">${s.type} • ${s.notes ? escapeHtml(s.notes) : ''}</span>
+              <strong style="color:var(--study-text-primary); font-size:15px; display:block;">${escapeHtml(s.subject?.name || 'General Revision')}</strong>
+              <span style="font-size:12.5px; color:var(--study-text-secondary);">${s.type} • ${s.notes ? escapeHtml(s.notes) : ''}</span>
             </div>
             <div style="text-align:right;">
-              <span style="font-size:16px; font-weight:800; color:#a78bfa; display:block;">${s.durationMinutes}m</span>
-              <span style="font-size:11.5px; color:rgba(255,255,255,0.5);">${s.date}</span>
+              <span style="font-size:16px; font-weight:800; color:var(--study-accent-purple); display:block;">${s.durationMinutes}m</span>
+              <span style="font-size:11.5px; color:var(--study-text-muted);">${s.date}</span>
             </div>
           </div>
         `).join('')}
@@ -801,12 +801,12 @@
 
     container.innerHTML = `
       <div style="margin-bottom:24px;">
-        <h2 style="font-family:'Fraunces',serif; font-size:22px; color:#fff; margin:0 0 4px;">Study Analytics &amp; Hours Breakdown</h2>
-        <p style="font-size:13.5px; color:rgba(255,255,255,0.65); margin:0;">Visual summary of time invested across subjects and topics.</p>
+        <h2 class="study-section-title">Study Analytics &amp; Hours Breakdown</h2>
+        <p class="study-section-desc">Visual summary of time invested across subjects and topics.</p>
       </div>
 
-      <div style="background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:24px;">
-        <h3 style="font-size:16px; color:#fff; margin:0 0 16px;">Study Minutes by Subject</h3>
+      <div style="background:var(--study-box-bg); border:1px solid var(--study-box-border); border-radius:20px; padding:24px; box-shadow:var(--study-box-shadow);">
+        <h3 style="font-size:16px; color:var(--study-text-primary); margin:0 0 16px;">Study Minutes by Subject</h3>
         ${entries.length === 0 ? `
           <div class="study-empty-state">Log study sessions to see hours distribution charts.</div>
         ` : entries.map(([subName, mins]) => {
@@ -815,10 +815,10 @@
           return `
             <div style="margin-bottom:14px;">
               <div style="display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:6px;">
-                <strong style="color:#fff;">${escapeHtml(subName)}</strong>
-                <span style="color:#c4b5fd; font-weight:700;">${(mins / 60).toFixed(1)} hrs (${mins}m)</span>
+                <strong style="color:var(--study-text-primary);">${escapeHtml(subName)}</strong>
+                <span style="color:var(--study-accent-purple); font-weight:700;">${(mins / 60).toFixed(1)} hrs (${mins}m)</span>
               </div>
-              <div style="height:10px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden;">
+              <div style="height:10px; background:var(--study-ring-bg); border-radius:999px; overflow:hidden;">
                 <div style="height:100%; width:${pct}%; background:linear-gradient(90deg, #8B5CF6, #EC4899); border-radius:999px;"></div>
               </div>
             </div>
@@ -856,7 +856,7 @@
 
     listEl.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <span style="font-size:13px; color:rgba(255,255,255,0.7);">${subject.completedChapters} of ${subject.totalChapters} completed (${subject.progressPct}%)</span>
+        <span style="font-size:13px; color:var(--study-text-secondary);">${subject.completedChapters} of ${subject.totalChapters} completed (${subject.progressPct}%)</span>
         <button type="button" class="btn-secondary" style="font-size:11px; padding:4px 10px; border-radius:8px; color:#ef4444;" onclick="StudyHub.deleteSubject('${subject.id}')">
           Delete Subject
         </button>
@@ -883,14 +883,14 @@
           return `
             <div class="study-chapter-item" id="chapItem_${ch.id}">
               <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:12px; color:rgba(255,255,255,0.4); font-weight:700;">#${idx + 1}</span>
-                <strong style="font-size:14px; color:#fff;">${escapeHtml(ch.title)}</strong>
+                <span style="font-size:12px; color:var(--study-text-muted); font-weight:700;">#${idx + 1}</span>
+                <strong style="font-size:14px; color:var(--study-text-primary);">${escapeHtml(ch.title)}</strong>
               </div>
               <div style="display:flex; align-items:center; gap:8px;">
                 <button type="button" class="chapter-status-pill ${statusClass}" onclick="StudyHub.cycleChapterStatus('${ch.id}', '${ch.status}')">
                   ${statusLabel}
                 </button>
-                <button type="button" style="background:none; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-size:14px;" onclick="StudyHub.deleteChapter('${ch.id}')" title="Delete">
+                <button type="button" style="background:none; border:none; color:var(--study-text-muted); cursor:pointer; font-size:14px;" onclick="StudyHub.deleteChapter('${ch.id}')" title="Delete">
                   ✕
                 </button>
               </div>
@@ -1091,11 +1091,19 @@
   // Modal Open/Close helpers
   function openModal(modalId) {
     const m = document.getElementById(modalId);
-    if (m) m.style.display = 'flex';
+    if (m) {
+      m.classList.add('is-open');
+      m.style.setProperty('display', 'flex', 'important');
+      document.body.style.overflow = 'hidden';
+    }
   }
   function closeModal(modalId) {
     const m = document.getElementById(modalId);
-    if (m) m.style.display = 'none';
+    if (m) {
+      m.classList.remove('is-open');
+      m.style.setProperty('display', 'none', 'important');
+      document.body.style.overflow = '';
+    }
   }
 
   // Starter pack seeder (Dental Student Starter Pack)
