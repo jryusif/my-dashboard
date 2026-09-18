@@ -488,6 +488,8 @@ function hideAllTopLevelSections() {
   assetsSection.hidden        = true;
   const dentalSec = document.getElementById('dentalCasesSection');
   if (dentalSec) dentalSec.hidden = true;
+  const studySec = document.getElementById('studySection');
+  if (studySec) studySec.hidden = true;
   const analyticsSec = document.getElementById('analyticsProgressSection');
   if (analyticsSec) analyticsSec.hidden = true;
   const roadmapSec = document.getElementById('roadmapSection');
@@ -2021,6 +2023,12 @@ function openPage(category) {
   if (category === 'Finance') { openFinancePage(); return; }
   if (category === 'Gold & Assets') { openAssetsPage(); return; }
   if (category === 'Roadmaps & Master Plan') { openRoadmapPage(); return; }
+  if (category === 'Studies' || category === 'Study' || category === 'Studies & Knowledge') {
+    if (typeof window.openStudyPage === 'function') {
+      window.openStudyPage();
+      return;
+    }
+  }
   if (TASK_CATEGORY_PAGES.includes(category)) { openCategoryPage(category); return; }
   showToast(`${category} page coming soon.`);
 }

@@ -57,6 +57,18 @@ model User {
   notificationPreference  NotificationPreference?
   notificationLogs        NotificationLog[]
 
+  // Study Suite Relations
+  studyProfile            StudyProfile?
+  studySemesters          StudySemester[]
+  studySubjects           StudySubject[]
+  studyTimetableSlots     StudyTimetableSlot[]
+  studyLectures           StudyLecture[]
+  studyCourses            StudyCourse[]
+  studyResources          StudyResource[]
+  studySessions           StudySession[]
+  studyGoals              StudyGoal[]
+  studyExams              StudyExam[]
+
   @@index([role])
   @@index([status])
   @@index([persona])
@@ -546,4 +558,246 @@ model StockProcessedNews {
   @@index([ticker])
   @@map("stock_processed_news")
 }
+
+// ─────────────────────────────────────────────────────────────
+// Study & Academic Suite Models
+// ─────────────────────────────────────────────────────────────
+
+model StudyProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique @map("user_id")
+  mode               String   @default("STUDENT") // 'STUDENT' | 'PROFESSIONAL' | 'GENERAL'
+  institution        String?  // University, Medical Center, Organization
+  program            String?  // Faculty of Dentistry, Computer Science, etc.
+  academicYear       String?  @map("academic_year") // '2026-2027'
+  yearLevel          String?  @map("year_level") // 'Year 4', 'Senior Resident', etc.
+  activeSemesterId   String?  @map("active_semester_id")
+  targetWeeklyHours  Float?   @default(15) @map("target_weekly_hours")
+  settings           Json?    // Optional preferences & widget layout
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("study_profiles")
+}
+
+model StudySemester {
+  id            String         @id @default(cuid())
+  userId        String         @map("user_id")
+  name          String         // 'Semester 1', 'Semester 2', 'Fall 2026', 'Spring 2027'
+  academicYear  String?        @map("academic_year")
+  startDate     String?        @map("start_date") // 'YYYY-MM-DD'
+  endDate       String?        @map("end_date")   // 'YYYY-MM-DD'
+  examStartDate String?        @map("exam_start_date")
+  examEndDate   String?        @map("exam_end_date")
+  isCurrent     Boolean        @default(false) @map("is_current")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjects      StudySubject[]
+
+  @@index([userId, isCurrent])
+  @@map("study_semesters")
+}
+
+model StudySubject {
+  id             String               @id @default(cuid())
+  userId         String               @map("user_id")
+  semesterId     String?              @map("semester_id")
+  name           String               // 'Operative Dentistry', 'Anatomy', etc.
+  code           String?              // 'DENT-401'
+  color          String               @default("purple") // 'purple', 'peach', 'mint', 'amber', 'rose', 'blue', 'green'
+  icon           String               @default("book")   // icon identifier
+  category       String?              // 'Clinical', 'Pre-clinical', 'Basic Science'
+  creditHours    Float?               @map("credit_hours")
+  instructor     String?
+  order          Int                  @default(0)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  semester       StudySemester?       @relation(fields: [semesterId], references: [id], onDelete: SetNull)
+  chapters       StudyChapter[]
+  lectures       StudyLecture[]
+  timetableSlots StudyTimetableSlot[]
+  sessions       StudySession[]
+  exams          StudyExam[]
+
+  @@index([userId, semesterId])
+  @@map("study_subjects")
+}
+
+model StudyChapter {
+  id            String       @id @default(cuid())
+  subjectId     String       @map("subject_id")
+  title         String       // 'Chapter 13 — Composite Restorations'
+  chapterNumber Int?         @map("chapter_number")
+  order         Int          @default(0)
+  status        String       @default("NOT_STARTED") // 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
+  notes         String?      @db.Text
+  completedAt   DateTime?    @map("completed_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  subject       StudySubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([subjectId, order])
+  @@map("study_chapters")
+}
+
+model StudyTimetableSlot {
+  id          String        @id @default(cuid())
+  userId      String        @map("user_id")
+  subjectId   String?       @map("subject_id")
+  title       String        // 'Operative Dentistry Lecture'
+  dayOfWeek   String        // 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
+  startTime   String        // '09:00'
+  endTime     String        // '11:00'
+  type        String        @default("Lecture") // 'Lecture' | 'Section' | 'Lab' | 'Tutorial' | 'Other'
+  instructor  String?
+  location    String?       // 'Lecture Hall B', 'Phantom Lab 2'
+  color       String?
+  active      Boolean       @default(true)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     StudySubject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dayOfWeek])
+  @@map("study_timetable_slots")
+}
+
+model StudyLecture {
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id")
+  subjectId       String?       @map("subject_id")
+  timetableSlotId String?       @map("timetable_slot_id")
+  title           String
+  type            String        @default("Lecture") // 'Lecture' | 'Section' | 'Lab' | 'Tutorial' | 'Other'
+  date            String        // 'YYYY-MM-DD'
+  startTime       String?       @map("start_time")
+  endTime         String?       @map("end_time")
+  instructor      String?
+  location        String?
+  notes           String?       @db.Text
+  completed       Boolean       @default(false)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject         StudySubject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, subjectId])
+  @@map("study_lectures")
+}
+
+model StudyCourse {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  name             String
+  provider         String?  // 'Coursera', 'Masterclass', 'Hospital CME', etc.
+  instructor       String?
+  category         String?
+  color            String   @default("peach")
+  icon             String   @default("laptop")
+  startDate        String?  @map("start_date")
+  endDate          String?  @map("end_date")
+  status           String   @default("IN_PROGRESS") // 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED'
+  totalModules     Int      @default(0) @map("total_modules")
+  completedModules Int      @default(0) @map("completed_modules")
+  totalLessons     Int      @default(0) @map("total_lessons")
+  completedLessons Int      @default(0) @map("completed_lessons")
+  modules          Json?    // Array of [{id, title, completed, lessons: [{id, title, completed}]}]
+  notes            String?  @db.Text
+  linkUrl          String?  @map("link_url")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("study_courses")
+}
+
+model StudyResource {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  subjectId   String?  @map("subject_id")
+  courseId    String?  @map("course_id")
+  title       String
+  author      String?
+  type        String   @default("BOOK") // 'BOOK' | 'PDF' | 'ARTICLE' | 'WEBSITE' | 'VIDEO' | 'CLINICAL'
+  category    String?
+  color       String   @default("mint")
+  totalPages  Int?     @map("total_pages")
+  currentPage Int?     @default(0) @map("current_page")
+  status      String   @default("READING") // 'WANT_TO_READ' | 'READING' | 'COMPLETED'
+  linkUrl     String?  @map("link_url")
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("study_resources")
+}
+
+model StudySession {
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id")
+  subjectId       String?       @map("subject_id")
+  courseId        String?       @map("course_id")
+  date            String        // 'YYYY-MM-DD'
+  durationMinutes Int           @map("duration_minutes")
+  type            String        @default("Revision") // 'Reading' | 'Video' | 'Revision' | 'Practice' | 'Lecture' | 'Lab'
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject         StudySubject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@map("study_sessions")
+}
+
+model StudyGoal {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  title      String
+  timeframe  String   @default("WEEKLY") // 'DAILY' | 'WEEKLY' | 'MONTHLY'
+  targetDate String?  @map("target_date")
+  completed  Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timeframe])
+  @@map("study_goals")
+}
+
+model StudyExam {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id")
+  subjectId   String?      @map("subject_id")
+  title       String       // 'Operative Dentistry Midterm Exam'
+  date        String       // 'YYYY-MM-DD'
+  time        String?      // '10:00 AM'
+  location    String?      // 'Main Exam Hall 3'
+  weightPct   Float?       @map("weight_pct")
+  grade       String?      // 'A+', '92%'
+  notes       String?      @db.Text
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     StudySubject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@map("study_exams")
+}
+
 

@@ -22,11 +22,13 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700;800&family=Oswald:wght@500;600;700&family=Pathway+Gothic+One&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <link rel="stylesheet" href="/style.css?v=37.0" />
+        <link rel="stylesheet" href="/study.css?v=1.0" />
       </head>
       <body data-theme="kristin-light">
         {children}
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script src="/studyApp.js?v=1.0" defer></script>
         <script src="/app.js?v=37.0" defer></script>
       </body>
     </html>
