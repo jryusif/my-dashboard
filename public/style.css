@@ -23595,99 +23595,390 @@ body[data-theme="kristin-light"] .nav-brand-logo {
   border-color: #0F172A;
 }
 
-/* Dark theme overrides */
-[data-theme="dark"] .kristin-avatar-btn {
-  background: #1E293B;
-  border-color: #334155;
-  color: #F8FAFC;
-}
+/* =============================================================
+   DARK THEME OVERRIDES — KRISTIN EXECUTIVE HERO CARDS
+   Applies when active theme is NOT 'kristin-light'
+   ============================================================= */
 
+/* Card 1: Profile Card in Dark Mode */
+:root:not([data-theme="kristin-light"]) .kristin-profile-card,
+body:not([data-theme="kristin-light"]) .kristin-profile-card,
+[data-theme-mode="dark"] .kristin-profile-card,
 [data-theme="dark"] .kristin-profile-card {
-  background: #1E293B;
-  border-color: #334155;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.25);
+  background: #000000 !important;
+  border-color: #1E2024 !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5) !important;
 }
 
-[data-theme="dark"] .kristin-profile-header-left span,
-[data-theme="dark"] .kristin-profile-name {
-  color: #F8FAFC;
+:root:not([data-theme="kristin-light"]) .kristin-profile-header-left span,
+:root:not([data-theme="kristin-light"]) .kristin-profile-name,
+body:not([data-theme="kristin-light"]) .kristin-profile-header-left span,
+body:not([data-theme="kristin-light"]) .kristin-profile-name,
+[data-theme-mode="dark"] .kristin-profile-header-left span,
+[data-theme-mode="dark"] .kristin-profile-name {
+  color: #FFFFFF !important;
 }
 
-[data-theme="dark"] .kristin-profile-role {
-  color: #94A3B8;
+:root:not([data-theme="kristin-light"]) .kristin-profile-role,
+body:not([data-theme="kristin-light"]) .kristin-profile-role,
+[data-theme-mode="dark"] .kristin-profile-role {
+  color: #94A3B8 !important;
 }
 
-[data-theme="dark"] .kristin-status-pill {
-  background: #0F172A;
-  border-color: #334155;
-  color: #CBD5E1;
+:root:not([data-theme="kristin-light"]) .kristin-card-act-btn,
+:root:not([data-theme="kristin-light"]) .kristin-refresh-btn,
+body:not([data-theme="kristin-light"]) .kristin-card-act-btn,
+body:not([data-theme="kristin-light"]) .kristin-refresh-btn,
+[data-theme-mode="dark"] .kristin-card-act-btn,
+[data-theme-mode="dark"] .kristin-refresh-btn {
+  background: #1C1E23 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #CBD5E1 !important;
 }
 
-[data-theme="dark"] .kristin-micro-pill {
-  background: #0F172A;
-  border-color: #334155;
-  color: #E2E8F0;
+:root:not([data-theme="kristin-light"]) .kristin-card-act-btn:hover,
+:root:not([data-theme="kristin-light"]) .kristin-refresh-btn:hover,
+body:not([data-theme="kristin-light"]) .kristin-card-act-btn:hover,
+body:not([data-theme="kristin-light"]) .kristin-refresh-btn:hover {
+  background: #282B33 !important;
+  color: #FFFFFF !important;
 }
 
-[data-theme="dark"] .kristin-avatar-badge {
-  border-color: #1E293B;
+:root:not([data-theme="kristin-light"]) .kristin-status-pill,
+body:not([data-theme="kristin-light"]) .kristin-status-pill,
+[data-theme-mode="dark"] .kristin-status-pill {
+  background: #14161A !important;
+  border-color: #242830 !important;
+  color: #CBD5E1 !important;
 }
 
-[data-theme="dark"] .kristin-productivity-flyout {
-  background: rgba(30, 41, 59, 0.98);
-  border-color: #475569;
-  color: #F8FAFC;
+:root:not([data-theme="kristin-light"]) .kristin-micro-pill,
+body:not([data-theme="kristin-light"]) .kristin-micro-pill,
+[data-theme-mode="dark"] .kristin-micro-pill {
+  background: #14161A !important;
+  border-color: #242830 !important;
+  color: #E2E8F0 !important;
 }
 
-[data-theme="dark"] .kristin-flyout-header {
-  color: #F8FAFC;
+:root:not([data-theme="kristin-light"]) .kristin-micro-pill:hover,
+body:not([data-theme="kristin-light"]) .kristin-micro-pill:hover {
+  background: #1E222A !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
-[data-theme="dark"] .kristin-flyout-score-row,
-[data-theme="dark"] .kristin-flyout-stat {
-  background: #0F172A;
-  border-color: #334155;
+:root:not([data-theme="kristin-light"]) .kristin-avatar-badge,
+body:not([data-theme="kristin-light"]) .kristin-avatar-badge {
+  border-color: #000000 !important;
 }
 
-[data-theme="dark"] .kristin-flyout-score-text strong,
-[data-theme="dark"] .kristin-flyout-stat .num {
-  color: #F8FAFC;
+:root:not([data-theme="kristin-light"]) .kristin-productivity-flyout,
+body:not([data-theme="kristin-light"]) .kristin-productivity-flyout {
+  background: #14161A !important;
+  border-color: #282B33 !important;
+  color: #F8FAFC !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7) !important;
 }
 
-[data-theme="dark"] .kristin-avatar-modal {
-  background: #1E293B;
-  border-color: #334155;
-  color: #F8FAFC;
+:root:not([data-theme="kristin-light"]) .kristin-flyout-header,
+body:not([data-theme="kristin-light"]) .kristin-flyout-header {
+  color: #F8FAFC !important;
 }
 
-[data-theme="dark"] .kristin-modal-preview-zone {
-  background: #0F172A;
-  border-color: #334155;
+:root:not([data-theme="kristin-light"]) .kristin-flyout-score-row,
+:root:not([data-theme="kristin-light"]) .kristin-flyout-stat,
+body:not([data-theme="kristin-light"]) .kristin-flyout-score-row,
+body:not([data-theme="kristin-light"]) .kristin-flyout-stat {
+  background: #0B0D11 !important;
+  border-color: #1E2024 !important;
 }
 
-[data-theme="dark"] .kristin-modal-preview-info h4 {
-  color: #F8FAFC;
+:root:not([data-theme="kristin-light"]) .kristin-flyout-score-text strong,
+:root:not([data-theme="kristin-light"]) .kristin-flyout-stat .num,
+body:not([data-theme="kristin-light"]) .kristin-flyout-score-text strong,
+body:not([data-theme="kristin-light"]) .kristin-flyout-stat .num {
+  color: #F8FAFC !important;
 }
 
-[data-theme="dark"] .kristin-field-label {
-  color: #94A3B8;
+:root:not([data-theme="kristin-light"]) .kristin-avatar-modal,
+body:not([data-theme="kristin-light"]) .kristin-avatar-modal {
+  background: #14161A !important;
+  border-color: #282B33 !important;
+  color: #F8FAFC !important;
 }
 
-[data-theme="dark"] .kristin-btn-action,
-[data-theme="dark"] .kristin-preset-btn,
-[data-theme="dark"] .kristin-text-input,
-[data-theme="dark"] .kristin-input-with-icon input,
-[data-theme="dark"] .kristin-status-chip {
-  background: #0F172A;
-  border-color: #334155;
-  color: #F8FAFC;
+:root:not([data-theme="kristin-light"]) .kristin-modal-preview-zone,
+body:not([data-theme="kristin-light"]) .kristin-modal-preview-zone {
+  background: #0B0D11 !important;
+  border-color: #1E2024 !important;
 }
 
-[data-theme="dark"] .kristin-btn-action.primary,
-[data-theme="dark"] .kristin-status-chip.active {
-  background: #38BDF8;
-  color: #0F172A;
-  border-color: #38BDF8;
+:root:not([data-theme="kristin-light"]) .kristin-modal-preview-info h4,
+body:not([data-theme="kristin-light"]) .kristin-modal-preview-info h4 {
+  color: #F8FAFC !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-field-label,
+body:not([data-theme="kristin-light"]) .kristin-field-label {
+  color: #94A3B8 !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-btn-action,
+:root:not([data-theme="kristin-light"]) .kristin-preset-btn,
+:root:not([data-theme="kristin-light"]) .kristin-text-input,
+:root:not([data-theme="kristin-light"]) .kristin-input-with-icon input,
+:root:not([data-theme="kristin-light"]) .kristin-status-chip,
+body:not([data-theme="kristin-light"]) .kristin-btn-action,
+body:not([data-theme="kristin-light"]) .kristin-preset-btn,
+body:not([data-theme="kristin-light"]) .kristin-text-input,
+body:not([data-theme="kristin-light"]) .kristin-input-with-icon input,
+body:not([data-theme="kristin-light"]) .kristin-status-chip {
+  background: #0B0D11 !important;
+  border-color: #242830 !important;
+  color: #F8FAFC !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-btn-action.primary,
+:root:not([data-theme="kristin-light"]) .kristin-status-chip.active,
+body:not([data-theme="kristin-light"]) .kristin-btn-action.primary,
+body:not([data-theme="kristin-light"]) .kristin-status-chip.active {
+  background: #38BDF8 !important;
+  color: #0B0D11 !important;
+  border-color: #38BDF8 !important;
+}
+
+/* Card 2: Interactive Real Location & Weather Map in Dark Mode */
+:root:not([data-theme="kristin-light"]) .kristin-map-weather-card,
+body:not([data-theme="kristin-light"]) .kristin-map-weather-card,
+[data-theme-mode="dark"] .kristin-map-weather-card {
+  border-color: #1E2024 !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-map-container .leaflet-tile-pane,
+body:not([data-theme="kristin-light"]) .kristin-map-container .leaflet-tile-pane,
+[data-theme-mode="dark"] .kristin-map-container .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%);
+}
+
+/* Card 3: Task Velocity Stack (Coral & Cyan) in Dark Mode */
+:root:not([data-theme="kristin-light"]) .kristin-card-coral,
+body:not([data-theme="kristin-light"]) .kristin-card-coral,
+[data-theme-mode="dark"] .kristin-card-coral {
+  background: radial-gradient(circle at 90% 10%, rgba(244, 63, 94, 0.22) 0%, transparent 60%),
+              linear-gradient(145deg, #18090f 0%, #220d15 55%, #14070c 100%) !important;
+  border: 1px solid rgba(244, 63, 94, 0.32) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(244, 63, 94, 0.1) !important;
+  color: #FFFFFF !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-coral:hover,
+body:not([data-theme="kristin-light"]) .kristin-card-coral:hover {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 25px rgba(244, 63, 94, 0.2) !important;
+  border-color: rgba(244, 63, 94, 0.5) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-task-title,
+body:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-task-title {
+  color: #FFFFFF !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-hero-pct,
+body:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-hero-pct {
+  color: #FDA4AF !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-hero-sub,
+body:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-hero-sub {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-frosted-circle,
+body:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-frosted-circle {
+  background: rgba(244, 63, 94, 0.18) !important;
+  border-color: rgba(244, 63, 94, 0.35) !important;
+  color: #FDA4AF !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-scope-badge.coral,
+body:not([data-theme="kristin-light"]) .kristin-card-scope-badge.coral {
+  background: rgba(244, 63, 94, 0.2) !important;
+  color: #FDA4AF !important;
+  border-color: rgba(244, 63, 94, 0.35) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-card-mini-track,
+body:not([data-theme="kristin-light"]) .kristin-card-coral .kristin-card-mini-track {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-cyan,
+body:not([data-theme="kristin-light"]) .kristin-card-cyan,
+[data-theme-mode="dark"] .kristin-card-cyan {
+  background: radial-gradient(circle at 90% 10%, rgba(56, 189, 248, 0.22) 0%, transparent 60%),
+              linear-gradient(145deg, #051420 0%, #0a2133 55%, #04111c 100%) !important;
+  border: 1px solid rgba(56, 189, 248, 0.32) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(56, 189, 248, 0.1) !important;
+  color: #FFFFFF !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-cyan:hover,
+body:not([data-theme="kristin-light"]) .kristin-card-cyan:hover {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 25px rgba(56, 189, 248, 0.2) !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-task-title,
+body:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-task-title {
+  color: #FFFFFF !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-hero-pct,
+body:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-hero-pct {
+  color: #38BDF8 !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-hero-sub,
+body:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-hero-sub {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-frosted-circle,
+body:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-frosted-circle {
+  background: rgba(56, 189, 248, 0.18) !important;
+  border-color: rgba(56, 189, 248, 0.35) !important;
+  color: #38BDF8 !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-scope-badge.cyan,
+body:not([data-theme="kristin-light"]) .kristin-card-scope-badge.cyan {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: #7DD3FC !important;
+  border-color: rgba(56, 189, 248, 0.35) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-card-mini-track,
+body:not([data-theme="kristin-light"]) .kristin-card-cyan .kristin-card-mini-track {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Card 5: Today's High Priority Tasks Card in Dark Mode */
+:root:not([data-theme="kristin-light"]) .kristin-meetings-card,
+:root:not([data-theme="kristin-light"]) .kristin-priority-card,
+body:not([data-theme="kristin-light"]) .kristin-meetings-card,
+body:not([data-theme="kristin-light"]) .kristin-priority-card,
+[data-theme-mode="dark"] .kristin-meetings-card,
+[data-theme-mode="dark"] .kristin-priority-card {
+  background: #000000 !important;
+  border-color: #1E2024 !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-card-header-row h2,
+:root:not([data-theme="kristin-light"]) .kristin-prio-header-title h2,
+body:not([data-theme="kristin-light"]) .kristin-card-header-row h2,
+body:not([data-theme="kristin-light"]) .kristin-prio-header-title h2,
+[data-theme-mode="dark"] .kristin-card-header-row h2,
+[data-theme-mode="dark"] .kristin-prio-header-title h2 {
+  color: #FFFFFF !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-badge,
+body:not([data-theme="kristin-light"]) .kristin-prio-badge,
+[data-theme-mode="dark"] .kristin-prio-badge {
+  background: rgba(225, 29, 72, 0.2) !important;
+  color: #FDA4AF !important;
+  border: 1px solid rgba(225, 29, 72, 0.3) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-badge.all-clear,
+body:not([data-theme="kristin-light"]) .kristin-prio-badge.all-clear,
+[data-theme-mode="dark"] .kristin-prio-badge.all-clear {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #6EE7B7 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-header-icon-btn,
+body:not([data-theme="kristin-light"]) .kristin-header-icon-btn,
+[data-theme-mode="dark"] .kristin-header-icon-btn {
+  background: #1C1E23 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #E2E8F0 !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-header-icon-btn:hover,
+body:not([data-theme="kristin-light"]) .kristin-header-icon-btn:hover {
+  background: #282B33 !important;
+  color: #FFFFFF !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-task-item,
+body:not([data-theme="kristin-light"]) .kristin-prio-task-item,
+[data-theme-mode="dark"] .kristin-prio-task-item {
+  background: #14161A !important;
+  border-color: #242830 !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-task-item:hover,
+body:not([data-theme="kristin-light"]) .kristin-prio-task-item:hover {
+  background: #1C1E23 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-task-title,
+body:not([data-theme="kristin-light"]) .kristin-prio-task-title,
+[data-theme-mode="dark"] .kristin-prio-task-title {
+  color: #F8FAFC !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-empty-title,
+body:not([data-theme="kristin-light"]) .kristin-prio-empty-title,
+[data-theme-mode="dark"] .kristin-prio-empty-title {
+  color: #F8FAFC !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-empty-sub,
+body:not([data-theme="kristin-light"]) .kristin-prio-empty-sub,
+[data-theme-mode="dark"] .kristin-prio-empty-sub {
+  color: #94A3B8 !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-add-quick-btn,
+body:not([data-theme="kristin-light"]) .kristin-prio-add-quick-btn,
+[data-theme-mode="dark"] .kristin-prio-add-quick-btn {
+  background: #1C1E23 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #F8FAFC !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-add-quick-btn:hover,
+body:not([data-theme="kristin-light"]) .kristin-prio-add-quick-btn:hover {
+  background: #2563EB !important;
+  border-color: #2563EB !important;
+  color: #FFFFFF !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-card-footer,
+body:not([data-theme="kristin-light"]) .kristin-prio-card-footer,
+[data-theme-mode="dark"] .kristin-prio-card-footer {
+  border-top-color: #1E2024 !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-see-all-link,
+body:not([data-theme="kristin-light"]) .kristin-see-all-link,
+[data-theme-mode="dark"] .kristin-see-all-link {
+  color: #94A3B8 !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-see-all-link:hover,
+body:not([data-theme="kristin-light"]) .kristin-see-all-link:hover {
+  color: #38BDF8 !important;
+}
+
+:root:not([data-theme="kristin-light"]) .kristin-prio-completed-sub,
+body:not([data-theme="kristin-light"]) .kristin-prio-completed-sub,
+[data-theme-mode="dark"] .kristin-prio-completed-sub {
+  color: #64748B !important;
 }
 
 /* Card 2: Interactive Real Location & Weather Map */

@@ -17540,9 +17540,11 @@ window.initTheme = initTheme;
 
 function setTheme(themeId, notify = true) {
   const theme = THEMES_LIST.find(t => t.id === themeId) || THEMES_LIST[0];
-  currentActiveTheme = theme.id;
+  const isDark = theme.id !== 'kristin-light';
   document.documentElement.setAttribute('data-theme', theme.id);
   document.body.setAttribute('data-theme', theme.id);
+  document.documentElement.setAttribute('data-theme-mode', isDark ? 'dark' : 'light');
+  document.body.setAttribute('data-theme-mode', isDark ? 'dark' : 'light');
   localStorage.setItem('antigravity_theme', theme.id);
 
   renderThemeGallery('themeCardsGrid');
