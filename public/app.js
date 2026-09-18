@@ -26381,15 +26381,31 @@ async function renderScannerOpportunities(isSilent = false) {
 
     if (loadingBox) loadingBox.style.display = 'none';
 
-    // Auto-trigger background scan if zero opportunities found on initial load
-    if (stats.totalActive === 0 && !scannerUiState.hasTriggeredAutoScan && !scannerUiState.isScanning) {
+    // Auto-trigger background scan if zero opportunities found on initial load during live market hours only
+    const isLiveMarket = Boolean(stats.marketSession?.isLive && !stats.isAfterHoursEnded);
+    if (stats.totalActive === 0 && isLiveMarket && !scannerUiState.hasTriggeredAutoScan && !scannerUiState.isScanning) {
       scannerUiState.hasTriggeredAutoScan = true;
       triggerManualScannerRun();
     }
 
     if (scannerUiState.opportunities.length === 0) {
       tableBody.innerHTML = '';
-      if (emptyBox) emptyBox.style.display = 'flex';
+      if (emptyBox) {
+        emptyBox.style.display = 'flex';
+        const emptyTitle = document.getElementById('scannerEmptyTitle');
+        const emptyDesc = document.getElementById('scannerEmptyDesc');
+        const emptyActions = document.getElementById('scannerEmptyActions');
+
+        if (stats.isAfterHoursEnded || stats.marketSession?.isAfterHoursEnded || stats.marketSession?.session === 'CLOSED' || stats.marketSession?.session === 'WEEKEND') {
+          if (emptyTitle) emptyTitle.textContent = 'انتهت جلسة ما بعد الإغلاق لهذا اليوم (Daily Reset)';
+          if (emptyDesc) emptyDesc.textContent = 'انتهت جلسة ما بعد الإغلاق (After-Hours) لهذا اليوم وتم تصفير قائمة اليوم بنجاح. سيبدأ الرادار تلقائياً البحث لقائمة جديدة مع انطلاق جلسة ما قبل التداول (Pre-Market) القادمة الساعة 04:00 صباحاً بتوقيت نيويورك. يمكنك استعراض أسهم اليوم المنتهية من تبويب "الأرشيف".';
+          if (emptyActions) emptyActions.style.display = 'none';
+        } else {
+          if (emptyTitle) emptyTitle.textContent = 'رادار السوق الأمريكي في وضع المراقبة الحية';
+          if (emptyDesc) emptyDesc.textContent = 'يراقب المحرك الأسهم ذات الفوليوم اليومي العالي والانفجار السعري، ويتم تصفير القائمة تلقائياً عند نهاية جلسة ما بعد الإغلاق لبدء يوم تداول جديد.';
+          if (emptyActions) emptyActions.style.display = 'block';
+        }
+      }
       return;
     }
 
@@ -26450,12 +26466,12 @@ async function renderScannerOpportunities(isSilent = false) {
             ${opp.momentum5m ? `<div class="scanner-momentum-sub">5m: ${opp.momentum5m > 0 ? '+' : ''}${opp.momentum5m}%</div>` : ''}
           </td>
 
-          <!-- Relative Volume -->
+          <!-- Relative Volume & Daily Volume -->
           <td>
             <span class="scanner-rvol-tag ${rvolClass}">
               ${opp.rvol ? Number(opp.rvol).toFixed(1) + 'x RVOL' : '1.0x'}
             </span>
-            ${opp.volume ? `<div class="scanner-vol-sub">${formatCompactNumber(opp.volume)} سهم</div>` : ''}
+            ${opp.volume ? `<div class="scanner-vol-sub">${formatCompactNumber(opp.volume)} سهم اليوم</div>` : ''}
           </td>
 
           <!-- Float / Shares -->
@@ -26558,11 +26574,15 @@ async function triggerManualScannerRun() {
     const result = await res.json();
 
     if (result.success) {
-      const count = result.discoveredCount || 0;
-      if (count > 0) {
-        showToast(`🎉 تم اكتشاف ${count} فرصة جديدة مطابقة!`);
+      if (result.isAfterHoursEnded) {
+        showToast(result.message || 'انتهت جلسة ما بعد الإغلاق لهذا اليوم وتم تصفير قائمة الفرص.');
       } else {
-        showToast(`✅ تم فحص ${result.evaluatedNewsCount || 0} خبر؛ لا توجد فرص جديدة حالياً.`);
+        const count = result.discoveredCount || 0;
+        if (count > 0) {
+          showToast(`🎉 تم اكتشاف ${count} فرصة جديدة مطابقة اليوم!`);
+        } else {
+          showToast('✅ تم فحص السوق؛ لا توجد فرص جديدة مطابقة للشروط حالياً.');
+        }
       }
       await renderScannerOpportunities(true);
     } else {

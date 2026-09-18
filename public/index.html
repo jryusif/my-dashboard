@@ -1422,7 +1422,7 @@
                     <th style="width: 135px;">Ticker / الشركة</th>
                     <th style="width: 85px;">السعر</th>
                     <th style="width: 100px;">% التغيّر / الزخم</th>
-                    <th style="width: 110px;">Relative Volume</th>
+                    <th style="width: 130px;">حجم اليوم & RVOL</th>
                     <th style="width: 115px;">الأسهم الحرة (Float)</th>
                     <th>الخبر والمحفز (Catalyst Intelligence)</th>
                     <th style="width: 140px;">التوافق الشرعي</th>
@@ -1450,11 +1450,11 @@
                 <div class="radar-sweep"></div>
                 <div class="radar-center-blip"></div>
               </div>
-              <h4 class="scanner-empty-title">رادار السوق الأمريكي في وضع المراقبة الحية</h4>
-              <p class="scanner-empty-desc">
-                يراقب المحرك الأخبار اللحظية، وعند رصد سهم بين <bdi class="accent-tag">$1.00 - $20.00</bdi> مصحوباً بارتفاع فوليوم غير طبيعي (<bdi class="accent-tag">RVOL &ge; 3.0x</bdi>) أو انفجار سعري (<bdi class="accent-tag">&ge; +5%</bdi>)، يظهر هنا فوراً مع تصنيفه الشرعي.
+              <h4 class="scanner-empty-title" id="scannerEmptyTitle">رادار السوق الأمريكي في وضع المراقبة الحية</h4>
+              <p class="scanner-empty-desc" id="scannerEmptyDesc">
+                يراقب المحرك الأسهم ذات الفوليوم اليومي العالي والانفجار السعري، ويتم تصفير القائمة تلقائياً عند نهاية جلسة ما بعد الإغلاق لبدء يوم تداول جديد.
               </p>
-              <div class="scanner-empty-actions">
+              <div class="scanner-empty-actions" id="scannerEmptyActions">
                 <button type="button" class="btn-scanner-action-cta" onclick="triggerManualScannerRun()">
                   <span>⚡</span> تشغيل دورة فحص فورية الآن
                 </button>
