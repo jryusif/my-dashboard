@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { resolveTickerCik, getCompanyFinancialFacts, getCompanySubmissions, COUNTRY_FLAGS, COUNTRY_CODES, AUTHORITATIVE_PERIODIC_FORMS } from '@/lib/sec-provider';
 import { screenCompanyShariah } from '@/lib/shariah-engine';
 import { getMarketData } from '@/lib/market-provider';
-import { SHARIAH_CONFIG } from '@/lib/shariah-config';
+import { SHARIAH_CONFIG, KNOWN_ISRAEL_TICKERS } from '@/lib/shariah-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,9 +109,24 @@ export async function POST(request) {
     }
     const previousScreening = company.screenings?.[0] || null;
 
+    const isIsraelCompany = Boolean(
+      (company.country || '').toLowerCase() === 'israel' || 
+      (company.country || '').toLowerCase() === 'il' ||
+      (company.incCountry || '').toLowerCase() === 'israel' ||
+      (company.incCountry || '').toLowerCase() === 'il' ||
+      (secSubmissions?.country || '').toLowerCase() === 'israel' ||
+      (secSubmissions?.country || '').toLowerCase() === 'il' ||
+      (secSubmissions?.incCountry || '').toLowerCase() === 'israel' ||
+      (secSubmissions?.incCountry || '').toLowerCase() === 'il' ||
+      KNOWN_ISRAEL_TICKERS.has(ticker)
+    );
+
     const screening = screenCompanyShariah({
       company: {
         ...company,
+        country: isIsraelCompany ? (company.country && company.country !== 'United States' ? company.country : 'Israel') : company.country,
+        incCountry: isIsraelCompany ? (company.incCountry || 'Israel') : company.incCountry,
+        countryCode: isIsraelCompany ? 'IL' : (company.countryCode || null),
         sic: secSubmissions?.sic || null,
         sicDescription: secSubmissions?.sicDescription || company.sector || null
       },

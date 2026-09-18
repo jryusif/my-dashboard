@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSecTickersDirectory, COUNTRY_FLAGS, COUNTRY_CODES } from '@/lib/sec-provider';
+import { KNOWN_ISRAEL_TICKERS } from '@/lib/shariah-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,15 +29,21 @@ export async function GET(request) {
 
     const resultsMap = new Map();
     dbCompanies.forEach(c => {
-      const country = c.country || 'United States';
+      const isIsrael = (c.country || '').toLowerCase() === 'israel' || 
+        (c.country || '').toLowerCase() === 'il' || 
+        (c.incCountry || '').toLowerCase() === 'israel' || 
+        (c.incCountry || '').toLowerCase() === 'il' || 
+        KNOWN_ISRAEL_TICKERS.has(c.ticker.toUpperCase());
+      const country = isIsrael ? 'Israel' : (c.country || 'United States');
       resultsMap.set(c.ticker, {
         ticker: c.ticker,
         name: c.name,
         exchange: c.exchange || 'US Market',
         sector: c.sector || null,
         country,
-        countryCode: COUNTRY_CODES[country] || 'us',
-        countryFlag: COUNTRY_FLAGS[country] || '🌐'
+        countryCode: isIsrael ? 'il' : (COUNTRY_CODES[country] || 'us'),
+        countryFlag: isIsrael ? '🇮🇱' : (COUNTRY_FLAGS[country] || '🌐'),
+        isExcluded: isIsrael
       });
     });
 
@@ -48,11 +55,15 @@ export async function GET(request) {
       // Check exact match first
       if (secDir.has(upperQ) && !resultsMap.has(upperQ)) {
         const item = secDir.get(upperQ);
+        const isIsrael = KNOWN_ISRAEL_TICKERS.has(item.ticker.toUpperCase());
         resultsMap.set(item.ticker, {
           ticker: item.ticker,
           name: item.name,
           exchange: 'US Market',
-          country: 'United States'
+          country: isIsrael ? 'Israel' : 'United States',
+          countryCode: isIsrael ? 'il' : 'us',
+          countryFlag: isIsrael ? '🇮🇱' : '🇺🇸',
+          isExcluded: isIsrael
         });
       }
 
@@ -60,11 +71,15 @@ export async function GET(request) {
       for (const [ticker, item] of secDir.entries()) {
         if (resultsMap.size >= 8) break;
         if (ticker.startsWith(upperQ) && !resultsMap.has(ticker)) {
+          const isIsrael = KNOWN_ISRAEL_TICKERS.has(item.ticker.toUpperCase());
           resultsMap.set(ticker, {
             ticker: item.ticker,
             name: item.name,
             exchange: 'US Market',
-            country: 'United States'
+            country: isIsrael ? 'Israel' : 'United States',
+            countryCode: isIsrael ? 'il' : 'us',
+            countryFlag: isIsrael ? '🇮🇱' : '🇺🇸',
+            isExcluded: isIsrael
           });
         }
       }
@@ -74,11 +89,15 @@ export async function GET(request) {
         for (const [ticker, item] of secDir.entries()) {
           if (resultsMap.size >= 8) break;
           if (item.name.toLowerCase().includes(query.toLowerCase()) && !resultsMap.has(ticker)) {
+            const isIsrael = KNOWN_ISRAEL_TICKERS.has(item.ticker.toUpperCase());
             resultsMap.set(ticker, {
               ticker: item.ticker,
               name: item.name,
               exchange: 'US Market',
-              country: 'United States'
+              country: isIsrael ? 'Israel' : 'United States',
+              countryCode: isIsrael ? 'il' : 'us',
+              countryFlag: isIsrael ? '🇮🇱' : '🇺🇸',
+              isExcluded: isIsrael
             });
           }
         }

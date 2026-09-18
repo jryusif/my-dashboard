@@ -4,7 +4,7 @@ import { resolveTickerCik, getCompanySubmissions, getCompanyFinancialFacts, COUN
 import { screenCompanyShariah } from '@/lib/shariah-engine';
 import { getMarketData } from '@/lib/market-provider';
 import { getCompanyNews } from '@/lib/news-provider';
-import { SHARIAH_CONFIG } from '@/lib/shariah-config';
+import { SHARIAH_CONFIG, KNOWN_ISRAEL_TICKERS } from '@/lib/shariah-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -221,7 +221,19 @@ export async function GET(request) {
     const cachedReportDate = latestFin?.rawXbrlData?.periodInfo?.reportDate || latestFin?.rawXbrlData?.periodInfo?.endDate || null;
     const isReportDateOutdated = Boolean(latestSecFiling?.reportDate && cachedReportDate && latestSecFiling.reportDate > cachedReportDate);
 
-    const requiresRecalculation = !currentScreening || isScreeningStale || newMaterialFilingDetected || forceRefresh || hasImpureBug || isReportDateOutdated;
+    const isIsraelCompany = Boolean(
+      (company.country || '').toLowerCase() === 'israel' || 
+      (company.country || '').toLowerCase() === 'il' ||
+      (company.incCountry || '').toLowerCase() === 'israel' ||
+      (company.incCountry || '').toLowerCase() === 'il' ||
+      (secSubmissions?.country || '').toLowerCase() === 'israel' ||
+      (secSubmissions?.country || '').toLowerCase() === 'il' ||
+      (secSubmissions?.incCountry || '').toLowerCase() === 'israel' ||
+      (secSubmissions?.incCountry || '').toLowerCase() === 'il' ||
+      KNOWN_ISRAEL_TICKERS.has((company.ticker || '').toUpperCase())
+    );
+
+    const requiresRecalculation = !currentScreening || isScreeningStale || newMaterialFilingDetected || forceRefresh || hasImpureBug || isReportDateOutdated || (isIsraelCompany && currentScreening?.status !== 'FAIL');
 
     if (!requiresRecalculation && currentScreening) {
       // Return cached Shariah screening
@@ -239,6 +251,23 @@ export async function GET(request) {
         impureDetail.result = 0;
         impureDetail.resultFormatted = '0%';
         impureDetail.status = 'PASS';
+      }
+
+      // Ensure Jurisdiction check is present in calculation details
+      const hasJurisdiction = calculationDetails.some(d => d.key === 'jurisdiction_screen');
+      if (!hasJurisdiction) {
+        calculationDetails.unshift({
+          key: 'jurisdiction_screen',
+          title: 'Jurisdiction & Geographic Exclusion Screen',
+          ruleReference: 'Jurisdiction Exclusion Policy',
+          status: isIsraelCompany ? 'FAIL' : 'PASS',
+          resultFormatted: isIsraelCompany ? 'Excluded (Israel / IL)' : 'Compliant (Non-excluded)',
+          thresholdFormatted: 'Non-excluded jurisdiction',
+          complianceNote: isIsraelCompany 
+            ? 'Company is incorporated, headquartered, or domiciled in Israel. Flagged as Non-Compliant / Haram under jurisdiction exclusion policy.'
+            : 'Company is not domiciled in an excluded jurisdiction.',
+          source: isIsraelCompany ? 'Jurisdiction Registry' : 'SEC EDGAR Submissions'
+        });
       }
 
       // Ensure Rule 1 Business Activity check is present in calculation details even for older cached screenings
@@ -282,10 +311,13 @@ export async function GET(request) {
       };
 
       shariahResult = {
-        status: currentScreening.status,
+        status: isIsraelCompany ? 'FAIL' : currentScreening.status,
+        isExcludedJurisdiction: isIsraelCompany,
+        jurisdictionStatus: isIsraelCompany ? 'FAIL' : 'PASS',
+        jurisdictionReason: isIsraelCompany ? 'Company is domiciled, incorporated, or headquartered in Israel (Jurisdiction Exclusion)' : null,
         methodology: currentScreening.methodology,
         businessActivity: currentScreening.businessActivity || company.sector || 'General Commercial',
-        businessStatus: currentScreening.businessStatus,
+        businessStatus: isIsraelCompany ? 'FAIL' : currentScreening.businessStatus,
         debtRatioPct: currentScreening.debtRatioPct,
         debtThresholdPct: currentScreening.debtThresholdPct,
         cashRatioPct: currentScreening.cashRatioPct,
@@ -337,6 +369,9 @@ export async function GET(request) {
         const screening = screenCompanyShariah({
           company: {
             ...company,
+            country: isIsraelCompany ? (company.country && company.country !== 'United States' ? company.country : 'Israel') : company.country,
+            incCountry: isIsraelCompany ? (company.incCountry || 'Israel') : company.incCountry,
+            countryCode: isIsraelCompany ? 'IL' : (company.countryCode || null),
             sic: secSubmissions?.sic || null,
             sicDescription: secSubmissions?.sicDescription || company.sector || null
           },
@@ -470,11 +505,11 @@ export async function GET(request) {
         exchange: marketResult?.exchange || company.exchange || 'NASDAQ',
         sector: company.sector || marketResult?.sector || 'Technology',
         industry: company.industry || marketResult?.industry || 'Semiconductors',
-        country: secSubmissions?.country || company.country || 'N/A',
-        countryCode: secSubmissions?.countryCode || COUNTRY_CODES[company.country] || 'us',
-        countryFlag: secSubmissions?.countryFlag || COUNTRY_FLAGS[company.country] || '🌐',
+        country: isIsraelCompany ? 'Israel' : (secSubmissions?.country || company.country || 'N/A'),
+        countryCode: isIsraelCompany ? 'il' : (secSubmissions?.countryCode || COUNTRY_CODES[company.country] || 'us'),
+        countryFlag: isIsraelCompany ? '🇮🇱' : (secSubmissions?.countryFlag || COUNTRY_FLAGS[company.country] || '🌐'),
         hqAddress: secSubmissions?.hqAddress || company.hqAddress || 'N/A',
-        incCountry: secSubmissions?.incCountry || company.incCountry || 'N/A'
+        incCountry: isIsraelCompany ? 'Israel' : (secSubmissions?.incCountry || company.incCountry || 'N/A')
       },
       shariah: shariahResult || { error: shariahError, status: 'REVIEW_REQUIRED', reviewReasons: [shariahError || 'Data unavailable'] },
       market: marketResult || { error: marketError, price: null, dataQuality: 'LOW' },

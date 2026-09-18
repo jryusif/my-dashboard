@@ -24854,7 +24854,10 @@ function renderScreenerAutocomplete(results) {
         <span class="screener-auto-name">${item.name}</span>
       </div>
       <div class="screener-auto-right">
-        <span style="display:inline-flex; align-items:center; gap:5px;">
+        <span style="display:inline-flex; align-items:center; gap:6px;">
+          ${(item.isExcluded || item.countryCode === 'il' || (item.country || '').toLowerCase() === 'israel') 
+            ? '<span class="stock-sub-tag" style="background:rgba(239,68,68,0.15);color:#ef4444;border-color:rgba(239,68,68,0.4);font-size:10px;padding:2px 6px;font-weight:700;">🚫 Haram / Excluded</span>' 
+            : ''}
           ${item.exchange || 'US Market'} &bull; ${renderCountryFlagHtml(item.countryCode, item.countryFlag, item.country, { width: 16, height: 12 })}
         </span>
       </div>
@@ -24978,6 +24981,34 @@ function renderScreenerSelectedBar(company) {
   if (coTag) coTag.innerHTML = renderCountryFlagHtml(company.countryCode, company.countryFlag, company.country, { width: 20, height: 15 });
   if (secTag) secTag.textContent = company.sector || 'Technology';
 
+  let exclTag = document.getElementById('selectedStockExclusionTag');
+  const isExcluded = Boolean(
+    (company.countryCode === 'il') || 
+    (company.country || '').toLowerCase() === 'israel' || 
+    (company.incCountry || '').toLowerCase() === 'israel' ||
+    company.isExcluded
+  );
+
+  if (isExcluded) {
+    if (!exclTag) {
+      exclTag = document.createElement('span');
+      exclTag.id = 'selectedStockExclusionTag';
+      exclTag.className = 'stock-sub-tag';
+      exclTag.style.background = 'rgba(239, 68, 68, 0.18)';
+      exclTag.style.color = '#ef4444';
+      exclTag.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+      exclTag.style.fontWeight = '700';
+      exclTag.innerHTML = '🚫 Excluded / Haram (IL)';
+      if (coTag && coTag.parentNode) {
+        coTag.parentNode.insertBefore(exclTag, coTag.nextSibling);
+      }
+    } else {
+      exclTag.style.display = 'inline-flex';
+    }
+  } else if (exclTag) {
+    exclTag.style.display = 'none';
+  }
+
   bar.style.display = 'flex';
 }
 
@@ -25013,7 +25044,20 @@ function renderShariahCard(shariah, company) {
   let statusText = 'REVIEW REQUIRED';
   let statusSub = 'Manual audit recommended for non-disclosed line items';
 
-  if (status === 'PASS') {
+  const isExcluded = Boolean(
+    shariah.isExcludedJurisdiction || 
+    shariah.jurisdictionStatus === 'FAIL' ||
+    company.countryCode === 'il' || 
+    (company.country || '').toLowerCase() === 'israel' ||
+    (company.incCountry || '').toLowerCase() === 'israel'
+  );
+
+  if (isExcluded) {
+    statusClass = 'is-fail';
+    statusIcon = '🚫';
+    statusText = 'NON-COMPLIANT / HARAM (EXCLUDED)';
+    statusSub = 'Company is incorporated or headquartered in Israel (Jurisdiction Exclusion)';
+  } else if (status === 'PASS') {
     statusClass = 'is-pass';
     statusIcon = '🟢';
     statusText = 'SHARIAH PASS';
