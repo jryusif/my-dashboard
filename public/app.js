@@ -25156,12 +25156,19 @@ function renderShariahCard(shariah, company) {
   const impurePass = impureVal !== null && !impureIsError && impureVal <= 5.0;
 
   // Dual Business Activity & Revenue Screen (AAOIFI Standard No. 21 Rule 1 & 2)
-  const sectorPass = shariah.sectorStatus ? shariah.sectorStatus === 'PASS' : (shariah.businessStatus === 'PASS');
-  const revenueStatus = shariah.revenueStatus || (shariah.businessStatus === 'FAIL' ? 'FAIL' : (shariah.businessStatus === 'REVIEW_REQUIRED' ? 'REVIEW_REQUIRED' : 'PASS'));
+  const bDetail = (shariah.calculationDetails || []).find(d => d.key === 'business_activity' || d.type === 'BUSINESS_ACTIVITY');
+  const resolvedSectorStatus = shariah.sectorStatus || bDetail?.sectorStatus || (shariah.businessStatus === 'FAIL' ? 'FAIL' : 'PASS');
+  const sectorPass = resolvedSectorStatus === 'PASS';
+  const sectorFail = resolvedSectorStatus === 'FAIL';
+  const sectorReview = resolvedSectorStatus === 'REVIEW_REQUIRED';
+
+  const revenueStatus = shariah.revenueStatus || bDetail?.revenueStatus || (shariah.businessStatus === 'FAIL' ? 'FAIL' : (shariah.businessStatus === 'REVIEW_REQUIRED' ? 'REVIEW_REQUIRED' : 'PASS'));
   const revenuePass = revenueStatus === 'PASS';
   const revenueReview = revenueStatus === 'REVIEW_REQUIRED';
   const revenueFail = revenueStatus === 'FAIL';
-  const revenueImpureRatio = typeof shariah.revenueImpureRatioPct === 'number' ? shariah.revenueImpureRatioPct : null;
+  const revenueImpureRatio = typeof shariah.revenueImpureRatioPct === 'number'
+    ? shariah.revenueImpureRatioPct
+    : (typeof bDetail?.revenueImpureRatioPct === 'number' ? bDetail.revenueImpureRatioPct : null);
   const businessPass = shariah.businessStatus === 'PASS';
 
   card.innerHTML = `
@@ -25264,8 +25271,8 @@ function renderShariahCard(shariah, company) {
           <span class="dual-sector-label">
             <span>🏢</span> Sector Classification: <strong class="dual-sector-val">${shariah.businessActivity || company.sector || 'General Commercial'}</strong>
           </span>
-          <span class="stock-sub-tag" style="font-size: 10px; padding: 2px 6px; color: ${sectorPass ? '#10b981' : '#ef4444'}; background: ${sectorPass ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; border: 1px solid ${sectorPass ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'};" title="Informational general industry classification">
-            ${sectorPass ? 'Permissible Sector ℹ️' : 'Prohibited Sector 🔴'}
+          <span class="stock-sub-tag" style="font-size: 10px; padding: 2px 6px; color: ${sectorPass ? '#10b981' : (sectorReview ? '#f59e0b' : '#ef4444')}; background: ${sectorPass ? 'rgba(16,185,129,0.1)' : (sectorReview ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)')}; border: 1px solid ${sectorPass ? 'rgba(16,185,129,0.25)' : (sectorReview ? 'rgba(245,158,11,0.25)' : 'rgba(239,68,68,0.25)')};" title="Informational general industry classification">
+            ${sectorPass ? 'Permissible Sector ℹ️' : (sectorReview ? 'Sector Under Review 🟡' : 'Prohibited Sector 🔴')}
           </span>
         </div>
 
@@ -25717,7 +25724,8 @@ function openScreenerCalcDetailsModal() {
 
       // Dedicated Rule 1: Business Activity & Revenue Permissibility Card (Dual Screen)
       if (item.key === 'business_activity' || item.type === 'BUSINESS_ACTIVITY') {
-        const sectorPass = item.sectorStatus ? item.sectorStatus === 'PASS' : isPass;
+        const sectorPass = item.sectorStatus ? item.sectorStatus === 'PASS' : (item.status === 'FAIL' ? false : true);
+        const sectorReview = item.sectorStatus === 'REVIEW_REQUIRED';
         const revStatus = item.revenueStatus || item.status;
         const revPass = revStatus === 'PASS';
         const revReview = revStatus === 'REVIEW_REQUIRED';
@@ -25782,9 +25790,9 @@ function openScreenerCalcDetailsModal() {
             <div class="calc-ratio-grid">
               <div class="calc-item">
                 <label>Primary Sector Classification (Informational):</label>
-                <span style="color:${sectorPass ? '#10b981' : '#ef4444'}; font-size:13px; font-weight:600;">
+                <span style="color:${sectorPass ? '#10b981' : (sectorReview ? '#f59e0b' : '#ef4444')}; font-size:13px; font-weight:600;">
                   ${item.businessActivity || item.sicDescription || 'Commercial Enterprise'}
-                  <small style="margin-left:4px; font-size:10px; opacity:0.8;">(${sectorPass ? 'Permissible' : 'Prohibited'})</small>
+                  <small style="margin-left:4px; font-size:10px; opacity:0.8;">(${sectorPass ? 'Permissible' : (sectorReview ? 'Review' : 'Prohibited')})</small>
                 </span>
               </div>
               <div class="calc-item">

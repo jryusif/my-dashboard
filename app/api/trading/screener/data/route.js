@@ -310,6 +310,11 @@ export async function GET(request) {
         primaryDocUrl: latestSecFiling?.primaryDocUrl || (company.cik ? `https://www.sec.gov/edgar/browse/?CIK=${parseInt(company.cik, 10)}` : null)
       };
 
+      const bDetail = calculationDetails?.find(d => d.key === 'business_activity' || d.type === 'BUSINESS_ACTIVITY');
+      const cachedSectorStatus = bDetail?.sectorStatus || (currentScreening.businessStatus === 'FAIL' ? 'FAIL' : 'PASS');
+      const cachedRevenueStatus = bDetail?.revenueStatus || currentScreening.businessStatus || 'PASS';
+      const cachedRevenueImpureRatio = typeof bDetail?.revenueImpureRatioPct === 'number' ? bDetail.revenueImpureRatioPct : null;
+
       shariahResult = {
         status: isIsraelCompany ? 'FAIL' : currentScreening.status,
         isExcludedJurisdiction: isIsraelCompany,
@@ -318,6 +323,10 @@ export async function GET(request) {
         methodology: currentScreening.methodology,
         businessActivity: currentScreening.businessActivity || company.sector || 'General Commercial',
         businessStatus: isIsraelCompany ? 'FAIL' : currentScreening.businessStatus,
+        sectorStatus: cachedSectorStatus,
+        revenueStatus: cachedRevenueStatus,
+        revenueImpureRatioPct: cachedRevenueImpureRatio,
+        revenueBreakdown: bDetail?.revenueBreakdown || null,
         debtRatioPct: currentScreening.debtRatioPct,
         debtThresholdPct: currentScreening.debtThresholdPct,
         cashRatioPct: currentScreening.cashRatioPct,
