@@ -99,13 +99,24 @@ export async function POST(request) {
 
     // Fetch official SEC facts targeting the latest periodic filing
     const secFacts = await getCompanyFinancialFacts(company.cik, latestSecFiling?.accessionNumber || null, ticker);
-    if (latestSecFiling && secFacts.periodInfo) {
-      secFacts.periodInfo.form = secFacts.periodInfo.form || latestSecFiling.form;
-      secFacts.periodInfo.filingDate = secFacts.periodInfo.filingDate || latestSecFiling.filingDate;
-      secFacts.periodInfo.accessionNumber = secFacts.periodInfo.accessionNumber || latestSecFiling.accessionNumber;
-      secFacts.periodInfo.reportDate = secFacts.periodInfo.reportDate || secFacts.periodInfo.endDate || latestSecFiling.reportDate;
-      secFacts.periodInfo.endDate = secFacts.periodInfo.endDate || secFacts.periodInfo.reportDate || latestSecFiling.reportDate;
-      secFacts.periodInfo.primaryDocUrl = secFacts.periodInfo.primaryDocUrl || latestSecFiling.primaryDocUrl;
+    if (!secFacts.periodInfo && latestSecFiling) {
+      secFacts.periodInfo = {
+        form: latestSecFiling.form,
+        fiscalYear: latestSecFiling.fiscalYear || new Date().getFullYear(),
+        fiscalPeriod: latestSecFiling.fiscalPeriod || 'Q2',
+        reportDate: latestSecFiling.reportDate || latestSecFiling.filingDate,
+        endDate: latestSecFiling.reportDate || latestSecFiling.filingDate,
+        filingDate: latestSecFiling.filingDate,
+        accessionNumber: latestSecFiling.accessionNumber,
+        primaryDocUrl: latestSecFiling.primaryDocUrl || (company.cik ? `https://www.sec.gov/edgar/browse/?CIK=${parseInt(company.cik, 10)}` : null)
+      };
+    } else if (latestSecFiling && secFacts.periodInfo) {
+      secFacts.periodInfo.form = latestSecFiling.form || secFacts.periodInfo.form;
+      secFacts.periodInfo.filingDate = latestSecFiling.filingDate || secFacts.periodInfo.filingDate;
+      secFacts.periodInfo.accessionNumber = latestSecFiling.accessionNumber || secFacts.periodInfo.accessionNumber;
+      secFacts.periodInfo.reportDate = latestSecFiling.reportDate || secFacts.periodInfo.reportDate || secFacts.periodInfo.endDate;
+      secFacts.periodInfo.endDate = latestSecFiling.reportDate || secFacts.periodInfo.endDate || secFacts.periodInfo.reportDate;
+      secFacts.periodInfo.primaryDocUrl = latestSecFiling.primaryDocUrl || secFacts.periodInfo.primaryDocUrl || (company.cik ? `https://www.sec.gov/edgar/browse/?CIK=${parseInt(company.cik, 10)}` : null);
     }
     const previousScreening = company.screenings?.[0] || null;
 
